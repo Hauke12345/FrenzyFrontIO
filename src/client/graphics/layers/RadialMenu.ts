@@ -29,9 +29,11 @@ import traitorIcon from "../../../../resources/images/TraitorIconWhite.png";
 import allianceIcon from "../../../../resources/images/AllianceIconWhite.png";
 import boatIcon from "../../../../resources/images/BoatIconWhite.png";
 import swordIcon from "../../../../resources/images/SwordIconWhite.png";
+import infoIcon from "../../../../resources/images/InfoIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIconWhite.png";
 import emojiIcon from "../../../../resources/images/EmojiIconWhite.png";
 import disabledIcon from "../../../../resources/images/DisabledIcon.png";
+import xIcon from "../../../../resources/images/XIcon.svg";
 import donateIcon from "../../../../resources/images/DonateIconWhite.png";
 import buildIcon from "../../../../resources/images/BuildIconWhite.svg";
 import { EmojiTable } from "./EmojiTable";
@@ -41,13 +43,13 @@ import { consolex } from "../../../core/Consolex";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { TileRef } from "../../../core/game/GameMap";
 import { PlayerInfoOverlay } from "./PlayerInfoOverlay";
+import { PlayerPanel } from "./PlayerPanel";
 
 enum Slot {
-  Alliance,
+  Info,
   Boat,
-  Target,
-  Emoji,
   Build,
+  Close,
 }
 
 export class RadialMenu implements Layer {
@@ -56,16 +58,6 @@ export class RadialMenu implements Layer {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private isVisible: boolean = false;
   private readonly menuItems = new Map([
-    [
-      Slot.Alliance,
-      {
-        name: "alliance",
-        disabled: true,
-        action: () => {},
-        color: null,
-        icon: null,
-      },
-    ],
     [
       Slot.Boat,
       {
@@ -76,9 +68,18 @@ export class RadialMenu implements Layer {
         icon: null,
       },
     ],
-    [Slot.Target, { name: "target", disabled: true, action: () => {} }],
-    [Slot.Emoji, { name: "emoji", disabled: true, action: () => {} }],
+    [Slot.Close, { name: "close", disabled: true, action: () => {} }],
     [Slot.Build, { name: "build", disabled: true, action: () => {} }],
+    [
+      Slot.Info,
+      {
+        name: "info",
+        disabled: true,
+        action: () => {},
+        color: null,
+        icon: null,
+      },
+    ],
   ]);
 
   private readonly menuSize = 190;
@@ -97,7 +98,8 @@ export class RadialMenu implements Layer {
     private emojiTable: EmojiTable,
     private buildMenu: BuildMenu,
     private uiState: UIState,
-    private playerInfoOverlay: PlayerInfoOverlay
+    private playerInfoOverlay: PlayerInfoOverlay,
+    private playerPanel: PlayerPanel
   ) {}
 
   init() {
@@ -145,7 +147,9 @@ export class RadialMenu implements Layer {
     const pie = d3
       .pie<any>()
       .value(() => 1)
-      .padAngle(0.03);
+      .padAngle(0.03)
+      .startAngle(Math.PI / 4) // Start at 45 degrees (π/4 radians)
+      .endAngle(2 * Math.PI + Math.PI / 4); // Complete the circle but shifted by 45 degrees
 
     const arc = d3
       .arc<any>()
@@ -200,6 +204,7 @@ export class RadialMenu implements Layer {
           this.hideRadialMenu();
         }
       });
+
     arcs
       .append("image")
       .attr("xlink:href", (d) => d.data.icon)
@@ -244,7 +249,6 @@ export class RadialMenu implements Layer {
       .attr("fill", "#2c3e50")
       .style("pointer-events", "none");
 
-    // Replace text with sword icon
     centerButton
       .append("image")
       .attr("class", "center-button-icon")
@@ -321,26 +325,32 @@ export class RadialMenu implements Layer {
     this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
       this.buildMenu.showMenu(myPlayer, this.clickedCell);
     });
-    const canSendEmojiToPlayer =
-      this.g.hasOwner(tile) &&
-      this.g.ownerID(tile) != myPlayer.smallID() &&
-      actions.interaction?.canSendEmoji;
-    const canSendEmojiToAllPlayers =
-      this.g.ownerID(tile) == myPlayer.smallID() &&
-      actions.canSendEmojiAllPlayers;
-    if (canSendEmojiToPlayer || canSendEmojiToAllPlayers) {
-      this.activateMenuElement(Slot.Emoji, "#00a6a4", emojiIcon, () => {
-        const target =
-          this.g.owner(tile) == myPlayer
-            ? AllPlayers
-            : (this.g.owner(tile) as PlayerView);
-        this.emojiTable.onEmojiClicked = (emoji: string) => {
-          this.emojiTable.hideTable();
-          this.eventBus.emit(new SendEmojiIntentEvent(target, emoji));
-        };
-        this.emojiTable.showTable();
+    if (this.g.hasOwner(tile)) {
+      this.activateMenuElement(Slot.Info, "#64748B", infoIcon, () => {
+        this.playerPanel.show(actions, tile);
       });
     }
+    this.activateMenuElement(Slot.Close, "#DC2626", xIcon, () => {});
+    // const canSendEmojiToPlayer =
+    //   this.g.hasOwner(tile) &&
+    //   this.g.ownerID(tile) != myPlayer.smallID() &&
+    //   actions.interaction?.canSendEmoji;
+    // const canSendEmojiToAllPlayers =
+    //   this.g.ownerID(tile) == myPlayer.smallID() &&
+    //   actions.canSendEmojiAllPlayers;
+    // if (canSendEmojiToPlayer || canSendEmojiToAllPlayers) {
+    //   this.activateMenuElement(Slot.Emoji, "#00a6a4", emojiIcon, () => {
+    //     const target =
+    //       this.g.owner(tile) == myPlayer
+    //         ? AllPlayers
+    //         : (this.g.owner(tile) as PlayerView);
+    //     this.emojiTable.onEmojiClicked = (emoji: string) => {
+    //       this.emojiTable.hideTable();
+    //       this.eventBus.emit(new SendEmojiIntentEvent(target, emoji));
+    //     };
+    //     this.emojiTable.showTable();
+    //   });
+    // }
 
     if (actions.canBoat) {
       this.activateMenuElement(Slot.Boat, "#3f6ab1", boatIcon, () => {
@@ -362,29 +372,29 @@ export class RadialMenu implements Layer {
     }
     const other = this.g.owner(tile) as PlayerView;
 
-    if (actions?.interaction.canDonate) {
-      this.activateMenuElement(Slot.Target, "#53ac75", donateIcon, () => {
-        this.eventBus.emit(new SendDonateIntentEvent(myPlayer, other, null));
-      });
-    }
+    // if (actions?.interaction.canDonate) {
+    //   this.activateMenuElement(Slot.Target, "#53ac75", donateIcon, () => {
+    //     this.eventBus.emit(new SendDonateIntentEvent(myPlayer, other, null));
+    //   });
+    // }
 
-    if (actions?.interaction.canTarget) {
-      this.activateMenuElement(Slot.Target, "#c74848", targetIcon, () => {
-        this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
-      });
-    }
+    // if (actions?.interaction.canTarget) {
+    //   this.activateMenuElement(Slot.Target, "#c74848", targetIcon, () => {
+    //     this.eventBus.emit(new SendTargetPlayerIntentEvent(other.id()));
+    //   });
+    // }
 
-    if (actions?.interaction.canSendAllianceRequest) {
-      this.activateMenuElement(Slot.Alliance, "#53ac75", allianceIcon, () => {
-        this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
-      });
-    }
+    // if (actions?.interaction.canSendAllianceRequest) {
+    //   this.activateMenuElement(Slot.Alliance, "#53ac75", allianceIcon, () => {
+    //     this.eventBus.emit(new SendAllianceRequestIntentEvent(myPlayer, other));
+    //   });
+    // }
 
-    if (actions?.interaction.canBreakAlliance) {
-      this.activateMenuElement(Slot.Alliance, "#c74848", traitorIcon, () => {
-        this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
-      });
-    }
+    // if (actions?.interaction.canBreakAlliance) {
+    //   this.activateMenuElement(Slot.Alliance, "#c74848", traitorIcon, () => {
+    //     this.eventBus.emit(new SendBreakAllianceIntentEvent(myPlayer, other));
+    //   });
+    // }
   }
 
   private onPointerUp(event: MouseUpEvent) {

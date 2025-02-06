@@ -93,7 +93,7 @@ export class EmojiTable extends LitElement {
   @state()
   private _hidden = true;
 
-  public onEmojiClicked: (emoji: string) => void = () => {};
+  private onEmojiClicked: (emoji: string) => void = () => {};
 
   render() {
     return html`
@@ -109,10 +109,10 @@ export class EmojiTable extends LitElement {
                   >
                     ${emoji}
                   </button>
-                `,
+                `
               )}
             </div>
-          `,
+          `
         )}
       </div>
     `;
@@ -123,7 +123,8 @@ export class EmojiTable extends LitElement {
     this.requestUpdate();
   }
 
-  showTable() {
+  showTable(oneEmojiClicked: (emoji: string) => void) {
+    this.onEmojiClicked = oneEmojiClicked;
     this._hidden = false;
     this.requestUpdate();
   }

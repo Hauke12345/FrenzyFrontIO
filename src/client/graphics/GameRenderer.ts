@@ -23,6 +23,7 @@ import { WinModal } from "./layers/WinModal";
 import { SpawnTimer } from "./layers/SpawnTimer";
 import { OptionsMenu } from "./layers/OptionsMenu";
 import { TopBar } from "./layers/TopBar";
+import { PlayerPanel } from "./layers/PlayerPanel";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -104,6 +105,14 @@ export function createRenderer(
   }
   topBar.game = game;
 
+  const playerPanel = document.querySelector("player-panel") as PlayerPanel;
+  if (!(playerPanel instanceof PlayerPanel)) {
+    console.error("player panel not found");
+  }
+  playerPanel.g = game;
+  playerPanel.eventBus = eventBus;
+  playerPanel.emojiTable = emojiTable;
+
   const layers: Layer[] = [
     new TerrainLayer(game),
     new TerritoryLayer(game, eventBus),
@@ -119,7 +128,8 @@ export function createRenderer(
       emojiTable as EmojiTable,
       buildMenu,
       uiState,
-      playerInfo
+      playerInfo,
+      playerPanel
     ),
     new SpawnTimer(game, transformHandler),
     leaderboard,
@@ -128,6 +138,7 @@ export function createRenderer(
     winModel,
     optionsMenu,
     topBar,
+    playerPanel,
   ];
 
   return new GameRenderer(

@@ -348,6 +348,9 @@ export class PlayerImpl implements Player {
   }
 
   canTarget(other: Player): boolean {
+    if (this == other) {
+      return false;
+    }
     if (this.isAlliedWith(other)) {
       return false;
     }
