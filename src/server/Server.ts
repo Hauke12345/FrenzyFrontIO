@@ -21,6 +21,7 @@ import {
   sanitizeUsername,
   validateUsername,
 } from "../core/validations/username";
+import { Request, Response } from "express";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,20 +43,11 @@ try {
   console.error("Failed to start bot:", error);
 }
 
+let lobbiesString = "";
+
 // New GET endpoint to list lobbies
-app.get("/lobbies", (req, res) => {
-  const now = Date.now();
-  res.json({
-    lobbies: gm
-      .gamesByPhase(GamePhase.Lobby)
-      .filter((g) => g.isPublic)
-      .map((g) => ({
-        id: g.id,
-        msUntilStart: g.startTime() - now,
-        numClients: g.numClients(),
-      }))
-      .sort((a, b) => a.msUntilStart - b.msUntilStart),
-  });
+app.get("/lobbies", (req: Request, res: Response) => {
+  res.send(lobbiesString);
 });
 
 app.post("/private_lobby", (req, res) => {
@@ -139,14 +131,8 @@ wss.on("connection", (ws, req) => {
   ws.on("message", (message: string) => {
     try {
       const clientMsg: ClientMessage = ClientMessageSchema.parse(
-        JSON.parse(message),
+        JSON.parse(message)
       );
-      slog({
-        logKey: "websocket_msg",
-        msg: "server received websocket message",
-        data: clientMsg,
-        severity: LogSeverity.Debug,
-      });
       if (clientMsg.type == "join") {
         const forwarded = req.headers["x-forwarded-for"];
         let ip = Array.isArray(forwarded)
@@ -158,7 +144,7 @@ wss.on("connection", (ws, req) => {
         const { isValid, error } = validateUsername(clientMsg.username);
         if (!isValid) {
           console.log(
-            `game ${clientMsg.gameID}, client ${clientMsg.clientID} received invalid username, ${error}`,
+            `game ${clientMsg.gameID}, client ${clientMsg.clientID} received invalid username, ${error}`
           );
           return;
         }
@@ -169,10 +155,10 @@ wss.on("connection", (ws, req) => {
             clientMsg.persistentID,
             ip,
             clientMsg.username,
-            ws,
+            ws
           ),
           clientMsg.gameID,
-          clientMsg.lastTurn,
+          clientMsg.lastTurn
         );
       }
       if (clientMsg.type == "log") {
@@ -193,10 +179,25 @@ wss.on("connection", (ws, req) => {
 
 function runGame() {
   setInterval(() => tick(), 1000);
+  setInterval(() => updateLobbies(), 100);
 }
 
 function tick() {
   gm.tick();
+}
+
+function updateLobbies() {
+  lobbiesString = JSON.stringify({
+    lobbies: gm
+      .gamesByPhase(GamePhase.Lobby)
+      .filter((g) => g.isPublic)
+      .map((g) => ({
+        id: g.id,
+        msUntilStart: g.startTime() - Date.now(),
+        numClients: g.numClients(),
+      }))
+      .sort((a, b) => a.msUntilStart - b.msUntilStart),
+  });
 }
 
 const PORT = process.env.PORT || 3000;
