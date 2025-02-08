@@ -13,7 +13,6 @@ import {
   Nation,
   UnitType,
   UnitInfo,
-  DefenseBonus,
   AllPlayers,
   GameUpdates,
   TerrainType,
@@ -31,6 +30,7 @@ import { MessageType } from "./Game";
 import { UnitImpl } from "./UnitImpl";
 import { consolex } from "../Consolex";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
+import { DefenseGrid } from "./DefensePostGrid";
 
 export function createGame(
   gameMap: GameMap,
@@ -65,6 +65,7 @@ export class GameImpl implements Game {
   private _nextUnitID = 1;
 
   private updates: GameUpdates = createGameUpdatesMap();
+  private defenseGrid: DefenseGrid;
 
   constructor(
     private _map: GameMap,
@@ -82,6 +83,10 @@ export class GameImpl implements Game {
           new Cell(n.coordinates[0], n.coordinates[1]),
           n.strength
         )
+    );
+    this.defenseGrid = new DefenseGrid(
+      this._map,
+      this._config.defensePostRange()
     );
   }
 
@@ -123,21 +128,6 @@ export class GameImpl implements Game {
       type: GameUpdateType.Tile,
       update: this.toTileUpdate(tile),
     });
-  }
-
-  addTileDefenseBonus(tile: TileRef, unit: Unit, amount: number): DefenseBonus {
-    // TODO!!
-    const df = { unit: unit, tile: tile, amount: amount };
-    // (tile as TileImpl)._defenseBonuses.push(df)
-    // this.addUpdate((tile as TileImpl).toUpdate())
-    return df;
-  }
-
-  removeTileDefenseBonus(bonus: DefenseBonus): void {
-    // TODO!!
-    // const t = bonus.tile as TileImpl
-    // t._defenseBonuses = t._defenseBonuses.filter(db => db != bonus)
-    // this.addUpdate(t.toUpdate())
   }
 
   units(...types: UnitType[]): UnitImpl[] {
@@ -425,7 +415,6 @@ export class GameImpl implements Game {
       } else {
         (this.owner(t) as PlayerImpl)._borderTiles.delete(t);
       }
-      // this.updates.push(t.toUpdate())
     }
   }
 
@@ -529,6 +518,17 @@ export class GameImpl implements Game {
       message: message,
       playerID: id,
     });
+  }
+
+  addDefensePost(dp: Unit) {
+    this.defenseGrid.addDefense(dp);
+  }
+  removeDefensePost(dp: Unit) {
+    this.defenseGrid.removeDefense(dp);
+  }
+
+  nearbyDefensePosts(tile: TileRef): Unit[] {
+    return this.defenseGrid.nearbyDefenses(tile) as Unit[];
   }
 
   ref(x: number, y: number): TileRef {

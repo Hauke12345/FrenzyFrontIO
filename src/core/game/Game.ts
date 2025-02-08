@@ -165,13 +165,6 @@ export class PlayerInfo {
   ) {}
 }
 
-export interface DefenseBonus {
-  // Unit providing the defense bonus
-  unit: Unit;
-  amount: number;
-  tile: TileRef;
-}
-
 export interface Unit {
   // Properties
   type(): UnitType;
@@ -323,8 +316,7 @@ export interface Game extends GameMap {
   // Units
   units(...types: UnitType[]): Unit[];
   unitInfo(type: UnitType): UnitInfo;
-  addTileDefenseBonus(tile: TileRef, unit: Unit, amount: number): DefenseBonus;
-  removeTileDefenseBonus(bonus: DefenseBonus): void;
+  nearbyDefensePosts(tile: TileRef): Unit[];
 
   // Events & Messages
   executions(): Execution[];

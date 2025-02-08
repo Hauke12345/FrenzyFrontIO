@@ -16,6 +16,7 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.s
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
 import portIcon from "../../../../resources/images/PortIcon.svg";
 import cityIcon from "../../../../resources/images/CityIconWhite.svg";
+import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 
@@ -31,7 +32,7 @@ const buildTable: BuildItemDisplay[][] = [
     { unitType: UnitType.Warship, icon: warshipIcon },
     { unitType: UnitType.Port, icon: portIcon },
     { unitType: UnitType.MissileSilo, icon: missileSiloIcon },
-    // { unitType: UnitType.DefensePost, icon: shieldIcon },
+    { unitType: UnitType.DefensePost, icon: shieldIcon },
     { unitType: UnitType.City, icon: cityIcon },
   ],
 ];

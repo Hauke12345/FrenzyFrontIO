@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  Game,
   GameType,
   Gold,
   Player,
@@ -66,7 +67,7 @@ export class DefaultConfig implements Config {
   }
 
   defensePostRange(): number {
-    return 40;
+    return 30;
   }
   defensePostDefenseBonus(): number {
     return 5;
@@ -205,7 +206,7 @@ export class DefaultConfig implements Config {
   }
 
   attackLogic(
-    gm: GameMap,
+    gm: Game,
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
@@ -234,9 +235,16 @@ export class DefaultConfig implements Config {
       default:
         throw new Error(`terrain type ${type} not supported`);
     }
-    // TODO
-    // mag *= tileToConquer.defenseBonus(attacker)
-    // speed *= tileToConquer.defenseBonus(attacker)
+    if (defender.isPlayer()) {
+      for (const dp of gm.nearbyDefensePosts(tileToConquer)) {
+        if (dp.owner() == defender) {
+          mag *= this.defensePostDefenseBonus();
+          speed *= this.defensePostDefenseBonus();
+          break;
+        }
+      }
+    }
+
     if (gm.hasFallout(tileToConquer)) {
       mag *= this.falloutDefenseModifier();
       speed *= this.falloutDefenseModifier();

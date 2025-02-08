@@ -13,19 +13,12 @@ import { NameViewData } from "./Game";
 import { GameUpdateType } from "./GameUpdates";
 import { Config } from "../configuration/Config";
 import {
-  Alliance,
-  AllianceRequest,
-  AllPlayers,
   Cell,
-  DefenseBonus,
   EmojiMessage,
-  Game,
   Gold,
-  Nation,
   PlayerID,
   PlayerInfo,
   PlayerType,
-  Relation,
   TerrainType,
   TerraNullius,
   Tick,
@@ -37,6 +30,7 @@ import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { WorkerClient } from "../worker/WorkerClient";
 import { GameMap, GameMapImpl, TileRef, TileUpdate } from "./GameMap";
 import { GameUpdateViewData } from "./GameUpdates";
+import { DefenseGrid } from "./DefensePostGrid";
 
 export class UnitView {
   public _wasUpdated = true;
@@ -204,6 +198,8 @@ export class GameView implements GameMap {
 
   private _myPlayer: PlayerView | null = null;
 
+  private defensePostGrid: DefenseGrid;
+
   constructor(
     public worker: WorkerClient,
     private _config: Config,
@@ -217,6 +213,7 @@ export class GameView implements GameMap {
       updates: null,
       playerNameViewData: {},
     };
+    this.defensePostGrid = new DefenseGrid(_map, _config.defensePostRange());
   }
 
   public updatesSinceLastTick(): GameUpdates {
@@ -247,17 +244,31 @@ export class GameView implements GameMap {
       unit._wasUpdated = false;
       unit.lastPos = unit.lastPos.slice(-1);
     }
-    gu.updates[GameUpdateType.Unit].forEach((unit) => {
-      if (this._units.has(unit.id)) {
-        this._units.get(unit.id).update(unit);
+    gu.updates[GameUpdateType.Unit].forEach((update) => {
+      let unit: UnitView = null;
+      if (this._units.has(update.id)) {
+        unit = this._units.get(update.id);
+        unit.update(update);
       } else {
-        this._units.set(unit.id, new UnitView(this, unit));
+        unit = new UnitView(this, update);
+        this._units.set(update.id, unit);
+      }
+      if (update.unitType == UnitType.DefensePost) {
+        if (update.isActive) {
+          this.defensePostGrid.addDefense(unit);
+        } else {
+          this.defensePostGrid.removeDefense(unit);
+        }
       }
     });
   }
 
   recentlyUpdatedTiles(): TileRef[] {
     return this.updatedTiles;
+  }
+
+  nearbyDefenses(tile: TileRef): UnitView[] {
+    return this.defensePostGrid.nearbyDefenses(tile) as UnitView[];
   }
 
   myClientID(): ClientID {

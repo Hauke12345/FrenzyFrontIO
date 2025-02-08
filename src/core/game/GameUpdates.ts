@@ -62,6 +62,7 @@ export interface UnitUpdate {
   troops: number;
   id: number;
   ownerID: number;
+  // TODO: make these tilerefs
   pos: MapPos;
   lastPos: MapPos;
   isActive: boolean;

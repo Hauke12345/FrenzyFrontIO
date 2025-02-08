@@ -556,6 +556,9 @@ export class PlayerImpl implements Player {
     this.removeGold(cost);
     this.removeTroops(troops);
     this.mg.addUpdate(b.toUpdate());
+    if (type == UnitType.DefensePost) {
+      this.mg.addDefensePost(b);
+    }
     return b;
   }
 

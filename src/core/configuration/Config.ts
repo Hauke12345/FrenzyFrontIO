@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  Game,
   GameType,
   Gold,
   Player,
@@ -81,7 +82,7 @@ export interface Config {
     numAdjacentTilesWithEnemy: number,
   ): number;
   attackLogic(
-    gm: GameMap,
+    gm: Game,
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
