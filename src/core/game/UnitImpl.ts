@@ -12,6 +12,8 @@ export class UnitImpl implements Unit {
   private _health: number;
   private _lastTile: TileRef = null;
 
+  private _constructionType: UnitType = undefined;
+
   constructor(
     private _type: UnitType,
     private mg: GameImpl,
@@ -36,6 +38,7 @@ export class UnitImpl implements Unit {
       pos: { x: this.mg.x(this._tile), y: this.mg.y(this._tile) },
       lastPos: { x: this.mg.x(this._lastTile), y: this.mg.y(this._lastTile) },
       health: this.hasHealth() ? this._health : undefined,
+      constructionType: this._constructionType,
     };
   }
 
@@ -114,6 +117,21 @@ export class UnitImpl implements Unit {
   }
   isActive(): boolean {
     return this._active;
+  }
+
+  constructionType(): UnitType | null {
+    if (this.type() != UnitType.Construction) {
+      throw new Error(`Cannot get construction type on ${this.type()}`);
+    }
+    return this._constructionType;
+  }
+
+  setConstructionType(type: UnitType): void {
+    if (this.type() != UnitType.Construction) {
+      throw new Error(`Cannot set construction type on ${this.type()}`);
+    }
+    this._constructionType = type;
+    this.mg.addUpdate(this.toUpdate());
   }
 
   hash(): number {

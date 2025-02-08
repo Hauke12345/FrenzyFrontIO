@@ -45,10 +45,10 @@ export class DevConfig extends DefaultConfig {
   //     return 5000
   // }
 
-  // numBots(): number {
-  //   return 0;
-  // }
-  // spawnNPCs(): boolean {
-  //   return false;
-  // }
+  //   numBots(): number {
+  //     return 0;
+  //   }
+  //   spawnNPCs(): boolean {
+  //     return false;
+  //   }
 }

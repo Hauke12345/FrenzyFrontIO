@@ -29,6 +29,7 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { closestTwoTiles } from "./Util";
 import { calculateBoundingBox, simpleHash } from "../Util";
 import { andFN, manhattanDistFN, TileRef } from "../game/GameMap";
+import { ConstructionExecution } from "./ConstructionExecution";
 
 export class FakeHumanExecution implements Execution {
   private firstMove = true;
@@ -304,14 +305,16 @@ export class FakeHumanExecution implements Execution {
       );
       if (oceanTiles.length > 0) {
         const buildTile = this.random.randElement(oceanTiles);
-        this.mg.addExecution(new PortExecution(this.player.id(), buildTile));
+        this.mg.addExecution(
+          new ConstructionExecution(this.player.id(), buildTile, UnitType.Port)
+        );
       }
       return;
     }
     this.maybeSpawnStructure(
       UnitType.City,
       2,
-      (t) => new CityExecution(this.player.id(), t)
+      (t) => new ConstructionExecution(this.player.id(), t, UnitType.City)
     );
     if (this.maybeSpawnWarship()) {
       return;
@@ -319,7 +322,8 @@ export class FakeHumanExecution implements Execution {
     this.maybeSpawnStructure(
       UnitType.MissileSilo,
       1,
-      (t) => new MissileSiloExecution(this.player.id(), t)
+      (t) =>
+        new ConstructionExecution(this.player.id(), t, UnitType.MissileSilo)
     );
   }
 
@@ -369,7 +373,13 @@ export class FakeHumanExecution implements Execution {
         consolex.warn("cannot spawn destroyer");
         return false;
       }
-      this.mg.addExecution(new WarshipExecution(this.player.id(), targetTile));
+      this.mg.addExecution(
+        new ConstructionExecution(
+          this.player.id(),
+          targetTile,
+          UnitType.Warship
+        )
+      );
       return true;
     }
     return false;

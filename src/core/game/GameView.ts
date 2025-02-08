@@ -86,6 +86,9 @@ export class UnitView {
   health(): number {
     return this.data.health ?? 0;
   }
+  constructionType(): UnitType | undefined {
+    return this.data.constructionType;
+  }
 }
 
 export class PlayerView {

@@ -1,7 +1,6 @@
 import { Colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
 import { Unit, UnitType, Player } from "../../../core/game/Game";
-import { UnitUpdate } from "../../../core/game/GameUpdates";
 import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
 import { AlternateViewEvent } from "../../InputHandler";

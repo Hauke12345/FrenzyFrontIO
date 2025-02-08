@@ -109,6 +109,7 @@ export class DefaultConfig implements Config {
               Math.pow(2, p.units(UnitType.Port).length) * 250_000
             ),
           territoryBound: true,
+          constructionDuration: 2 * 10,
         };
       case UnitType.AtomBomb:
         return {
@@ -139,6 +140,7 @@ export class DefaultConfig implements Config {
         return {
           cost: () => 1_000_000,
           territoryBound: true,
+          constructionDuration: 10 * 10,
         };
       case UnitType.DefensePost:
         return {
@@ -148,6 +150,7 @@ export class DefaultConfig implements Config {
               (p.units(UnitType.DefensePost).length + 1) * 50_000
             ),
           territoryBound: true,
+          constructionDuration: 5 * 10,
         };
       case UnitType.City:
         return {
@@ -156,6 +159,12 @@ export class DefaultConfig implements Config {
               1_000_000,
               Math.pow(2, p.units(UnitType.City).length) * 125_000
             ),
+          territoryBound: true,
+          constructionDuration: 2 * 10,
+        };
+      case UnitType.Construction:
+        return {
+          cost: () => 0,
           territoryBound: true,
         };
       default:

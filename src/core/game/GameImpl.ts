@@ -13,7 +13,6 @@ import {
   Nation,
   UnitType,
   UnitInfo,
-  AllPlayers,
   GameUpdates,
   TerrainType,
   EmojiMessage,

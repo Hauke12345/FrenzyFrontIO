@@ -8,9 +8,11 @@ import missileSiloIcon from "../../../../resources/images/MissileSiloUnit.png";
 import shieldIcon from "../../../../resources/images/ShieldIcon.png";
 import cityIcon from "../../../../resources/images/CityIcon.png";
 import { GameView, UnitView } from "../../../core/game/GameView";
-import { Cell, Unit, UnitType } from "../../../core/game/Game";
+import { Cell, UnitType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { euclDistFN } from "../../../core/game/GameMap";
+
+const underConstructionColor = colord({ r: 150, g: 150, b: 150 });
 
 interface UnitRenderConfig {
   icon: string;
@@ -48,10 +50,7 @@ export class StructureLayer implements Layer {
     },
   };
 
-  constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-  ) {
+  constructor(private game: GameView, private eventBus: EventBus) {
     this.theme = game.config().theme();
     this.loadIconData();
   }
@@ -73,11 +72,11 @@ export class StructureLayer implements Layer {
           0,
           0,
           tempCanvas.width,
-          tempCanvas.height,
+          tempCanvas.height
         );
         this.unitIcons.set(unitType, iconData);
         console.log(
-          `icond data width height: ${iconData.width}, ${iconData.height}`,
+          `icond data width height: ${iconData.width}, ${iconData.height}`
         );
       };
     });
@@ -90,9 +89,9 @@ export class StructureLayer implements Layer {
   tick() {
     this.game
       .updatesSinceLastTick()
-      [
-        GameUpdateType.Unit
-      ].forEach((u) => this.handleUnitRendering(this.game.unit(u.id)));
+      [GameUpdateType.Unit].forEach((u) =>
+        this.handleUnitRendering(this.game.unit(u.id))
+      );
   }
 
   init() {
@@ -114,7 +113,7 @@ export class StructureLayer implements Layer {
       -this.game.width() / 2,
       -this.game.height() / 2,
       this.game.width(),
-      this.game.height(),
+      this.game.height()
     );
   }
 
@@ -123,7 +122,7 @@ export class StructureLayer implements Layer {
   }
 
   private handleUnitRendering(unit: UnitView) {
-    const unitType = unit.type();
+    const unitType = unit.constructionType() ?? unit.type();
     if (!this.isUnitTypeSupported(unitType)) return;
 
     const config = this.unitConfigs[unitType];
@@ -134,7 +133,7 @@ export class StructureLayer implements Layer {
     // Clear previous rendering
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius),
+      euclDistFN(unit.tile(), config.borderRadius)
     )) {
       this.clearCell(new Cell(this.game.x(tile), this.game.y(tile)));
     }
@@ -146,23 +145,27 @@ export class StructureLayer implements Layer {
     // Draw border and territory
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.borderRadius),
+      euclDistFN(unit.tile(), config.borderRadius)
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
-        this.theme.borderColor(unit.owner().info()),
-        255,
+        unit.type() == UnitType.Construction
+          ? underConstructionColor
+          : this.theme.borderColor(unit.owner().info()),
+        255
       );
     }
 
     for (const tile of this.game.bfs(
       unit.tile(),
-      euclDistFN(unit.tile(), config.territoryRadius),
+      euclDistFN(unit.tile(), config.territoryRadius)
     )) {
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
-        this.theme.territoryColor(unit.owner().info()),
-        130,
+        unit.type() == UnitType.Construction
+          ? underConstructionColor
+          : this.theme.territoryColor(unit.owner().info()),
+        130
       );
     }
 
@@ -178,8 +181,12 @@ export class StructureLayer implements Layer {
     startY: number,
     width: number,
     height: number,
-    unit: UnitView,
+    unit: UnitView
   ) {
+    let color = this.theme.borderColor(unit.owner().info());
+    if (unit.type() == UnitType.Construction) {
+      color = underConstructionColor;
+    }
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const iconIndex = (y * width + x) * 4;
@@ -195,11 +202,7 @@ export class StructureLayer implements Layer {
             targetY >= 0 &&
             targetY < this.game.height()
           ) {
-            this.paintCell(
-              new Cell(targetX, targetY),
-              this.theme.borderColor(unit.owner().info()),
-              alpha,
-            );
+            this.paintCell(new Cell(targetX, targetY), color, alpha);
           }
         }
       }

@@ -67,6 +67,7 @@ export interface UnitUpdate {
   lastPos: MapPos;
   isActive: boolean;
   health?: number;
+  constructionType?: UnitType;
 }
 
 export interface PlayerUpdate {

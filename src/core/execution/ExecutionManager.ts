@@ -38,6 +38,7 @@ import { DefensePostExecution } from "./DefensePostExecution";
 import { CityExecution } from "./CityExecution";
 import { TileRef } from "../game/GameMap";
 import { MirvExecution } from "./MIRVExecution";
+import { ConstructionExecution } from "./ConstructionExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -106,47 +107,11 @@ export class Executor {
       case "troop_ratio":
         return new SetTargetTroopRatioExecution(intent.player, intent.ratio);
       case "build_unit":
-        switch (intent.unit) {
-          case UnitType.AtomBomb:
-          case UnitType.HydrogenBomb:
-            return new NukeExecution(
-              intent.unit,
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.MIRV:
-            return new MirvExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.Warship:
-            return new WarshipExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.Port:
-            return new PortExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.MissileSilo:
-            return new MissileSiloExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.DefensePost:
-            return new DefensePostExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          case UnitType.City:
-            return new CityExecution(
-              intent.player,
-              this.mg.ref(intent.x, intent.y)
-            );
-          default:
-            throw Error(`unit type ${intent.unit} not supported`);
-        }
+        return new ConstructionExecution(
+          intent.player,
+          this.mg.ref(intent.x, intent.y),
+          intent.unit
+        );
       default:
         throw new Error(`intent type ${intent} not found`);
     }

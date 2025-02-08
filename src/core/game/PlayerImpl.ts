@@ -580,15 +580,14 @@ export class PlayerImpl implements Player {
         return this.warshipSpawn(targetTile);
       case UnitType.Shell:
         return targetTile;
-      case UnitType.MissileSilo:
-        return this.landBasedStructureSpawn(targetTile);
-      case UnitType.DefensePost:
-        return this.landBasedStructureSpawn(targetTile);
       case UnitType.TransportShip:
         return this.transportShipSpawn(targetTile);
       case UnitType.TradeShip:
         return this.tradeShipSpawn(targetTile);
+      case UnitType.MissileSilo:
+      case UnitType.DefensePost:
       case UnitType.City:
+      case UnitType.Construction:
         return this.landBasedStructureSpawn(targetTile);
       default:
         assertNever(unitType);

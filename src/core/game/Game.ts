@@ -58,6 +58,7 @@ export interface UnitInfo {
   territoryBound: boolean;
   maxHealth?: number;
   damage?: number;
+  constructionDuration?: number;
 }
 
 export enum UnitType {
@@ -73,6 +74,7 @@ export enum UnitType {
   City = "City",
   MIRV = "MIRV",
   MIRVWarhead = "MIRV Warhead",
+  Construction = "Construction",
 }
 
 export enum Relation {
@@ -186,6 +188,10 @@ export interface Unit {
   // Mutations
   setTroops(troops: number): void;
   delete(displayerMessage?: boolean): void;
+
+  // Only for Construction type
+  constructionType(): UnitType | null;
+  setConstructionType(type: UnitType): void;
 
   // Updates
   toUpdate(): UnitUpdate;
