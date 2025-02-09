@@ -11,6 +11,7 @@ import {
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
+import { GameUpdateType } from "../../../core/game/GameUpdates";
 
 enum Relationship {
   Self,
@@ -48,9 +49,9 @@ export class UnitLayer implements Layer {
     if (this.myPlayer == null) {
       this.myPlayer = this.game.playerByClientID(this.clientID);
     }
-    for (const unit of this.game.units()) {
-      if (unit.wasUpdated()) this.onUnitEvent(unit);
-    }
+    this.game.updatesSinceLastTick()?.[GameUpdateType.Unit]?.forEach((unit) => {
+      this.onUnitEvent(this.game.unit(unit.id));
+    });
   }
 
   init() {
@@ -79,9 +80,11 @@ export class UnitLayer implements Layer {
 
     this.canvas.width = this.game.width();
     this.canvas.height = this.game.height();
-    for (const unit of this.game.units()) {
-      this.onUnitEvent(unit);
-    }
+    this.game
+      ?.updatesSinceLastTick()
+      ?.[GameUpdateType.Unit]?.forEach((unit) => {
+        this.onUnitEvent(this.game.unit(unit.id));
+      });
   }
 
   private relationship(unit: UnitView): Relationship {
