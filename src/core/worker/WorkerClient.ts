@@ -5,7 +5,7 @@ import {
   PlayerProfile,
 } from "../game/Game";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { GameConfig, GameID, Turn } from "../Schemas";
+import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
 
@@ -17,7 +17,11 @@ export class WorkerClient {
     update: GameUpdateViewData | ErrorUpdate
   ) => void;
 
-  constructor(private gameID: GameID, private gameConfig: GameConfig) {
+  constructor(
+    private gameID: GameID,
+    private gameConfig: GameConfig,
+    private clientID: ClientID
+  ) {
     this.worker = new Worker(new URL("./Worker.worker.ts", import.meta.url));
     this.messageHandlers = new Map();
 
@@ -65,6 +69,7 @@ export class WorkerClient {
         id: messageId,
         gameID: this.gameID,
         gameConfig: this.gameConfig,
+        clientID: this.clientID,
       });
 
       // Add timeout for initialization

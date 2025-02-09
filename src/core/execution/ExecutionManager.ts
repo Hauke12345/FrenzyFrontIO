@@ -12,6 +12,7 @@ import {
 import {
   AttackIntent,
   BoatAttackIntentSchema,
+  ClientID,
   GameID,
   Intent,
   Turn,
@@ -22,29 +23,26 @@ import { BotSpawner } from "./BotSpawner";
 import { TransportShipExecution } from "./TransportShipExecution";
 import { PseudoRandom } from "../PseudoRandom";
 import { FakeHumanExecution } from "./FakeHumanExecution";
-import { generateID, processName, sanitize, simpleHash } from "../Util";
+import { sanitize, simpleHash } from "../Util";
 import { AllianceRequestExecution } from "./alliance/AllianceRequestExecution";
 import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyExecution";
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { EmojiExecution } from "./EmojiExecution";
 import { DonateExecution } from "./DonateExecution";
-import { NukeExecution } from "./NukeExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
-import { WarshipExecution } from "./WarshipExecution";
-import { PortExecution } from "./PortExecution";
-import { MissileSiloExecution } from "./MissileSiloExecution";
-import { DefensePostExecution } from "./DefensePostExecution";
-import { CityExecution } from "./CityExecution";
-import { TileRef } from "../game/GameMap";
-import { MirvExecution } from "./MIRVExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
 
 export class Executor {
   // private random = new PseudoRandom(999)
   private random: PseudoRandom = null;
 
-  constructor(private mg: Game, private gameID: GameID) {
+  constructor(
+    private mg: Game,
+    private gameID: GameID,
+    private clientID: ClientID
+  ) {
     // Add one to avoid id collisions with bots.
     this.random = new PseudoRandom(simpleHash(gameID) + 1);
   }
@@ -66,7 +64,10 @@ export class Executor {
       case "spawn":
         return new SpawnExecution(
           new PlayerInfo(
-            sanitize(intent.name),
+            // Players see their original name, others see a sanitized version
+            intent.clientID == this.clientID
+              ? sanitize(intent.name)
+              : fixProfaneUsername(sanitize(intent.name)),
             intent.playerType,
             intent.clientID,
             intent.playerID

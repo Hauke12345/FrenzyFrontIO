@@ -1,5 +1,5 @@
 import { GameUpdateViewData } from "../game/GameUpdates";
-import { GameConfig, GameID, Turn } from "../Schemas";
+import { ClientID, GameConfig, GameID, Turn } from "../Schemas";
 import { PlayerActions, PlayerID, PlayerProfile } from "../game/Game";
 
 export type WorkerMessageType =
@@ -28,6 +28,7 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameID: GameID;
   gameConfig: GameConfig;
+  clientID: ClientID;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {

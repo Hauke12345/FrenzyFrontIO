@@ -22,14 +22,13 @@ import { NameViewData } from "./game/Game";
 import { GameUpdateType } from "./game/GameUpdates";
 import { createGame } from "./game/GameImpl";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
-import { GameConfig, Turn } from "./Schemas";
+import { ClientID, GameConfig, Turn } from "./Schemas";
 import { GameUpdateViewData } from "./game/GameUpdates";
-import { andFN, manhattanDistFN, TileRef } from "./game/GameMap";
-import { targetTransportTile } from "./Util";
 
 export async function createGameRunner(
   gameID: string,
   gameConfig: GameConfig,
+  clientID: ClientID,
   callBack: (gu: GameUpdateViewData) => void
 ): Promise<GameRunner> {
   const config = getConfig(gameConfig);
@@ -40,7 +39,7 @@ export async function createGameRunner(
     gameMap.nationMap,
     config
   );
-  const gr = new GameRunner(game as Game, new Executor(game, gameID), callBack);
+  const gr = new GameRunner(game as Game, new Executor(game, gameID, clientID), callBack);
   gr.init();
   return gr;
 }

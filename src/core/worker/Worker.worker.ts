@@ -27,14 +27,15 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
 
   switch (message.type) {
     case "heartbeat":
-      (await gameRunner).executeNextTick()
+      (await gameRunner).executeNextTick();
       break;
     case "init":
       try {
         gameRunner = createGameRunner(
           message.gameID,
           message.gameConfig,
-          gameUpdate,
+          message.clientID,
+          gameUpdate
         ).then((gr) => {
           sendMessage({
             type: "initialized",
@@ -71,7 +72,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         const actions = (await gameRunner).playerActions(
           message.playerID,
           message.x,
-          message.y,
+          message.y
         );
         sendMessage({
           type: "player_actions_result",
