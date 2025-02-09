@@ -47,7 +47,7 @@ export class GameServer {
     public readonly createdAt: number,
     public readonly isPublic: boolean,
     private config: ServerConfig,
-    private gameConfig: GameConfig,
+    public gameConfig: GameConfig,
   ) {}
 
   public updateGameConfig(gameConfig: GameConfig): void {

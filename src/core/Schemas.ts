@@ -85,6 +85,7 @@ export interface Lobby {
   id: string;
   msUntilStart?: number;
   numClients?: number;
+  gameConfig?: GameConfig;
 }
 
 const GameConfigSchema = z.object({
