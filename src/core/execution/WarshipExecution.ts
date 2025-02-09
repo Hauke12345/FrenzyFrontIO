@@ -68,7 +68,7 @@ export class WarshipExecution implements Execution {
       const ships = this.mg
         .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
         .filter(
-          (u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 100
+          (u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130
         )
         .filter((u) => u.owner() != this.warship.owner())
         .filter((u) => u != this.warship)
