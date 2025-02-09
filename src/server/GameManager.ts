@@ -5,11 +5,14 @@ import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
 import { generateID } from "../core/Util";
+import { PseudoRandom } from "../core/PseudoRandom";
 
 export class GameManager {
   private lastNewLobby: number = 0;
 
   private games: GameServer[] = [];
+
+  private random = new PseudoRandom(123);
 
   constructor(private config: ServerConfig) {}
 
@@ -46,7 +49,7 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         difficulty: Difficulty.Medium,
-      }),
+      })
     );
     return id;
   }
@@ -54,7 +57,7 @@ export class GameManager {
   hasActiveGame(gameID: GameID): boolean {
     const game = this.games
       .filter(
-        (g) => g.phase() == GamePhase.Lobby || g.phase() == GamePhase.Active,
+        (g) => g.phase() == GamePhase.Lobby || g.phase() == GamePhase.Active
       )
       .find((g) => g.id == gameID);
     return game != null;
@@ -81,10 +84,10 @@ export class GameManager {
       this.lastNewLobby = now;
       lobbies.push(
         new GameServer(generateID(), now, true, this.config, {
-          gameMap: GameMapType.World,
+          gameMap: this.random.randElement(Object.values(GameMapType)),
           gameType: GameType.Public,
           difficulty: Difficulty.Medium,
-        }),
+        })
       );
     }
 
