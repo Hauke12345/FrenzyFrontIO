@@ -135,62 +135,80 @@ export class ControlPanel extends LitElement implements Layer {
           </div>
         </div>
 
-        <div class="relative mb-4 lg:mb-4 h-6 lg:h-6">
+        <div class="relative mb-4 lg:mb-4">
           <label class="block text-white mb-1"
             >Troops: ${renderTroops(this._troops)} | Workers:
             ${renderTroops(this._workers)}</label
           >
-          <div
-            class="absolute h-2 bg-blue-500/60 rounded top-6 transition-all duration-300"
-            style="width: ${this.currentTroopRatio * 100}%"
-          ></div>
-          <div
-            class="absolute w-4 h-4 bg-white border-2 border-blue-500 rounded-full top-5 -ml-2 cursor-pointer hover:scale-110 transition-transform"
-            style="left: ${this.targetTroopRatio * 100}%"
-          ></div>
-          <input
-            type="range"
-            min="1"
-            max="100"
-            .value=${this.targetTroopRatio * 100}
-            @input=${(e: Event) => {
-              this.targetTroopRatio =
-                parseInt((e.target as HTMLInputElement).value) / 100;
-              this.onTroopChange(this.targetTroopRatio);
-            }}
-            class="absolute w-full top-3 m-0 opacity-0 cursor-pointer"
-          />
+          <div class="relative h-8">
+            <!-- Background track -->
+            <div
+              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
+            ></div>
+            <!-- Fill track -->
+            <div
+              class="absolute left-0 top-3 h-2 bg-blue-500/60 rounded transition-all duration-300"
+              style="width: ${this.currentTroopRatio * 100}%"
+            ></div>
+            <!-- Range input - exactly overlaying the visual elements -->
+            <input
+              type="range"
+              min="1"
+              max="100"
+              .value=${this.targetTroopRatio * 100}
+              @input=${(e: Event) => {
+                this.targetTroopRatio =
+                  parseInt((e.target as HTMLInputElement).value) / 100;
+                this.onTroopChange(this.targetTroopRatio);
+              }}
+              class="absolute left-0 right-0 top-2 m-0 h-4 opacity-0 cursor-pointer"
+            />
+            <!-- Handle -->
+            <div
+              class="absolute top-2 w-4 h-4 bg-white border-2 border-blue-500 rounded-full -ml-2 cursor-pointer hover:scale-110 transition-transform pointer-events-none"
+              style="left: ${this.targetTroopRatio * 100}%"
+            ></div>
+          </div>
         </div>
 
-        <div class="relative mb:0 lg:mb-4 h-10 lg:h-12">
+        <div class="relative mb-0 lg:mb-4">
           <label class="block text-white mb-1"
             >Attack Ratio: ${(this.attackRatio * 100).toFixed(0)}%</label
           >
-          <div class="absolute w-full h-2 bg-white/20 rounded top-6"></div>
-          <div
-            class="absolute h-2 bg-red-500/60 rounded top-6 transition-all duration-300"
-            style="width: ${this.attackRatio * 100}%"
-          ></div>
-          <div
-            class="absolute w-4 h-4 bg-white border-2 border-red-500 rounded-full top-5 -ml-2 cursor-pointer hover:scale-110 transition-transform"
-            style="left: ${this.attackRatio * 100}%"
-          ></div>
-          <input
-            type="range"
-            min="1"
-            max="100"
-            .value=${this.attackRatio * 100}
-            @input=${(e: Event) => {
-              this.attackRatio =
-                parseInt((e.target as HTMLInputElement).value) / 100;
-              this.onAttackRatioChange(this.attackRatio);
-            }}
-            class="absolute w-full top-3 m-0 opacity-0 cursor-pointer"
-          />
+          <div class="relative h-8">
+            <!-- Background track -->
+            <div
+              class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
+            ></div>
+            <!-- Fill track -->
+            <div
+              class="absolute left-0 top-3 h-2 bg-red-500/60 rounded transition-all duration-300"
+              style="width: ${this.attackRatio * 100}%"
+            ></div>
+            <!-- Range input - exactly overlaying the visual elements -->
+            <input
+              type="range"
+              min="1"
+              max="100"
+              .value=${this.attackRatio * 100}
+              @input=${(e: Event) => {
+                this.attackRatio =
+                  parseInt((e.target as HTMLInputElement).value) / 100;
+                this.onAttackRatioChange(this.attackRatio);
+              }}
+              class="absolute left-0 right-0 top-2 m-0 h-4 opacity-0 cursor-pointer"
+            />
+            <!-- Handle -->
+            <div
+              class="absolute top-2 w-4 h-4 bg-white border-2 border-red-500 rounded-full -ml-2 cursor-pointer hover:scale-110 transition-transform pointer-events-none"
+              style="left: ${this.attackRatio * 100}%"
+            ></div>
+          </div>
         </div>
       </div>
     `;
   }
+
   createRenderRoot() {
     return this; // Disable shadow DOM to allow Tailwind styles
   }

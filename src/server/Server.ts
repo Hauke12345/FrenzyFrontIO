@@ -195,6 +195,7 @@ function updateLobbies() {
         id: g.id,
         msUntilStart: g.startTime() - Date.now(),
         numClients: g.numClients(),
+        gameConfig: g.gameConfig,
       }))
       .sort((a, b) => a.msUntilStart - b.msUntilStart),
   });
