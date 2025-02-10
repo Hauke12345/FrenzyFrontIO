@@ -7,11 +7,11 @@ import { MouseUpEvent } from "../../InputHandler";
 import { AllPlayers, Player, PlayerActions } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { renderNumber, renderTroops } from "../../Utils";
-import targetIcon from "../../../../resources/images/TargetIconWhite.png";
-import emojiIcon from "../../../../resources/images/EmojiIconWhite.png";
-import donateIcon from "../../../../resources/images/DonateIconWhite.png";
-import traitorIcon from "../../../../resources/images/TraitorIconWhite.png";
-import allianceIcon from "../../../../resources/images/AllianceIconWhite.png";
+import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
+import emojiIcon from "../../../../resources/images/EmojiIconWhite.svg";
+import donateIcon from "../../../../resources/images/DonateIconWhite.svg";
+import traitorIcon from "../../../../resources/images/TraitorIconWhite.svg";
+import allianceIcon from "../../../../resources/images/AllianceIconWhite.svg";
 import {
   SendAllianceRequestIntentEvent,
   SendBreakAllianceIntentEvent,
