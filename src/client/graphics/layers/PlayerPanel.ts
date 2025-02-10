@@ -132,6 +132,7 @@ export class PlayerPanel extends LitElement implements Layer {
     return html`
       <div
         class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-auto"
+        @contextmenu=${(e) => e.preventDefault()}
       >
         <div
           class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md relative"
