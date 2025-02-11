@@ -351,14 +351,28 @@ export class DefaultConfig implements Config {
   }
 
   maxPopulation(player: Player | PlayerView): number {
-    let maxPop = Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000;
+    let maxPop =
+      2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+      player.units(UnitType.City).length * this.cityPopulationIncrease();
+
     if (player.type() == PlayerType.Bot) {
+      return maxPop / 2;
+    }
+
+    if (player.type() == PlayerType.Human) {
       return maxPop;
     }
-    return (
-      maxPop * 2 +
-      player.units(UnitType.City).length * this.cityPopulationIncrease()
-    );
+
+    switch (this._gameConfig.difficulty) {
+      case Difficulty.Easy:
+        return maxPop * 0.5;
+      case Difficulty.Medium:
+        return maxPop * 0.7;
+      case Difficulty.Hard:
+        return maxPop * 1;
+      case Difficulty.Impossible:
+        return maxPop * 1.5;
+    }
   }
 
   populationIncreaseRate(player: Player): number {
@@ -371,24 +385,6 @@ export class DefaultConfig implements Config {
 
     if (player.type() == PlayerType.Bot) {
       toAdd *= 0.7;
-    }
-    let difficultyMultiplier = 1;
-    switch (this._gameConfig.difficulty) {
-      case Difficulty.Easy:
-        difficultyMultiplier = 0.3;
-        break;
-      case Difficulty.Medium:
-        difficultyMultiplier = 0.5;
-        break;
-      case Difficulty.Hard:
-        difficultyMultiplier = 1;
-        break;
-      case Difficulty.Impossible:
-        difficultyMultiplier = 1.2;
-        break;
-    }
-    if (player.type() == PlayerType.FakeHuman) {
-      toAdd *= difficultyMultiplier;
     }
 
     return Math.min(player.population() + toAdd, max) - player.population();
