@@ -59,6 +59,7 @@ export interface LobbyConfig {
   difficulty: Difficulty | null;
   disableBots: boolean | null;
   disableNPCs: boolean | null;
+  creativeMode: boolean | null;
 }
 
 export function joinLobby(
@@ -82,6 +83,7 @@ export function joinLobby(
       difficulty: lobbyConfig.difficulty,
       disableBots: lobbyConfig.disableBots,
       disableNPCs: lobbyConfig.disableNPCs,
+      creativeMode: lobbyConfig.creativeMode,
     };
   }
 

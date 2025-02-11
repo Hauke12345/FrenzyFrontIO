@@ -11,6 +11,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private disableBots = false;
+  @state() private creativeMode = false;
 
   static styles = css`
     .modal-overlay {
@@ -134,6 +135,15 @@ export class SinglePlayerModal extends LitElement {
             <label for="disable-npcs">Disable NPCs</label>
           </div>
 
+          <div>
+            <input
+              type="checkbox"
+              id="creative-mode"
+              @change=${this.handleCreativeModeChange}
+            />
+            <label for="creative-mode">Creative mode</label>
+          </div>
+
           <button @click=${this.startGame}>Start Game</button>
         </div>
       </div>
@@ -164,6 +174,9 @@ export class SinglePlayerModal extends LitElement {
   private handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
   }
+  private handleCreativeModeChange(e: Event) {
+    this.creativeMode = Boolean((e.target as HTMLInputElement).checked);
+  }
   private startGame() {
     consolex.log(
       `Starting single player game with map: ${GameMapType[this.selectedMap]}`,
@@ -179,6 +192,7 @@ export class SinglePlayerModal extends LitElement {
           difficulty: this.selectedDifficulty,
           disableBots: this.disableBots,
           disableNPCs: this.disableNPCs,
+          creativeMode: this.creativeMode,
         },
         bubbles: true,
         composed: true,

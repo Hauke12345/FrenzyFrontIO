@@ -115,6 +115,7 @@ class Client {
 				difficulty: event.detail.difficulty,
 				disableBots: event.detail.disableBots,
 				disableNPCs: event.detail.disableNPCs,
+				creativeMode: event.detail.creativeMode,
 			},
 			() => this.joinModal.close()
 		);

@@ -81,6 +81,9 @@ export class DefaultConfig implements Config {
   spawnBots(): boolean {
     return !this._gameConfig.disableBots;
   }
+  creativeMode(): boolean {
+    return this._gameConfig.creativeMode;
+  }
   tradeShipGold(dist: number): Gold {
     return 10000 + 100 * Math.pow(dist, 1.1);
   }
@@ -97,7 +100,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) => (p.units(UnitType.Warship).length + 1) * 250_000,
+          cost: (p: Player) => this.creativeMode() ? 0 : (p.units(UnitType.Warship).length + 1) * 250_000,
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -110,26 +113,27 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               1_000_000,
               Math.pow(2, p.units(UnitType.Port).length) * 250_000
             ),
           territoryBound: true,
-          constructionDuration: 2 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
       case UnitType.AtomBomb:
         return {
-          cost: () => 750_000,
+          cost: () => this.creativeMode() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: () => 5_000_000,
+          cost: () => this.creativeMode() ? 0 : 5_000_000,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: () => 10_000_000,
+          cost: () => this.creativeMode() ? 0 : 10_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -144,29 +148,31 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: () => 1_000_000,
+          cost: () => this.creativeMode() ? 0 : 1_000_000,
           territoryBound: true,
-          constructionDuration: 10 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 10 * 10,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               250_000,
               (p.units(UnitType.DefensePost).length + 1) * 50_000
             ),
           territoryBound: true,
-          constructionDuration: 5 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 5 * 10,
         };
       case UnitType.City:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               1_000_000,
               Math.pow(2, p.units(UnitType.City).length) * 125_000
             ),
           territoryBound: true,
-          constructionDuration: 2 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
       case UnitType.Construction:
         return {
@@ -347,11 +353,11 @@ export class DefaultConfig implements Config {
           return 20_000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return 25_000;
+    return this.creativeMode() ? 1_000_000 : 25_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
-    let maxPop =
+    let maxPop = this.creativeMode() ? 999_999_999_999 :
       2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
       player.units(UnitType.City).length * this.cityPopulationIncrease();
 

@@ -96,6 +96,7 @@ app.put("/private_lobby/:id", (req, res) => {
     difficulty: req.body.difficulty,
     disableBots: req.body.disableBots,
     disableNPCs: req.body.disableNPCs,
+    creativeMode: req.body.creativeMode,
   });
 });
 
