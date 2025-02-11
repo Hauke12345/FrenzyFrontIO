@@ -17,6 +17,7 @@ import {
   Relation,
   EmojiMessage,
   PlayerProfile,
+  Attack,
 } from "./Game";
 import { PlayerUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
@@ -37,6 +38,7 @@ import { renderTroops } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { Emoji } from "discord.js";
+import { AttackImpl } from "./AttackImpl";
 
 interface Target {
   tick: Tick;
@@ -74,6 +76,9 @@ export class PlayerImpl implements Player {
   private sentDonations: Donation[] = [];
 
   private relations = new Map<Player, number>();
+
+  public _incomingAttacks: Attack[] = [];
+  public _outgoingAttacks: Attack[] = [];
 
   constructor(
     private mg: GameImpl,
@@ -757,6 +762,25 @@ export class PlayerImpl implements Player {
         }
       }
     }
+  }
+
+  createAttack(
+    target: Player | TerraNullius,
+    troops: number,
+    sourceTile: TileRef
+  ): Attack {
+    const attack = new AttackImpl(target, this, troops, sourceTile);
+    this._outgoingAttacks.push(attack);
+    if (target.isPlayer()) {
+      (target as PlayerImpl)._incomingAttacks.push(attack);
+    }
+    return attack;
+  }
+  outgoingAttacks(): Attack[] {
+    return this._outgoingAttacks;
+  }
+  incomingAttacks(): Attack[] {
+    return this._incomingAttacks;
   }
 
   public canAttack(tile: TileRef): boolean {

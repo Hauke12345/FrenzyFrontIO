@@ -135,6 +135,17 @@ export interface Execution {
   owner(): Player;
 }
 
+export interface Attack {
+  target(): Player | TerraNullius;
+  attacker(): Player;
+  troops(): number;
+  setTroops(troops: number): void;
+  isActive(): boolean;
+  delete(): void;
+  // The tile the attack originated from, mostly used for boat attacks.
+  sourceTile(): TileRef | null;
+}
+
 export interface AllianceRequest {
   accept(): void;
   reject(): void;
@@ -284,12 +295,21 @@ export interface Player {
   canDonate(recipient: Player): boolean;
   donate(recipient: Player, troops: number): void;
 
+  // Attacking.
+  canAttack(tile: TileRef): boolean;
+  createAttack(
+    target: Player | TerraNullius,
+    troops: number,
+    sourceTile: TileRef
+  ): Attack;
+  outgoingAttacks(): Attack[];
+  incomingAttacks(): Attack[];
+
   // Misc
   executions(): Execution[];
   toUpdate(): PlayerUpdate;
   playerProfile(): PlayerProfile;
   canBoat(tile: TileRef): boolean;
-  canAttack(tile: TileRef);
 }
 
 export interface Game extends GameMap {
@@ -324,8 +344,6 @@ export interface Game extends GameMap {
   unitInfo(type: UnitType): UnitInfo;
   nearbyDefensePosts(tile: TileRef): Unit[];
 
-  // Events & Messages
-  executions(): Execution[];
   addExecution(...exec: Execution[]): void;
   displayMessage(
     message: string,
