@@ -126,7 +126,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MIRV:
         return {
-          cost: () => 5_000_000,
+          cost: () => 10_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:

@@ -104,7 +104,7 @@ export class NukeExecution implements Execution {
     let magnitude;
     switch (this.type) {
       case UnitType.MIRVWarhead:
-        magnitude = { inner: 10, outer: 14 };
+        magnitude = { inner: 20, outer: 25 };
         break;
       case UnitType.AtomBomb:
         magnitude = { inner: 15, outer: 40 };
