@@ -114,6 +114,10 @@ export class FlagInput extends LitElement {
     this.storeFlag(flag);
   }
 
+  public getCurrentFlag(): string {
+    return this.flag;
+  }
+
   private getStoredFlag(): string {
     const storedFlag = localStorage.getItem(flagKey);
     if (storedFlag) {
@@ -125,6 +129,8 @@ export class FlagInput extends LitElement {
   private storeFlag(flag: string) {
     if (flag) {
       localStorage.setItem(flagKey, flag);
+    } else if (flag === "") {
+      localStorage.removeItem(flagKey);
     }
   }
 

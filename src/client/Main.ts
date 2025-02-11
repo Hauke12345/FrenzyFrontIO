@@ -104,6 +104,7 @@ class Client {
 		this.gameStop = joinLobby(
 			{
 				gameType: event.detail.gameType,
+				flag: (): string => this.flagInput.getCurrentFlag(),
 				playerName: (): string =>
 					this.usernameInput.getCurrentUsername(),
 				gameID: lobby.id,
