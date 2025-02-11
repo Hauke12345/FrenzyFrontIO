@@ -110,7 +110,7 @@ export class NukeExecution implements Execution {
         magnitude = { inner: 15, outer: 40 };
         break;
       case UnitType.HydrogenBomb:
-        magnitude = { inner: 140, outer: 160 };
+        magnitude = { inner: 120, outer: 140 };
         break;
     }
 
