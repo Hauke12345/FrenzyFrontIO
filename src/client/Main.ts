@@ -95,6 +95,8 @@ class Client {
         clientID: generateID(),
         map: event.detail.map,
         difficulty: event.detail.difficulty,
+        disableBots: event.detail.disableBots,
+        disableNPCs: event.detail.disableNPCs,
       },
       () => this.joinModal.close()
     );

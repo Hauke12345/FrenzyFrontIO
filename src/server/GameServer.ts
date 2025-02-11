@@ -57,6 +57,12 @@ export class GameServer {
     if (gameConfig.difficulty != null) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
+    if (gameConfig.disableBots != null) {
+      this.gameConfig.disableBots = gameConfig.disableBots;
+    }
+    if (gameConfig.disableNPCs != null) {
+      this.gameConfig.disableNPCs = gameConfig.disableNPCs;
+    }
   }
 
   public addClient(client: Client, lastTurn: number) {

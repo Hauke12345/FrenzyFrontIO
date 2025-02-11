@@ -94,6 +94,8 @@ app.put("/private_lobby/:id", (req, res) => {
   gm.updateGameConfig(lobbyID, {
     gameMap: req.body.gameMap,
     difficulty: req.body.difficulty,
+    disableBots: req.body.disableBots,
+    disableNPCs: req.body.disableNPCs,
   });
 });
 

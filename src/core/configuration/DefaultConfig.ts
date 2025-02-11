@@ -76,7 +76,10 @@ export class DefaultConfig implements Config {
     return 5;
   }
   spawnNPCs(): boolean {
-    return true;
+    return !this._gameConfig.disableNPCs;
+  }
+  spawnBots(): boolean {
+    return !this._gameConfig.disableBots;
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 100 * Math.pow(dist, 1.1);

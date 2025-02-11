@@ -56,6 +56,8 @@ export interface LobbyConfig {
   gameID: GameID;
   map: GameMapType | null;
   difficulty: Difficulty | null;
+  disableBots: boolean | null;
+  disableNPCs: boolean | null;
 }
 
 export function joinLobby(
@@ -77,6 +79,8 @@ export function joinLobby(
       gameType: GameType.Singleplayer,
       gameMap: lobbyConfig.map,
       difficulty: lobbyConfig.difficulty,
+      disableBots: lobbyConfig.disableBots,
+      disableNPCs: lobbyConfig.disableNPCs,
     };
   }
 
