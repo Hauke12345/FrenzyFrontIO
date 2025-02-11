@@ -26,9 +26,8 @@ export class MirvExecution implements Execution {
 
   private nuke: Unit;
 
-  private mirvRange = 500;
-  private warheadCount = 1000;
-  //   private warheadRange = 5;
+  private mirvRange = 1500;
+  private warheadCount = 500;
 
   private random: PseudoRandom;
 
@@ -92,7 +91,7 @@ export class MirvExecution implements Execution {
 
   private separate() {
     const dsts: TileRef[] = [this.dst];
-    let attempts = 1000;
+    let attempts = 10000;
     while (attempts > 0 && dsts.length < this.warheadCount) {
       attempts--;
       const potential = this.randomLand(this.dst);
@@ -106,6 +105,7 @@ export class MirvExecution implements Execution {
       (a, b) =>
         this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst)
     );
+    console.log(`got ${dsts.length} dsts!!`);
 
     for (const [i, dst] of dsts.entries()) {
       this.mg.addExecution(

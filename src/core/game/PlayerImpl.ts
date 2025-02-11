@@ -17,8 +17,9 @@ import {
   Relation,
   EmojiMessage,
   PlayerProfile,
+  Attack,
 } from "./Game";
-import { PlayerUpdate } from "./GameUpdates";
+import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
 import { ClientID } from "../Schemas";
 import {
@@ -37,6 +38,7 @@ import { renderTroops } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { Emoji } from "discord.js";
+import { AttackImpl } from "./AttackImpl";
 
 interface Target {
   tick: Tick;
@@ -75,6 +77,9 @@ export class PlayerImpl implements Player {
 
   private relations = new Map<Player, number>();
 
+  public _incomingAttacks: Attack[] = [];
+  public _outgoingAttacks: Attack[] = [];
+
   constructor(
     private mg: GameImpl,
     private _smallID: number,
@@ -111,6 +116,22 @@ export class PlayerImpl implements Player {
       isTraitor: this.isTraitor(),
       targets: this.targets().map((p) => p.smallID()),
       outgoingEmojis: this.outgoingEmojis(),
+      outgoingAttacks: this._outgoingAttacks.map(
+        (a) =>
+          ({
+            attackerID: a.attacker().smallID(),
+            targetID: a.target().smallID(),
+            troops: a.troops(),
+          } as AttackUpdate)
+      ),
+      incomingAttacks: this._incomingAttacks.map(
+        (a) =>
+          ({
+            attackerID: a.attacker().smallID(),
+            targetID: a.target().smallID(),
+            troops: a.troops(),
+          } as AttackUpdate)
+      ),
     };
   }
 
@@ -757,6 +778,25 @@ export class PlayerImpl implements Player {
         }
       }
     }
+  }
+
+  createAttack(
+    target: Player | TerraNullius,
+    troops: number,
+    sourceTile: TileRef
+  ): Attack {
+    const attack = new AttackImpl(target, this, troops, sourceTile);
+    this._outgoingAttacks.push(attack);
+    if (target.isPlayer()) {
+      (target as PlayerImpl)._incomingAttacks.push(attack);
+    }
+    return attack;
+  }
+  outgoingAttacks(): Attack[] {
+    return this._outgoingAttacks;
+  }
+  incomingAttacks(): Attack[] {
+    return this._incomingAttacks;
   }
 
   public canAttack(tile: TileRef): boolean {

@@ -195,7 +195,7 @@ export class ControlPanel extends LitElement implements Layer {
               type="range"
               min="1"
               max="100"
-              .value=${this.targetTroopRatio * 100}
+              .value=${(this.targetTroopRatio * 100).toString()}
               @input=${(e: Event) => {
                 this.targetTroopRatio =
                   parseInt((e.target as HTMLInputElement).value) / 100;
@@ -225,7 +225,7 @@ export class ControlPanel extends LitElement implements Layer {
               type="range"
               min="1"
               max="100"
-              .value=${this.attackRatio * 100}
+              .value=${(this.attackRatio * 100).toString()}
               @input=${(e: Event) => {
                 this.attackRatio =
                   parseInt((e.target as HTMLInputElement).value) / 100;
