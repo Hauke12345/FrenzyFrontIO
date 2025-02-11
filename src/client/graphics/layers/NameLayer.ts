@@ -158,7 +158,7 @@ export class NameLayer implements Layer {
 
     const nameDiv = document.createElement("div");
     nameDiv.classList.add('player-name');
-    nameDiv.innerHTML = player.name();
+    nameDiv.innerHTML = (player.type() !== PlayerType.Human ? "🤖 " : '') + player.name();
     nameDiv.style.color = this.theme.playerInfoColor(player.id()).toHex();
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";

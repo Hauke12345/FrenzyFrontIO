@@ -11,6 +11,7 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedDiffculty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
   @state() private disableBots = false;
+  @state() private creativeMode = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private players: string[] = [];
@@ -183,6 +184,14 @@ export class HostLobbyModal extends LitElement {
             />
             <label for="disable-npcs">Disable NPCs</label>
           </div>
+          <div>
+            <input
+              type="checkbox"
+              id="creative-mode"
+              @change=${this.handleCreativeModeChange}
+            />
+            <label for="creative-mode">Creative mode</label>
+          </div>
           <button @click=${this.startGame}>Start Game</button>
           <div>
             <p>Players: ${this.players.join(", ")}</p>
@@ -211,6 +220,7 @@ export class HostLobbyModal extends LitElement {
               difficulty: this.selectedDiffculty,
               disableBots: this.disableBots,
               disableNPCs: this.disableNPCs,
+              creativeMode: this.creativeMode,
             },
             bubbles: true,
             composed: true,
@@ -258,6 +268,12 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
+  private async handleCreativeModeChange(e: Event) {
+    this.creativeMode = Boolean((e.target as HTMLInputElement).checked);
+    consolex.log(`updating creative mode to ${this.creativeMode}`);
+    this.putGameConfig();
+  }
+
   private async putGameConfig() {
     const response = await fetch(`/private_lobby/${this.lobbyId}`, {
       method: "PUT",
@@ -269,6 +285,7 @@ export class HostLobbyModal extends LitElement {
         difficulty: this.selectedDiffculty,
         disableBots: this.disableBots,
         disableNPCs: this.disableNPCs,
+        creativeMode: this.creativeMode,
       }),
     });
   }

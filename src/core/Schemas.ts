@@ -94,6 +94,7 @@ const GameConfigSchema = z.object({
   gameType: z.nativeEnum(GameType),
   disableBots: z.boolean(),
   disableNPCs: z.boolean(),
+  creativeMode: z.boolean(),
 });
 
 const SafeString = z

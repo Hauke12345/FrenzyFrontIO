@@ -51,6 +51,7 @@ export class GameManager {
         difficulty: Difficulty.Medium,
         disableBots: false,
         disableNPCs: false,
+        creativeMode: false,
       })
     );
     return id;
@@ -91,6 +92,7 @@ export class GameManager {
           difficulty: Difficulty.Medium,
           disableBots: false,
           disableNPCs: false,
+          creativeMode: false,
         })
       );
     }
