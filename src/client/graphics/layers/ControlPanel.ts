@@ -112,10 +112,50 @@ export class ControlPanel extends LitElement implements Layer {
 
   render() {
     return html`
+      <style>
+        input[type="range"] {
+          -webkit-appearance: none;
+          background: transparent;
+          outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          background: white;
+          border-width: 2px;
+          border-style: solid;
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        input[type="range"]::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          background: white;
+          border-width: 2px;
+          border-style: solid;
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        .targetTroopRatio::-webkit-slider-thumb {
+          border-color: rgb(59 130 246);
+        }
+        .targetTroopRatio::-moz-range-thumb {
+          border-color: rgb(59 130 246);
+        }
+        .attackRatio::-webkit-slider-thumb {
+          border-color: rgb(239 68 68);
+        }
+        .attackRatio::-moz-range-thumb {
+          border-color: rgb(239 68 68);
+        }
+      </style>
       <div
         class="${this._isVisible
           ? "w-full text-sm lg:text-m lg:w-72 bg-gray-800/70 p-2 pr-3 lg:p-4 shadow-lg rounded-lg backdrop-blur"
           : "hidden"}"
+        @contextmenu=${(e) => e.preventDefault()}
       >
         <div class="hidden lg:block bg-black/30 text-white mb-4 p-2 rounded">
           <div class="flex justify-between mb-1">
@@ -161,13 +201,8 @@ export class ControlPanel extends LitElement implements Layer {
                   parseInt((e.target as HTMLInputElement).value) / 100;
                 this.onTroopChange(this.targetTroopRatio);
               }}
-              class="absolute left-0 right-0 top-2 m-0 h-4 opacity-0 cursor-pointer"
+              class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer targetTroopRatio"
             />
-            <!-- Handle -->
-            <div
-              class="absolute top-2 w-4 h-4 bg-white border-2 border-blue-500 rounded-full -ml-2 cursor-pointer hover:scale-110 transition-transform pointer-events-none"
-              style="left: ${this.targetTroopRatio * 100}%"
-            ></div>
           </div>
         </div>
 
@@ -196,13 +231,8 @@ export class ControlPanel extends LitElement implements Layer {
                   parseInt((e.target as HTMLInputElement).value) / 100;
                 this.onAttackRatioChange(this.attackRatio);
               }}
-              class="absolute left-0 right-0 top-2 m-0 h-4 opacity-0 cursor-pointer"
+              class="absolute left-0 right-0 top-2 m-0 h-4 cursor-pointer attackRatio"
             />
-            <!-- Handle -->
-            <div
-              class="absolute top-2 w-4 h-4 bg-white border-2 border-red-500 rounded-full -ml-2 cursor-pointer hover:scale-110 transition-transform pointer-events-none"
-              style="left: ${this.attackRatio * 100}%"
-            ></div>
           </div>
         </div>
       </div>

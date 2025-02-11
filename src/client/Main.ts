@@ -1,5 +1,5 @@
 import { ClientGameRunner, joinLobby } from "./ClientGameRunner";
-import backgroundImage from "../../resources/images/EuropeBackground.png";
+import backgroundImage from "../../resources/images/EuropeBackground.svg";
 import favicon from "../../resources/images/Favicon.svg";
 
 import "./PublicLobby";
@@ -23,7 +23,7 @@ class Client {
 
   initialize(): void {
     this.usernameInput = document.querySelector(
-      "username-input",
+      "username-input"
     ) as UsernameInput;
     if (!this.usernameInput) {
       consolex.warn("Username input element not found");
@@ -40,11 +40,11 @@ class Client {
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener(
       "single-player",
-      this.handleSinglePlayer.bind(this),
+      this.handleSinglePlayer.bind(this)
     );
 
     const spModal = document.querySelector(
-      "single-player-modal",
+      "single-player-modal"
     ) as SinglePlayerModal;
     spModal instanceof SinglePlayerModal;
     document.getElementById("single-player").addEventListener("click", () => {
@@ -54,7 +54,7 @@ class Client {
     });
 
     const hostModal = document.querySelector(
-      "host-lobby-modal",
+      "host-lobby-modal"
     ) as HostPrivateLobbyModal;
     hostModal instanceof HostPrivateLobbyModal;
     document
@@ -66,7 +66,7 @@ class Client {
       });
 
     this.joinModal = document.querySelector(
-      "join-private-lobby-modal",
+      "join-private-lobby-modal"
     ) as JoinPrivateLobbyModal;
     this.joinModal instanceof JoinPrivateLobbyModal;
     document
@@ -96,7 +96,7 @@ class Client {
         map: event.detail.map,
         difficulty: event.detail.difficulty,
       },
-      () => this.joinModal.close(),
+      () => this.joinModal.close()
     );
   }
 
