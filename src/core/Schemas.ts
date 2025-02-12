@@ -92,6 +92,9 @@ const GameConfigSchema = z.object({
   gameMap: z.nativeEnum(GameMapType),
   difficulty: z.nativeEnum(Difficulty),
   gameType: z.nativeEnum(GameType),
+  disableBots: z.boolean(),
+  disableNPCs: z.boolean(),
+  creativeMode: z.boolean(),
 });
 
 const SafeString = z
@@ -137,6 +140,7 @@ export const AttackIntentSchema = BaseIntentSchema.extend({
 });
 
 export const SpawnIntentSchema = BaseIntentSchema.extend({
+  flag: z.string().nullable(),
   type: z.literal("spawn"),
   playerID: ID,
   name: SafeString,

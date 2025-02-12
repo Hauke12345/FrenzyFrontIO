@@ -49,6 +49,9 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         difficulty: Difficulty.Medium,
+        disableBots: false,
+        disableNPCs: false,
+        creativeMode: false,
       })
     );
     return id;
@@ -87,6 +90,9 @@ export class GameManager {
           gameMap: this.random.randElement(Object.values(GameMapType)),
           gameType: GameType.Public,
           difficulty: Difficulty.Medium,
+          disableBots: false,
+          disableNPCs: false,
+          creativeMode: false,
         })
       );
     }

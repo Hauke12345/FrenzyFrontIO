@@ -76,7 +76,13 @@ export class DefaultConfig implements Config {
     return 5;
   }
   spawnNPCs(): boolean {
-    return true;
+    return !this._gameConfig.disableNPCs;
+  }
+  spawnBots(): boolean {
+    return !this._gameConfig.disableBots;
+  }
+  creativeMode(): boolean {
+    return this._gameConfig.creativeMode;
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 100 * Math.pow(dist, 1.1);
@@ -94,7 +100,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) => (p.units(UnitType.Warship).length + 1) * 250_000,
+          cost: (p: Player) => this.creativeMode() ? 0 : (p.units(UnitType.Warship).length + 1) * 250_000,
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -107,26 +113,27 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               1_000_000,
               Math.pow(2, p.units(UnitType.Port).length) * 250_000
             ),
           territoryBound: true,
-          constructionDuration: 2 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
       case UnitType.AtomBomb:
         return {
-          cost: () => 750_000,
+          cost: () => this.creativeMode() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: () => 5_000_000,
+          cost: () => this.creativeMode() ? 0 : 5_000_000,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: () => 5_000_000,
+          cost: () => this.creativeMode() ? 0 : 10_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -141,29 +148,31 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: () => 1_000_000,
+          cost: () => this.creativeMode() ? 0 : 1_000_000,
           territoryBound: true,
-          constructionDuration: 10 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 10 * 10,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               250_000,
               (p.units(UnitType.DefensePost).length + 1) * 50_000
             ),
           territoryBound: true,
-          constructionDuration: 5 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 5 * 10,
         };
       case UnitType.City:
         return {
           cost: (p: Player) =>
+            this.creativeMode() ? 0 :
             Math.min(
               1_000_000,
               Math.pow(2, p.units(UnitType.City).length) * 125_000
             ),
           territoryBound: true,
-          constructionDuration: 2 * 10,
+          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
       case UnitType.Construction:
         return {
@@ -344,18 +353,32 @@ export class DefaultConfig implements Config {
           return 20_000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return 25_000;
+    return this.creativeMode() ? 1_000_000 : 25_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
-    let maxPop = Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000;
+    let maxPop = this.creativeMode() ? 999_999_999_999 :
+      2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+      player.units(UnitType.City).length * this.cityPopulationIncrease();
+
     if (player.type() == PlayerType.Bot) {
+      return maxPop / 2;
+    }
+
+    if (player.type() == PlayerType.Human) {
       return maxPop;
     }
-    return (
-      maxPop * 2 +
-      player.units(UnitType.City).length * this.cityPopulationIncrease()
-    );
+
+    switch (this._gameConfig.difficulty) {
+      case Difficulty.Easy:
+        return maxPop * 0.5;
+      case Difficulty.Medium:
+        return maxPop * 0.7;
+      case Difficulty.Hard:
+        return maxPop * 1;
+      case Difficulty.Impossible:
+        return maxPop * 1.5;
+    }
   }
 
   populationIncreaseRate(player: Player): number {
@@ -368,24 +391,6 @@ export class DefaultConfig implements Config {
 
     if (player.type() == PlayerType.Bot) {
       toAdd *= 0.7;
-    }
-    let difficultyMultiplier = 1;
-    switch (this._gameConfig.difficulty) {
-      case Difficulty.Easy:
-        difficultyMultiplier = 0.3;
-        break;
-      case Difficulty.Medium:
-        difficultyMultiplier = 0.5;
-        break;
-      case Difficulty.Hard:
-        difficultyMultiplier = 1;
-        break;
-      case Difficulty.Impossible:
-        difficultyMultiplier = 1.2;
-        break;
-    }
-    if (player.type() == PlayerType.FakeHuman) {
-      toAdd *= difficultyMultiplier;
     }
 
     return Math.min(player.population() + toAdd, max) - player.population();

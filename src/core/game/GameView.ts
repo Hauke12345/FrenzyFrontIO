@@ -7,7 +7,7 @@ import {
   PlayerProfile,
   Unit,
 } from "./Game";
-import { PlayerUpdate } from "./GameUpdates";
+import { AttackUpdate, PlayerUpdate } from "./GameUpdates";
 import { UnitUpdate } from "./GameUpdates";
 import { NameViewData } from "./Game";
 import { GameUpdateType } from "./GameUpdates";
@@ -106,6 +106,14 @@ export class PlayerView {
     );
   }
 
+  outgoingAttacks(): AttackUpdate[] {
+    return this.data.outgoingAttacks;
+  }
+
+  incomingAttacks(): AttackUpdate[] {
+    return this.data.incomingAttacks;
+  }
+
   units(...types: UnitType[]): UnitView[] {
     return this.game
       .units(...types)
@@ -118,6 +126,9 @@ export class PlayerView {
 
   smallID(): number {
     return this.data.smallID;
+  }
+  flag(): string {
+    return this.data.flag;
   }
   name(): string {
     return this.data.name;
@@ -188,7 +199,7 @@ export class PlayerView {
     return this.data.outgoingEmojis;
   }
   info(): PlayerInfo {
-    return new PlayerInfo(this.name(), this.type(), this.clientID(), this.id());
+    return new PlayerInfo(this.flag(), this.name(), this.type(), this.clientID(), this.id());
   }
 }
 

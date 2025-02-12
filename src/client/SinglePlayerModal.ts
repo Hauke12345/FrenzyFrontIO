@@ -268,6 +268,31 @@ export class SinglePlayerModal extends LitElement {
             />
             <label for="disable-npcs">Disable NPCs</label>
           </div>
+          <div>
+            <input
+              type="checkbox"
+              id="disable-bots"
+              @change=${this.handleDisableBotsChange}
+            />
+            <label for="disable-bots">Disable Bots</label>
+          </div>
+          <div>
+            <input
+              type="checkbox"
+              id="disable-npcs"
+              @change=${this.handleDisableNPCsChange}
+            />
+            <label for="disable-npcs">Disable NPCs</label>
+          </div>
+
+          <div>
+            <input
+              type="checkbox"
+              id="creative-mode"
+              @change=${this.handleCreativeModeChange}
+            />
+            <label for="creative-mode">Creative mode</label>
+          </div>
 
           <div>
             <input
@@ -298,6 +323,15 @@ export class SinglePlayerModal extends LitElement {
   }
   private handleDifficultySelection(value: Difficulty) {
     this.selectedDifficulty = value;
+  }
+  private handleDisableBotsChange(e: Event) {
+    this.disableBots = Boolean((e.target as HTMLInputElement).checked);
+  }
+  private handleDisableNPCsChange(e: Event) {
+    this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
+  }
+  private handleCreativeModeChange(e: Event) {
+    this.creativeMode = Boolean((e.target as HTMLInputElement).checked);
   }
   private handleDisableBotsChange(e: Event) {
     this.disableBots = Boolean((e.target as HTMLInputElement).checked);

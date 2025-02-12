@@ -1,5 +1,6 @@
 import { PriorityQueue } from "@datastructures-js/priority-queue";
 import {
+  Attack,
   Cell,
   Execution,
   Game,
@@ -37,8 +38,10 @@ export class AttackExecution implements Execution {
 
   private border = new Set<TileRef>();
 
+  private attack: Attack = null;
+
   constructor(
-    private troops: number | null,
+    private startTroops: number | null = null,
     private _ownerID: PlayerID,
     private _targetID: PlayerID | null,
     private sourceTile: TileRef | null,
@@ -80,57 +83,49 @@ export class AttackExecution implements Execution {
       return;
     }
 
-    if (this.troops == null) {
-      this.troops = this.mg.config().attackAmount(this._owner, this.target);
+    if (this.startTroops == null) {
+      this.startTroops = this.mg
+        .config()
+        .attackAmount(this._owner, this.target);
     }
-    this.troops = Math.min(this._owner.troops(), this.troops);
+    this.startTroops = Math.min(this._owner.troops(), this.startTroops);
     if (this.removeTroops) {
-      this._owner.removeTroops(this.troops);
+      this._owner.removeTroops(this.startTroops);
     }
+    this.attack = this._owner.createAttack(
+      this.target,
+      this.startTroops,
+      this.sourceTile
+    );
 
-    for (const exec of mg.executions()) {
-      if (exec.isActive() && exec instanceof AttackExecution && exec != this) {
-        const otherAttack = exec as AttackExecution;
+    for (const incoming of this._owner.incomingAttacks()) {
+      if (incoming.attacker() == this.target) {
         // Target has opposing attack, cancel them out
-        if (
-          this.target.isPlayer() &&
-          otherAttack._targetID == this._ownerID &&
-          this._targetID == otherAttack._ownerID
-        ) {
-          if (otherAttack.troops > this.troops) {
-            otherAttack.troops -= this.troops;
-            // otherAttack.calculateToConquer()
-            this.active = false;
-            return;
-          } else {
-            this.troops -= otherAttack.troops;
-            otherAttack.active = false;
-          }
-        }
-        // Existing attack on same target, add troops
-        if (
-          otherAttack._owner == this._owner &&
-          otherAttack._targetID == this._targetID &&
-          this.sourceTile == otherAttack.sourceTile
-        ) {
-          otherAttack.troops += this.troops;
-          otherAttack.refreshToConquer();
+        if (incoming.troops() > this.attack.troops()) {
+          incoming.setTroops(incoming.troops() - this.attack.troops());
+          this.attack.delete();
           this.active = false;
           return;
+        } else {
+          this.attack.setTroops(this.attack.troops() - incoming.troops());
+          incoming.delete();
         }
       }
     }
-    if (
-      this._owner.type() != PlayerType.Bot &&
-      this.target.isPlayer() &&
-      this.target.type() == PlayerType.Human
-    ) {
-      mg.displayMessage(
-        `You are being attacked by ${this._owner.displayName()}`,
-        MessageType.ERROR,
-        this._targetID
-      );
+    for (const outgoing of this._owner.outgoingAttacks()) {
+      if (
+        outgoing != this.attack &&
+        outgoing.target() == this.attack.target() &&
+        outgoing.sourceTile() == this.attack.sourceTile()
+      ) {
+        // Existing attack on same target, add troops
+        outgoing.setTroops(outgoing.troops() + this.attack.troops());
+        this.active = false;
+        this.attack.delete();
+        return;
+      }
     }
+
     if (this.sourceTile != null) {
       this.addNeighbors(this.sourceTile);
     } else {
@@ -155,9 +150,11 @@ export class AttackExecution implements Execution {
   }
 
   tick(ticks: number) {
-    if (!this.active) {
+    if (!this.attack.isActive()) {
+      this.active = false;
       return;
     }
+
     const alliance = this._owner.allianceWith(this.target as Player);
     if (this.breakAlliance && alliance != null) {
       this.breakAlliance = false;
@@ -165,7 +162,8 @@ export class AttackExecution implements Execution {
     }
     if (this.target.isPlayer() && this._owner.isAlliedWith(this.target)) {
       // In this case a new alliance was created AFTER the attack started.
-      this._owner.addTroops(this.troops);
+      this._owner.addTroops(this.attack.troops());
+      this.attack.delete();
       this.active = false;
       return;
     }
@@ -173,7 +171,7 @@ export class AttackExecution implements Execution {
     let numTilesPerTick = this.mg
       .config()
       .attackTilesPerTick(
-        this.troops,
+        this.attack.troops(),
         this._owner,
         this.target,
         this.border.size + this.random.nextInt(0, 5)
@@ -182,7 +180,8 @@ export class AttackExecution implements Execution {
     // consolex.log(`num execs: ${this.mg.executions().length}`)
 
     while (numTilesPerTick > 0) {
-      if (this.troops < 1) {
+      if (this.attack.troops() < 1) {
+        this.attack.delete();
         this.active = false;
         return;
       }
@@ -190,7 +189,8 @@ export class AttackExecution implements Execution {
       if (this.toConquer.size() == 0) {
         this.refreshToConquer();
         this.active = false;
-        this._owner.addTroops(this.troops);
+        this._owner.addTroops(this.attack.troops());
+        this.attack.delete();
         return;
       }
 
@@ -209,13 +209,13 @@ export class AttackExecution implements Execution {
         .config()
         .attackLogic(
           this.mg,
-          this.troops,
+          this.attack.troops(),
           this._owner,
           this.target,
           tileToConquer
         );
       numTilesPerTick -= tilesPerTickUsed;
-      this.troops -= attackerTroopLoss;
+      this.attack.setTroops(this.attack.troops() - attackerTroopLoss);
       if (this.target.isPlayer()) {
         this.target.removeTroops(defenderTroopLoss);
       }

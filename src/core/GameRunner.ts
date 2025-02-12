@@ -58,9 +58,11 @@ export class GameRunner {
   ) {}
 
   init() {
-    this.game.addExecution(
-      ...this.execManager.spawnBots(this.game.config().numBots())
-    );
+    if (this.game.config().spawnBots()) {
+      this.game.addExecution(
+        ...this.execManager.spawnBots(this.game.config().numBots())
+      );
+    }
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
     }

@@ -18,14 +18,14 @@ export class DevConfig extends DefaultConfig {
   }
 
   numSpawnPhaseTurns(): number {
-    return this.gameConfig().gameType == GameType.Singleplayer ? 20 : 100;
+    return this.gameConfig().gameType == GameType.Singleplayer ? 40 : 100;
     // return 100
   }
 
   unitInfo(type: UnitType): UnitInfo {
     const info = super.unitInfo(type);
     const oldCost = info.cost;
-    info.cost = (p: Player) => oldCost(p) / 1000000000;
+    // info.cost = (p: Player) => oldCost(p) / 1000000000;
     return info;
   }
 

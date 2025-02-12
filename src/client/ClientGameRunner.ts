@@ -48,6 +48,7 @@ import { GameView, PlayerView } from "../core/game/GameView";
 import { GameUpdateViewData } from "../core/game/GameUpdates";
 
 export interface LobbyConfig {
+  flag: () => string;
   playerName: () => string;
   clientID: ClientID;
   playerID: PlayerID;
@@ -56,6 +57,9 @@ export interface LobbyConfig {
   gameID: GameID;
   map: GameMapType | null;
   difficulty: Difficulty | null;
+  disableBots: boolean | null;
+  disableNPCs: boolean | null;
+  creativeMode: boolean | null;
 }
 
 export function joinLobby(
@@ -77,6 +81,9 @@ export function joinLobby(
       gameType: GameType.Singleplayer,
       gameMap: lobbyConfig.map,
       difficulty: lobbyConfig.difficulty,
+      disableBots: lobbyConfig.disableBots,
+      disableNPCs: lobbyConfig.disableNPCs,
+      creativeMode: lobbyConfig.creativeMode,
     };
   }
 

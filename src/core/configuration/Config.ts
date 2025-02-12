@@ -70,6 +70,8 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
+  spawnBots(): boolean;
+  creativeMode(): boolean;
   numSpawnPhaseTurns(): number;
 
   startManpower(playerInfo: PlayerInfo): number;

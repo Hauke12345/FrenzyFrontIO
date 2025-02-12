@@ -2,6 +2,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import webpack from 'webpack';
+import CopyPlugin from "copy-webpack-plugin";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,6 +15,7 @@ export default (env, argv) => {
 		output: {
 			filename: 'bundle.js',
 			path: path.resolve(__dirname, 'out'),
+			clean: true
 		},
 		module: {
 			rules: [
@@ -100,8 +102,17 @@ export default (env, argv) => {
 			new webpack.DefinePlugin({
 				'process.env.GAME_ENV': JSON.stringify(isProduction ? 'prod' : 'dev')
 			}),
+			new CopyPlugin({
+				patterns: [
+					{ from: "resources", to: path.resolve(__dirname, 'out') },
+				],
+				options: {
+					concurrency: 100,
+				},
+			}),
 		],
 		devServer: isProduction ? {} : {
+			devMiddleware: { writeToDisk: true },
 			static: {
 				directory: path.join(__dirname, 'out'),
 			},
