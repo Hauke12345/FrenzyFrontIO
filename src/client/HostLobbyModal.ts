@@ -305,6 +305,7 @@ export class HostLobbyModal extends LitElement {
 
   private async copyToClipboard() {
     try {
+      //TODO: Convert id to url and copy
       await navigator.clipboard.writeText(this.lobbyId);
       this.copySuccess = true;
       setTimeout(() => {

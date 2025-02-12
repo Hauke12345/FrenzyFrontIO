@@ -162,7 +162,7 @@ export class FlagInput extends LitElement {
                       </button>`
                     : html`<img
                           class="selected-flag"
-                          src="flags/${this.flag}.svg"
+                          src="/flags/${this.flag}.svg"
                           @click=${() => (this.showModal = true)}
                       />`}
                 ${this.showModal
@@ -187,7 +187,7 @@ export class FlagInput extends LitElement {
                                   >
                                       <img
                                           class="country-flag"
-                                          src="flags/none.svg"
+                                          src="/flags/none.svg"
                                       />
                                       <span class="country-name">None</span>
                                   </button>
@@ -212,7 +212,7 @@ export class FlagInput extends LitElement {
                                           >
                                               <img
                                                   class="country-flag"
-                                                  src="flags/${country.code}.svg"
+                                                  src="/flags/${country.code}.svg"
                                               />
                                               <span class="country-name"
                                                   >${country.name}</span
