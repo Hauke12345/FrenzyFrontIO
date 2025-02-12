@@ -149,18 +149,6 @@ export class NameLayer implements Layer {
     element.style.alignItems = "center";
     element.style.gap = "0px";
 
-    if (player.flag()) {
-      const flagImg = document.createElement("img");
-      flagImg.classList.add("player-flag");
-      flagImg.style.marginBottom = "-5%";
-      flagImg.style.opacity = "0.8";
-      flagImg.src = "flags/" + sanitize(player.flag()) + ".svg";
-      flagImg.style.zIndex = "1";
-      flagImg.style.width = "40%";
-      flagImg.style.aspectRatio = "3/4";
-      element.appendChild(flagImg);
-    }
-
     const textColor = player.type() == PlayerType.Human ? "#000000" : "#4D4D4D";
 
     const nameDiv = document.createElement("div");
@@ -180,7 +168,7 @@ export class NameLayer implements Layer {
       flagImg.style.marginBottom = "-10%";
       flagImg.style.marginTop = "-20%";
       flagImg.style.opacity = "0.8";
-      flagImg.src = "flags/" + sanitize(player.flag()) + ".svg";
+      flagImg.src = "/flags/" + sanitize(player.flag()) + ".svg";
       flagImg.style.zIndex = "1";
       flagImg.style.width = "30%";
       flagImg.style.aspectRatio = "3/4";
