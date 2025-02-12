@@ -152,80 +152,66 @@ export class FlagInput extends LitElement {
   }
 
   render() {
-        return html`
-            <div class="flag-container">
-                ${this.flag === ""
-                    ? html` <button
-                          class="no-selected-flag"
-                          @click=${() => (this.showModal = true)}
+    return html`
+      <div class="flag-container">
+        ${this.flag === ""
+          ? html` <button
+              class="no-selected-flag"
+              @click=${() => (this.showModal = true)}
+            >
+              Flags
+            </button>`
+          : html`<img
+              class="selected-flag"
+              src="/flags/${this.flag}.svg"
+              @click=${() => (this.showModal = true)}
+            />`}
+        ${this.showModal
+          ? html`
+              <div class="flag-modal ${this.showModal ? "" : "hidden"}">
+                <input
+                  class="flag-search"
+                  type="text"
+                  placeholder="Search..."
+                  @change=${this.handleSearch}
+                  @keyup=${this.handleSearch}
+                />
+                <div class="flag-dropdown">
+                  <!-- Show each flag as button -->
+                  <button
+                    @click=${() => this.setFlag("")}
+                    class="dropdown-item"
+                  >
+                    <img class="country-flag" src="/flags/none.svg" />
+                    <span class="country-name">None</span>
+                  </button>
+                  ${Countries.filter(
+                    (country) =>
+                      country.name
+                        .toLowerCase()
+                        .includes(this.search.toLowerCase()) ||
+                      country.code
+                        .toLowerCase()
+                        .includes(this.search.toLowerCase()),
+                  ).map(
+                    (country) => html`
+                      <button
+                        @click=${() => this.setFlag(country.code)}
+                        class="dropdown-item"
                       >
-                          Flags
-                      </button>`
-                    : html`<img
-                          class="selected-flag"
-                          src="/flags/${this.flag}.svg"
-                          @click=${() => (this.showModal = true)}
-                      />`}
-                ${this.showModal
-                    ? html`
-                          <div
-                              class="flag-modal ${this.showModal
-                                  ? ""
-                                  : "hidden"}"
-                          >
-                              <input
-                                  class="flag-search"
-                                  type="text"
-                                  placeholder="Search..."
-                                  @change=${this.handleSearch}
-                                  @keyup=${this.handleSearch}
-                              />
-                              <div class="flag-dropdown">
-                                  <!-- Show each flag as button -->
-                                  <button
-                                      @click=${() => this.setFlag("")}
-                                      class="dropdown-item"
-                                  >
-                                      <img
-                                          class="country-flag"
-                                          src="/flags/none.svg"
-                                      />
-                                      <span class="country-name">None</span>
-                                  </button>
-                                  ${Countries.filter(
-                                      (country) =>
-                                          country.name
-                                              .toLowerCase()
-                                              .includes(
-                                                  this.search.toLowerCase()
-                                              ) ||
-                                          country.code
-                                              .toLowerCase()
-                                              .includes(
-                                                  this.search.toLowerCase()
-                                              )
-                                  ).map(
-                                      (country) => html`
-                                          <button
-                                              @click=${() =>
-                                                  this.setFlag(country.code)}
-                                              class="dropdown-item"
-                                          >
-                                              <img
-                                                  class="country-flag"
-                                                  src="/flags/${country.code}.svg"
-                                              />
-                                              <span class="country-name"
-                                                  >${country.name}</span
-                                              >
-                                          </button>
-                                      `
-                                  )}
-                              </div>
-                          </div>
-                      `
-                    : ""}
-            </div>
-        `;
-    }
+                        <img
+                          class="country-flag"
+                          src="/flags/${country.code}.svg"
+                        />
+                        <span class="country-name">${country.name}</span>
+                      </button>
+                    `,
+                  )}
+                </div>
+              </div>
+            `
+          : ""}
+      </div>
+    `;
+  }
 }
