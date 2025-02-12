@@ -1,5 +1,7 @@
 # OpenFront.io
 
+![Prettier Check](https://github.com/openfrontio/OpenFrontIO/actions/workflows/prettier.yml/badge.svg)
+
 OpenFront is an online rts.
 
 This is a fork/rewrite of WarFront.io. Credit to https://github.com/WarFrontIO.
