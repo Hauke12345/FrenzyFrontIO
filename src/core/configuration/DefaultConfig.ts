@@ -205,7 +205,7 @@ export class DefaultConfig implements Config {
     return 5 * 10;
   }
   emojiMessageCooldown(): Tick {
-    return 15 * 10;
+    return 5 * 10;
   }
   targetDuration(): Tick {
     return 10 * 10;
