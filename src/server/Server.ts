@@ -183,6 +183,11 @@ wss.on("connection", (ws, req) => {
       console.log(`errror handling websocket message: ${error}`);
     }
   });
+  ws.on("error", (error: Error) => {
+    if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
+      ws.close(1002);
+    }
+  });
 });
 
 function runGame() {
