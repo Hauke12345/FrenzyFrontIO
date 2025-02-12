@@ -1,14 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-tg" viewBox="0 0 640 480">
-  <defs>
-    <clipPath id="tg-a">
-      <path fill-opacity=".7" d="M0 0h682.7v512H0z"/>
-    </clipPath>
-  </defs>
-  <g fill-rule="evenodd" clip-path="url(#tg-a)" transform="scale(.9375)">
-    <path fill="#ffe300" d="M0 0h767.6v512H0z"/>
-    <path fill="#118600" d="M0 208.1h767.6V311H0zM0 .2h767.6v102.9H0z"/>
-    <path fill="#d80000" d="M0 .3h306.5v310.6H0z"/>
-    <path fill="#fff" d="M134.4 128.4c0-.8 18.9-53 18.9-53l17 52.2s57.4 1.7 57.4.8-45.3 34.3-45.3 34.3 21.4 60 20.5 58.2-49.6-36-49.6-36-49.7 34.3-48.8 34.3c.8 0 18.8-56.5 18.8-56.5l-44.5-33.4z"/>
-    <path fill="#118600" d="M0 409.2h767.6V512H0z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#fcea2b"/>
+    <rect x="5" y="32" width="62" height="8" fill="#5c9e31"/>
+    <rect x="5" y="47" width="62" height="8" fill="#5c9e31"/>
+    <rect x="5" y="17" width="62" height="8" fill="#5c9e31"/>
+    <rect x="5" y="17" width="23" height="23" fill="#d22f27"/>
+    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="14.415 33 17.07 25 19.359 32.878 13 28.131 21 27.933 14.415 33"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>

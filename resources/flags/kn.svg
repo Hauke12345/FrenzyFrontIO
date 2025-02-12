@@ -1,14 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-kn" viewBox="0 0 640 480">
-  <defs>
-    <clipPath id="kn-a">
-      <path fill-opacity=".7" d="M-80.1 0h682.7v512H-80.1z"/>
-    </clipPath>
-  </defs>
-  <g fill-rule="evenodd" clip-path="url(#kn-a)" transform="translate(75.1)scale(.9375)">
-    <path fill="#ffe900" d="M-107.8.2h737.6v511.3h-737.6z"/>
-    <path fill="#35a100" d="m-108.2.2.8 368.6L466.6 0z"/>
-    <path fill="#c70000" d="m630.7 511.5-1.4-383.2-579 383.5z"/>
-    <path fill="#000001" d="m-107.9 396.6.5 115.4 125.3-.2 611.7-410.1L629 1.4 505.2.2z"/>
-    <path fill="#fff" d="m380.4 156.6-9.8-42.2 33.3 27 38-24.6-17.4 41.3 33.4 27-44.2-1.5-17.3 41.3-9.9-42.2-44.1-1.5zm-275.2 179-9.9-42.3 33.3 27 38-24.6-17.4 41.3 33.4 27-44.1-1.5-17.4 41.3-9.8-42.2-44.1-1.5z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#d22f27" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polygon fill="#5c9e31" points="5 17 5 55 67 17 5 17"/>
+    <polygon stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="67 24 67 17 59 17 5 48 5 55 13 55 67 24"/>
+    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="44.799 33.5 43.78 28.5 47.5 31.905 42.5 31.396 46.87 28.815 44.799 33.5"/>
+    <polygon fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" points="25.799 44.5 24.78 39.5 28.5 42.905 23.5 42.396 27.87 39.815 25.799 44.5"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>

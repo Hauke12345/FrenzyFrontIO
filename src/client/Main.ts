@@ -12,8 +12,8 @@ import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
 import { generateID } from "../core/Util";
 import { generateCryptoRandomUUID } from "./Utils";
 import { consolex } from "../core/Consolex";
-import "./components/FlagInput";
-import { FlagInput } from "./components/FlagInput";
+import "./FlagInput";
+import { FlagInput } from "./FlagInput";
 import page from "page";
 
 class Client {

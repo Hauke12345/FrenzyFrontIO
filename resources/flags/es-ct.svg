@@ -1,4 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-es-ct" viewBox="0 0 640 480">
-  <path fill="#fcdd09" d="M0 0h640v480H0z"/>
-  <path stroke="#da121a" stroke-width="60" d="M0 90h810m0 120H0m0 120h810m0 120H0" transform="scale(.79012 .88889)"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#f1b31c"/>
+    <rect x="5" y="22" width="62" height="4" fill="#d22f27"/>
+    <rect x="5" y="30" width="62" height="4" fill="#d22f27"/>
+    <rect x="5" y="38" width="62" height="4" fill="#d22f27"/>
+    <rect x="5" y="46" width="62" height="4" fill="#d22f27"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
 </svg>

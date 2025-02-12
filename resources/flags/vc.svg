@@ -1,8 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-vc" viewBox="0 0 640 480">
-  <g fill-rule="evenodd">
-    <path fill="#f4f100" d="M0 0h640v480H0z"/>
-    <path fill="#199a00" d="M490 0h150v480H490z"/>
-    <path fill="#0058aa" d="M0 0h150v480H0z"/>
-    <path fill="#199a00" d="m259.3 130-46.4 71.3 44.7 74.4 43.8-73.7zm121.2 0-46.3 71.3 44.7 74.4 43.8-73.7zm-61.2 97.3-46.4 71.4 44.8 74.4 43.8-73.7-42.2-72z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#fcea2b"/>
+    <rect x="5" y="17" width="21" height="38" fill="#1e50a0"/>
+    <rect x="46" y="17" width="21" height="38" fill="#5c9e31"/>
+    <g>
+      <polygon fill="#5c9e31" points="39.182 41 36 46 32.818 41 36 36 39.182 41"/>
+      <polygon fill="#5c9e31" points="43 35 39.818 40 36.636 35 39.818 30 43 35"/>
+      <polygon fill="#5c9e31" points="35.364 35 32.182 40 29 35 32.182 30 35.364 35"/>
+    </g>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>

@@ -1,16 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-km" viewBox="0 0 640 480">
-  <defs>
-    <clipPath id="km-a">
-      <path fill-opacity=".7" d="M0 0h682.7v512H0z"/>
-    </clipPath>
-  </defs>
-  <g fill-rule="evenodd" clip-path="url(#km-a)" transform="scale(.9375)">
-    <path fill="#ff0" d="M0 0h768.8v128H0z"/>
-    <path fill="#fff" d="M0 128h768.8v128H0z"/>
-    <path fill="#be0027" d="M0 256h768.8v128H0z"/>
-    <path fill="#3b5aa3" d="M0 384h768.8v128H0z"/>
-    <path fill="#239e46" d="M0 0v512l381.9-255.3z"/>
-    <path fill="#fff" d="M157.2 141.4c-85-4.3-123.9 63.5-123.8 115.9-.2 62 58.6 113 112.8 110C117 353.5 81.2 314.6 81 257c-.3-52.1 29.5-97.5 76.3-115.6z"/>
-    <path fill="#fff" d="m156 197-12-9.3-14.6 4.6 5.2-14.4-8.8-12.4 15.2.6 9-12.3 4.3 14.7 14.4 4.8-12.6 8.5zm-.3 52.1-12-9.4-14.6 4.6 5.3-14.3-8.9-12.4 15.3.5 9-12.2 4.2 14.6 14.5 4.9-12.7 8.5zm.2 52.6-12-9.4-14.5 4.6 5.2-14.3-8.8-12.4 15.2.5 9-12.2 4.3 14.6 14.4 4.8-12.6 8.6zm-.2 53-12-9.3L129 350l5.3-14.4-8.9-12.4 15.3.6 9-12.3 4.2 14.7 14.5 4.8-12.7 8.5z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#1e50a0"/>
+    <rect x="5" y="27" width="62" height="9" fill="#fff"/>
+    <rect x="5" y="36" width="62" height="9" fill="#d22f27"/>
+    <rect x="5" y="17" width="62" height="10" fill="#f1b31c"/>
+    <polygon fill="#5c9e31" points="37 36 5 55 5 17 37 36"/>
+    <g>
+      <circle cx="19" cy="31" r="1.0435" fill="#fff"/>
+      <circle cx="19" cy="34.3333" r="1.0435" fill="#fff"/>
+      <circle cx="19" cy="37.6667" r="1.0435" fill="#fff"/>
+      <circle cx="19" cy="41" r="1.0435" fill="#fff"/>
+    </g>
+    <path fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" d="M11.6929,36.125a7.4815,7.4815,0,0,1,5.9889-7.3567,7.3762,7.3762,0,0,0-1.4373-.1433,7.5,7.5,0,0,0,0,15,7.3839,7.3839,0,0,0,1.4373-.1432A7.4817,7.4817,0,0,1,11.6929,36.125Z"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>

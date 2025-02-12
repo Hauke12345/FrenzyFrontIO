@@ -69,10 +69,6 @@
     "name": "Ascension Island"
   },
   {
-    "code": "asean",
-    "name": "Association of Southeast Asian Nations"
-  },
-  {
     "code": "au",
     "continent": "Oceania",
     "name": "Australia"
@@ -234,10 +230,6 @@
     "name": "Central African Republic"
   },
   {
-    "code": "cefta",
-    "name": "Central European Free Trade Agreement"
-  },
-  {
     "code": "td",
     "continent": "Africa",
     "name": "Chad"
@@ -344,10 +336,6 @@
     "code": "do",
     "continent": "North America",
     "name": "Dominican Republic"
-  },
-  {
-    "code": "eac",
-    "name": "East African Community"
   },
   {
     "code": "ec",
@@ -662,10 +650,6 @@
     "name": "Latvia"
   },
   {
-    "code": "arab",
-    "name": "League of Arab States"
-  },
-  {
     "code": "lb",
     "continent": "Asia",
     "name": "Lebanon"
@@ -871,11 +855,6 @@
     "name": "North Macedonia"
   },
   {
-    "code": "gb-nir",
-    "continent": "Europe",
-    "name": "Northern Ireland"
-  },
-  {
     "code": "mp",
     "continent": "Oceania",
     "name": "Northern Mariana Islands"
@@ -889,10 +868,6 @@
     "code": "om",
     "continent": "Asia",
     "name": "Oman"
-  },
-  {
-    "code": "pc",
-    "name": "Pacific Community"
   },
   {
     "code": "pk",
