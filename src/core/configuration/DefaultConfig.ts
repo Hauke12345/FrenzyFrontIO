@@ -292,13 +292,24 @@ export class DefaultConfig implements Config {
       }
     }
 
+    let largeTerritoryBonus = 1;
+    if (attacker.numTilesOwned() > 100_000) {
+      // Speed up the late game
+      largeTerritoryBonus = 100_000 / attacker.numTilesOwned();
+    }
+
     if (defender.isPlayer()) {
       return {
         attackerTroopLoss:
-          within(defender.troops() / (attackTroops * 0.5), 0.25, 4) * mag * 0.5,
+          within(defender.troops() / (attackTroops * 0.5), 0.25, 4) *
+          mag *
+          0.5 *
+          largeTerritoryBonus,
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
-          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) * speed,
+          within(defender.troops() / (5 * attackTroops), 0.2, 1.5) *
+          speed *
+          largeTerritoryBonus,
       };
     } else {
       return {
