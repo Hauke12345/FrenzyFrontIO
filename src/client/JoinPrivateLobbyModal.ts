@@ -228,7 +228,12 @@ export class JoinPrivateLobbyModal extends LitElement {
           <span class="close" @click=${this.closeAndLeave}>&times;</span>
           <div class="title">Join Private Lobby</div>
           <div class="lobby-id-box">
-            <input type="text" id="lobbyIdInput" placeholder="Enter Lobby ID" />
+            <input
+              type="text"
+              id="lobbyIdInput"
+              placeholder="Enter Lobby ID"
+              @keyup=${this.handleChange}
+            />
             <button
               @click=${this.pasteFromClipboard}
               class="lobby-id-paste-button"
@@ -280,8 +285,13 @@ export class JoinPrivateLobbyModal extends LitElement {
     `;
   }
 
-  public open() {
+  public open(id: string = "") {
     this.isModalOpen = true;
+
+    if (id) {
+      this.setLobbyId(id);
+      this.joinLobby();
+    }
   }
 
   public close() {
@@ -306,18 +316,37 @@ export class JoinPrivateLobbyModal extends LitElement {
     );
   }
 
+  private setLobbyId(id: string) {
+    if (id.startsWith("http")) {
+      this.lobbyIdInput.value = id.split("join/")[1];
+    } else {
+      this.lobbyIdInput.value = id;
+    }
+  }
+
+  private handleChange(e: Event) {
+    const value = (e.target as HTMLInputElement).value.trim();
+    this.setLobbyId(value);
+  }
+
   private async pasteFromClipboard() {
     try {
-      // TODO: This can be either a link or a id, check if it's a link
       const clipText = await navigator.clipboard.readText();
-      this.lobbyIdInput.value = clipText;
+
+      let lobbyId: string;
+      if (clipText.startsWith("http")) {
+        lobbyId = clipText.split("join/")[1];
+      } else {
+        lobbyId = clipText;
+      }
+
+      this.lobbyIdInput.value = lobbyId;
     } catch (err) {
       consolex.error("Failed to read clipboard contents: ", err);
     }
   }
 
   private joinLobby() {
-    // TODO: This can be either a link or a id, check if it's a link
     const lobbyId = this.lobbyIdInput.value;
     consolex.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = "Checking lobby..."; // Set initial message
