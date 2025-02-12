@@ -193,6 +193,36 @@ export class SinglePlayerModal extends LitElement {
       align-items: center;
       justify-content: center;
     }
+
+    .option-card input[type="checkbox"] {
+      display: none;
+    }
+
+    label.option-card:hover {
+      transform: none;
+    }
+
+    .checkbox-icon {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #aaa;
+      border-radius: 6px;
+      margin: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .option-card.selected .checkbox-icon {
+      border-color: #4a9eff;
+      background: #4a9eff;
+    }
+
+    .option-card.selected .checkbox-icon::after {
+      content: "✓";
+      color: white;
+    }
   `;
 
   render() {
@@ -251,56 +281,54 @@ export class SinglePlayerModal extends LitElement {
                   )}
               </div>
             </div>
-          </div>
-          <div>
-            <input
-              type="checkbox"
-              id="disable-bots"
-              @change=${this.handleDisableBotsChange}
-            />
-            <label for="disable-bots">Disable Bots</label>
-          </div>
-          <div>
-            <input
-              type="checkbox"
-              id="disable-npcs"
-              @change=${this.handleDisableNPCsChange}
-            />
-            <label for="disable-npcs">Disable NPCs</label>
-          </div>
-          <div>
-            <input
-              type="checkbox"
-              id="disable-bots"
-              @change=${this.handleDisableBotsChange}
-            />
-            <label for="disable-bots">Disable Bots</label>
-          </div>
-          <div>
-            <input
-              type="checkbox"
-              id="disable-npcs"
-              @change=${this.handleDisableNPCsChange}
-            />
-            <label for="disable-npcs">Disable NPCs</label>
-          </div>
 
-          <div>
-            <input
-              type="checkbox"
-              id="creative-mode"
-              @change=${this.handleCreativeModeChange}
-            />
-            <label for="creative-mode">Creative mode</label>
-          </div>
+            <!-- Game Options -->
+            <div class="options-section">
+              <div class="option-title">Options</div>
+              <div class="option-cards">
+                <label
+                  for="disable-bots"
+                  class="option-card ${this.disableBots ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="disable-bots"
+                    @change=${this.handleDisableBotsChange}
+                    .checked=${this.disableBots}
+                  />
+                  <div class="option-card-title">Disable Bots</div>
+                </label>
 
-          <div>
-            <input
-              type="checkbox"
-              id="creative-mode"
-              @change=${this.handleCreativeModeChange}
-            />
-            <label for="creative-mode">Creative mode</label>
+                <label
+                  for="disable-npcs"
+                  class="option-card ${this.disableNPCs ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="disable-npcs"
+                    @change=${this.handleDisableNPCsChange}
+                    .checked=${this.disableNPCs}
+                  />
+                  <div class="option-card-title">Disable NPCs</div>
+                </label>
+
+                <label
+                  for="creative-mode"
+                  class="option-card ${this.creativeMode ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="creative-mode"
+                    @change=${this.handleCreativeModeChange}
+                    .checked=${this.creativeMode}
+                  />
+                  <div class="option-card-title">Creative Mode</div>
+                </label>
+              </div>
+            </div>
           </div>
 
           <button @click=${this.startGame} class="start-game-button">
