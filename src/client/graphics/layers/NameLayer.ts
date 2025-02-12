@@ -161,11 +161,12 @@ export class NameLayer implements Layer {
       element.appendChild(flagImg);
     }
 
+    const textColor = player.type() == PlayerType.Human ? "#000000" : "#4D4D4D";
+
     const nameDiv = document.createElement("div");
     nameDiv.classList.add("player-name");
-    nameDiv.innerHTML =
-      (player.type() !== PlayerType.Human ? "🤖 " : "") + player.name();
-    nameDiv.style.color = this.theme.playerInfoColor(player.id()).toHex();
+    nameDiv.innerHTML = player.name();
+    nameDiv.style.color = textColor;
     nameDiv.style.fontFamily = this.theme.font();
     nameDiv.style.whiteSpace = "nowrap";
     nameDiv.style.overflow = "hidden";
@@ -176,7 +177,7 @@ export class NameLayer implements Layer {
     const troopsDiv = document.createElement("div");
     troopsDiv.classList.add("player-troops");
     troopsDiv.textContent = renderTroops(player.troops());
-    troopsDiv.style.color = this.theme.playerInfoColor(player.id()).toHex();
+    troopsDiv.style.color = textColor;
     troopsDiv.style.fontFamily = this.theme.font();
     troopsDiv.style.fontWeight = "bold";
     troopsDiv.style.zIndex = "3";
