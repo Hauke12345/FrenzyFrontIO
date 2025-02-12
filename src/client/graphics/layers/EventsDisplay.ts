@@ -1,8 +1,11 @@
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { AllPlayers, MessageType } from "../../../core/game/Game";
-import { DisplayMessageUpdate } from "../../../core/game/GameUpdates";
+import { AllPlayers, MessageType, PlayerType } from "../../../core/game/Game";
+import {
+  AttackUpdate,
+  DisplayMessageUpdate,
+} from "../../../core/game/GameUpdates";
 import { EmojiUpdate } from "../../../core/game/GameUpdates";
 import { TargetPlayerUpdate } from "../../../core/game/GameUpdates";
 import { AllianceExpiredUpdate } from "../../../core/game/GameUpdates";
@@ -16,6 +19,7 @@ import { SendAllianceReplyIntentEvent } from "../../Transport";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { onlyImages, sanitize } from "../../../core/Util";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { renderTroops } from "../../Utils";
 
 interface Event {
   description: string;
@@ -38,6 +42,8 @@ export class EventsDisplay extends LitElement implements Layer {
   public clientID: ClientID;
 
   private events: Event[] = [];
+  @state() private incomingAttacks: AttackUpdate[] = [];
+  @state() private outgoingAttacks: AttackUpdate[] = [];
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
@@ -54,6 +60,8 @@ export class EventsDisplay extends LitElement implements Layer {
   constructor() {
     super();
     this.events = [];
+    this.incomingAttacks = [];
+    this.outgoingAttacks = [];
   }
 
   init() {}
@@ -85,12 +93,18 @@ export class EventsDisplay extends LitElement implements Layer {
     if (!myPlayer) {
       return;
     }
-    myPlayer.incomingAttacks().forEach((a) => {
-      // console.log(`got incoming attack: ${JSON.stringify(a)}`);
+
+    // Update attacks
+    this.incomingAttacks = myPlayer.incomingAttacks().filter((a) => {
+      const t = (this.game.playerBySmallID(a.attackerID) as PlayerView).type();
+      return t != PlayerType.Bot;
     });
-    myPlayer.outgoingAttacks().forEach((a) => {
-      // console.log(`got outgoing attack: ${JSON.stringify(a)}`);
-    });
+
+    this.outgoingAttacks = myPlayer
+      .outgoingAttacks()
+      .filter((a) => a.targetID != 0);
+
+    this.requestUpdate();
   }
 
   private addEvent(event: Event) {
@@ -136,10 +150,10 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     const requestor = this.game.playerBySmallID(
-      update.requestorID
+      update.requestorID,
     ) as PlayerView;
     const recipient = this.game.playerBySmallID(
-      update.recipientID
+      update.recipientID,
     ) as PlayerView;
 
     this.addEvent({
@@ -150,7 +164,7 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, true)
+              new SendAllianceReplyIntentEvent(requestor, recipient, true),
             ),
         },
         {
@@ -158,7 +172,7 @@ export class EventsDisplay extends LitElement implements Layer {
           className: "btn-info",
           action: () =>
             this.eventBus.emit(
-              new SendAllianceReplyIntentEvent(requestor, recipient, false)
+              new SendAllianceReplyIntentEvent(requestor, recipient, false),
             ),
         },
       ],
@@ -167,7 +181,7 @@ export class EventsDisplay extends LitElement implements Layer {
       createdAt: this.game.ticks(),
       onDelete: () =>
         this.eventBus.emit(
-          new SendAllianceReplyIntentEvent(requestor, recipient, false)
+          new SendAllianceReplyIntentEvent(requestor, recipient, false),
         ),
     });
   }
@@ -179,7 +193,7 @@ export class EventsDisplay extends LitElement implements Layer {
     }
 
     const recipient = this.game.playerBySmallID(
-      update.request.recipientID
+      update.request.recipientID,
     ) as PlayerView;
 
     this.addEvent({
@@ -224,8 +238,8 @@ export class EventsDisplay extends LitElement implements Layer {
       update.player1ID === myPlayer.smallID()
         ? update.player2ID
         : update.player2ID === myPlayer.smallID()
-        ? update.player1ID
-        : null;
+          ? update.player1ID
+          : null;
     const other = this.game.playerBySmallID(otherID) as PlayerView;
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
@@ -261,7 +275,7 @@ export class EventsDisplay extends LitElement implements Layer {
         ? AllPlayers
         : this.game.playerBySmallID(update.emoji.recipientID);
     const sender = this.game.playerBySmallID(
-      update.emoji.senderID
+      update.emoji.senderID,
     ) as PlayerView;
 
     if (recipient == myPlayer) {
@@ -300,8 +314,62 @@ export class EventsDisplay extends LitElement implements Layer {
     }
   }
 
+  private renderAttacks() {
+    if (
+      this.incomingAttacks.length === 0 &&
+      this.outgoingAttacks.length === 0
+    ) {
+      return html``;
+    }
+
+    return html`
+      ${this.incomingAttacks.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-red-400">
+                ${this.incomingAttacks.map(
+                  (attack) => html`
+                    <div class="ml-2">
+                      ${renderTroops(attack.troops)}
+                      ${(
+                        this.game.playerBySmallID(
+                          attack.attackerID,
+                        ) as PlayerView
+                      )?.name()}
+                    </div>
+                  `,
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
+      ${this.outgoingAttacks.length > 0
+        ? html`
+            <tr class="border-t border-gray-700">
+              <td class="lg:p-3 p-1 text-left text-blue-400">
+                ${this.outgoingAttacks.map(
+                  (attack) => html`
+                    <div class="ml-2">
+                      ${renderTroops(attack.troops)}
+                      ${(
+                        this.game.playerBySmallID(attack.targetID) as PlayerView
+                      )?.name()}
+                    </div>
+                  `,
+                )}
+              </td>
+            </tr>
+          `
+        : ""}
+    `;
+  }
+
   render() {
-    if (this.events.length === 0) {
+    if (
+      this.events.length === 0 &&
+      this.incomingAttacks.length === 0 &&
+      this.outgoingAttacks.length === 0
+    ) {
       return html``;
     }
 
@@ -317,7 +385,7 @@ export class EventsDisplay extends LitElement implements Layer {
               (event, index) => html`
                 <tr
                   class="border-b border-opacity-0 ${this.getMessageTypeClasses(
-                    event.type
+                    event.type,
                   )}"
                 >
                   <td class="lg:p-3 p-1 text-left">
@@ -342,15 +410,16 @@ export class EventsDisplay extends LitElement implements Layer {
                                 >
                                   ${btn.text}
                                 </button>
-                              `
+                              `,
                             )}
                           </div>
                         `
                       : ""}
                   </td>
                 </tr>
-              `
+              `,
             )}
+            ${this.renderAttacks()}
           </tbody>
         </table>
       </div>
@@ -358,6 +427,6 @@ export class EventsDisplay extends LitElement implements Layer {
   }
 
   createRenderRoot() {
-    return this; // Required for Tailwind classes to work with Lit
+    return this;
   }
 }

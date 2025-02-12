@@ -71,6 +71,7 @@ export interface Config {
   numBots(): number;
   spawnNPCs(): boolean;
   spawnBots(): boolean;
+  creativeMode(): boolean;
   numSpawnPhaseTurns(): number;
 
   startManpower(playerInfo: PlayerInfo): number;
@@ -81,14 +82,14 @@ export interface Config {
     attckTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number
+    numAdjacentTilesWithEnemy: number,
   ): number;
   attackLogic(
     gm: Game,
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
-    tileToConquer: TileRef
+    tileToConquer: TileRef,
   ): {
     attackerTroopLoss: number;
     defenderTroopLoss: number;

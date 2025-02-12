@@ -34,7 +34,7 @@ export abstract class DefaultServerConfig implements ServerConfig {
 export class DefaultConfig implements Config {
   constructor(
     private _serverConfig: ServerConfig,
-    private _gameConfig: GameConfig
+    private _gameConfig: GameConfig,
   ) {}
   spawnImmunityDuration(): Tick {
     return 5 * 10;
@@ -100,7 +100,10 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: (p: Player) => this.creativeMode() ? 0 : (p.units(UnitType.Warship).length + 1) * 250_000,
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.creativeMode()
+              ? 0
+              : (p.units(UnitType.Warship).length + 1) * 250_000,
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -113,27 +116,33 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: (p: Player) =>
-            this.creativeMode() ? 0 :
-            Math.min(
-              1_000_000,
-              Math.pow(2, p.units(UnitType.Port).length) * 250_000
-            ),
+            p.type() == PlayerType.Human && this.creativeMode()
+              ? 0
+              : Math.min(
+                  1_000_000,
+                  Math.pow(2, p.units(UnitType.Port).length) * 250_000,
+                ),
           territoryBound: true,
           constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
       case UnitType.AtomBomb:
         return {
-          cost: () => this.creativeMode() ? 0 : 750_000,
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: () => this.creativeMode() ? 0 : 5_000_000,
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 5_000_000,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
-          cost: () => this.creativeMode() ? 0 : 10_000_000,
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.creativeMode()
+              ? 0
+              : 10_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -148,29 +157,32 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: () => this.creativeMode() ? 0 : 1_000_000,
+          cost: (p: Player) =>
+            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 1_000_000,
           territoryBound: true,
           constructionDuration: this.creativeMode() ? 0 : 10 * 10,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
-            this.creativeMode() ? 0 :
-            Math.min(
-              250_000,
-              (p.units(UnitType.DefensePost).length + 1) * 50_000
-            ),
+            p.type() == PlayerType.Human && this.creativeMode()
+              ? 0
+              : Math.min(
+                  250_000,
+                  (p.units(UnitType.DefensePost).length + 1) * 50_000,
+                ),
           territoryBound: true,
           constructionDuration: this.creativeMode() ? 0 : 5 * 10,
         };
       case UnitType.City:
         return {
           cost: (p: Player) =>
-            this.creativeMode() ? 0 :
-            Math.min(
-              1_000_000,
-              Math.pow(2, p.units(UnitType.City).length) * 125_000
-            ),
+            p.type() == PlayerType.Human && this.creativeMode()
+              ? 0
+              : Math.min(
+                  1_000_000,
+                  Math.pow(2, p.units(UnitType.City).length) * 125_000,
+                ),
           territoryBound: true,
           constructionDuration: this.creativeMode() ? 0 : 2 * 10,
         };
@@ -231,7 +243,7 @@ export class DefaultConfig implements Config {
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
-    tileToConquer: TileRef
+    tileToConquer: TileRef,
   ): {
     attackerTroopLoss: number;
     defenderTroopLoss: number;
@@ -302,7 +314,7 @@ export class DefaultConfig implements Config {
         tilesPerTickUsed: within(
           (2000 * Math.max(10, speed)) / attackTroops,
           5,
-          100
+          100,
         ),
       };
     }
@@ -312,7 +324,7 @@ export class DefaultConfig implements Config {
     attackTroops: number,
     attacker: Player,
     defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number
+    numAdjacentTilesWithEnemy: number,
   ): number {
     if (defender.isPlayer()) {
       return (
@@ -357,9 +369,11 @@ export class DefaultConfig implements Config {
   }
 
   maxPopulation(player: Player | PlayerView): number {
-    let maxPop = this.creativeMode() ? 999_999_999_999 :
-      2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
-      player.units(UnitType.City).length * this.cityPopulationIncrease();
+    let maxPop =
+      player.type() == PlayerType.Human && this.creativeMode()
+        ? 999_999_999_999
+        : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
+          player.units(UnitType.City).length * this.cityPopulationIncrease();
 
     if (player.type() == PlayerType.Bot) {
       return maxPop / 2;

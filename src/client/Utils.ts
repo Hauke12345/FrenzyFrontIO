@@ -3,6 +3,7 @@ export function renderTroops(troops: number): string {
 }
 
 export function renderNumber(num: number) {
+  num = Math.max(num, 0);
   let numStr = "";
   if (num >= 10_000_000) {
     numStr = (num / 1000000).toFixed(1) + "M";

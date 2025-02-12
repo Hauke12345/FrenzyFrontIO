@@ -49,6 +49,7 @@ export class FlagInput extends LitElement {
       left: 0;
       width: 560px;
       height: 500px;
+      max-height: 50vh;
       background-color: rgb(35 35 35 / 0.8);
       -webkit-backdrop-filter: blur(12px);
       backdrop-filter: blur(12px);
@@ -140,7 +141,7 @@ export class FlagInput extends LitElement {
         detail: { flag: this.flag },
         bubbles: true,
         composed: true,
-      })
+      }),
     );
   }
 
