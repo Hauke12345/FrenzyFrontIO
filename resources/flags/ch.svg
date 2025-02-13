@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-ch" viewBox="0 0 640 480">
-  <g fill-rule="evenodd" stroke-width="1pt">
-    <path fill="red" d="M0 0h640v480H0z"/>
-    <g fill="#fff">
-      <path d="M170 195h300v90H170z"/>
-      <path d="M275 90h90v300h-90z"/>
-    </g>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="17" y="17" width="38" height="38" fill="#d22f27"/>
+    <polygon fill="#fff" stroke="#fff" stroke-miterlimit="10" stroke-width="2" points="47 32.462 39.538 32.462 39.538 25 32.462 25 32.462 32.462 25 32.462 25 39.538 32.462 39.538 32.462 47 39.538 47 39.538 39.538 47 39.538 47 32.462"/>
+  </g>
+  <g id="line">
+    <rect x="17" y="17" width="38" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>

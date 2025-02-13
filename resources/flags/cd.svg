@@ -1,5 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-cd" viewBox="0 0 640 480">
-  <path fill="#007fff" d="M0 0h640v480H0z"/>
-  <path fill="#f7d618" d="M28.8 96H96l20.8-67.2L137.6 96h67.2l-54.4 41.6 20.8 67.2-54.4-41.6-54.4 41.6 20.8-67.2zM600 0 0 360v120h40l600-360V0z"/>
-  <path fill="#ce1021" d="M640 0 0 384v96L640 96z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#61b2e4"/>
+    <polygon fill="#d22f27" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="67 24 67 17 59 17 5 48 5 55 13 55 67 24"/>
+    <polygon fill="#f1b31c" stroke="#f1b31c" stroke-linecap="round" stroke-linejoin="round" points="12.348 30.583 14.671 23.583 16.674 30.476 11.11 26.322 18.11 26.15 12.348 30.583"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
 </svg>

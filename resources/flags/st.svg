@@ -1,16 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="flag-icons-st" viewBox="0 0 640 480">
-  <path fill="#12ad2b" d="M0 0h640v480H0z"/>
-  <path fill="#ffce00" d="M0 137.1h640V343H0z"/>
-  <path fill="#d21034" d="M0 0v480l240-240"/>
-  <g id="st-c" transform="translate(351.6 240)scale(.34286)">
-    <g id="st-b">
-      <path id="st-a" fill="#000001" d="M0-200V0h100" transform="rotate(18 0 -200)"/>
-      <use xlink:href="#st-a" width="100%" height="100%" transform="scale(-1 1)"/>
-    </g>
-    <use xlink:href="#st-b" width="100%" height="100%" transform="rotate(72)"/>
-    <use xlink:href="#st-b" width="100%" height="100%" transform="rotate(144)"/>
-    <use xlink:href="#st-b" width="100%" height="100%" transform="rotate(-144)"/>
-    <use xlink:href="#st-b" width="100%" height="100%" transform="rotate(-72)"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#b1cc33"/>
+    <rect x="5" y="30" width="62" height="12" fill="#fcea2b"/>
+    <polygon fill="#d22f27" points="26 36 5 55 5 17 26 36"/>
+    <polygon stroke="#000" stroke-linecap="round" stroke-linejoin="round" points="38.5 33.59 40.045 38.59 36 35.5 41 35.5 36.955 38.59 38.5 33.59"/>
+    <polygon stroke="#000" stroke-linecap="round" stroke-linejoin="round" points="53.5 33.59 55.045 38.59 51 35.5 56 35.5 51.955 38.59 53.5 33.59"/>
   </g>
-  <use xlink:href="#st-c" width="100%" height="100%" x="700" transform="translate(-523.2)"/>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
 </svg>

@@ -1,6 +1,6 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import Countries from "../data/countries.json";
+import Countries from "./data/countries.json";
 
 const flagKey: string = "flag";
 
@@ -17,28 +17,32 @@ export class FlagInput extends LitElement {
 
     .flag-container {
       display: flex;
+      position: relative;
     }
 
-    .no-selected-flag {
-      position: absolute;
-      left: 8px;
-      top: 8px;
-      height: 50px;
-      border-radius: 0.75rem;
-      border: none;
-      background: none;
-      font-size: 1rem;
+    .flag-button {
+      display: flex;
+      border: 1px solid rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.7);
       cursor: pointer;
+      padding: 4px;
+      border-radius: 8px;
     }
 
     .selected-flag {
       width: 48px;
-      cursor: pointer;
-      position: absolute;
-      left: 24px;
-      top: 14px;
-      border: 1px solid black;
     }
+    // .flag-button {
+    //   display: flex;
+    //   border: 0px;
+    //   background: none;
+    //   cursor: pointer;
+    //   padding: 0px;
+    // }
+
+    // .selected-flag {
+    //   width: 50px;
+    // }
 
     .flag-modal {
       display: flex;
@@ -154,18 +158,13 @@ export class FlagInput extends LitElement {
   render() {
     return html`
       <div class="flag-container">
-        ${this.flag === ""
-          ? html` <button
-              class="no-selected-flag"
-              @click=${() => (this.showModal = true)}
-            >
-              Flags
-            </button>`
-          : html`<img
-              class="selected-flag"
-              src="/flags/${this.flag}.svg"
-              @click=${() => (this.showModal = true)}
-            />`}
+        <button
+          @click=${() => (this.showModal = !this.showModal)}
+          class="flag-button"
+          title="Pick a flag!"
+        >
+          <img class="selected-flag" src="/flags/${this.flag || "xx"}.svg" />
+        </button>
         ${this.showModal
           ? html`
               <div class="flag-modal ${this.showModal ? "" : "hidden"}">
@@ -182,7 +181,7 @@ export class FlagInput extends LitElement {
                     @click=${() => this.setFlag("")}
                     class="dropdown-item"
                   >
-                    <img class="country-flag" src="/flags/none.svg" />
+                    <img class="country-flag" src="/flags/xx.svg" />
                     <span class="country-name">None</span>
                   </button>
                   ${Countries.filter(

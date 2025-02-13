@@ -1,13 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="flag-icons-gw" viewBox="0 0 640 480">
-  <path fill="#ce1126" d="M0 0h220v480H0z"/>
-  <path fill="#fcd116" d="M220 0h420v240H220z"/>
-  <path fill="#009e49" d="M220 240h420v240H220z"/>
-  <g id="gw-b" transform="matrix(80 0 0 80 110 240)">
-    <path id="gw-a" fill="#000001" d="M0-1v1h.5" transform="rotate(18 0 -1)"/>
-    <use xlink:href="#gw-a" width="100%" height="100%" transform="scale(-1 1)"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#fcea2b"/>
+    <rect x="5" y="36" width="62" height="19" fill="#5c9e31"/>
+    <rect x="5" y="17" width="21" height="38" fill="#d22f27"/>
+    <polygon stroke="#000" stroke-linecap="round" stroke-linejoin="round" points="15.5 33.5 17.045 38.5 13 35.41 18 35.41 13.955 38.5 15.5 33.5"/>
   </g>
-  <use xlink:href="#gw-b" width="100%" height="100%" transform="rotate(72 110 240)"/>
-  <use xlink:href="#gw-b" width="100%" height="100%" transform="rotate(144 110 240)"/>
-  <use xlink:href="#gw-b" width="100%" height="100%" transform="rotate(-144 110 240)"/>
-  <use xlink:href="#gw-b" width="100%" height="100%" transform="rotate(-72 110 240)"/>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
 </svg>

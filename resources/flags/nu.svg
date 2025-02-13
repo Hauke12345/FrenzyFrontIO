@@ -1,10 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-nu" viewBox="0 0 640 480">
-  <path fill="#fedd00" d="M0 0h640v480H0z"/>
-  <path fill="#012169" d="M0 0h320v240H0z"/>
-  <path fill="#fff" d="m37.5 0 122 90.5L281 0h39v31l-120 89.5 120 89V240h-40l-120-89.5L40.5 240H0v-30l119.5-89L0 32V0z"/>
-  <path fill="#c8102e" d="M212 140.5 320 220v20l-135.5-99.5zm-92 10 3 17.5-96 72H0zM320 0v1.5l-124.5 94 1-22L295 0zM0 0l119.5 88h-30L0 21z"/>
-  <path fill="#fff" d="M120.5 0v240h80V0zM0 80v80h320V80z"/>
-  <path fill="#c8102e" d="M0 96.5v48h320v-48zM136.5 0v240h48V0z"/>
-  <circle cx="160" cy="120" r="40.8" fill="#012169"/>
-  <path fill="#fedd00" d="m160 79.2 24 73.8-62.8-45.6h77.6L136 153M66.7 98.3l14 43.4L43.9 115h45.7l-37 26.8m200.7-43.5 14.1 43.4-36.9-26.8h45.7l-37 26.8M160 178.3l14.1 43.4-37-26.8h45.7l-37 26.8M160 18.3l14.1 43.4-37-26.8h45.7l-37 26.8"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#fcea2b"/>
+    <rect x="5" y="17" width="31" height="19" fill="#1e50a0"/>
+    <g>
+      <polygon fill="#fff" points="9.887 18 6 18 6 20.332 32.113 36 36 36 36 33.668 9.887 18"/>
+      <polygon fill="#fff" points="36 20.332 36 18 32.113 18 6 33.668 6 36 9.887 36 36 20.332"/>
+      <rect x="6" y="24" width="30" height="6" fill="#fff"/>
+      <rect x="18" y="18" width="6" height="18" fill="#fff"/>
+      <rect x="20" y="18" width="2" height="18" fill="#d22f27"/>
+      <rect x="6" y="26" width="30" height="2" fill="#d22f27"/>
+      <polygon fill="#d22f27" points="36 33.668 29.887 30 26 30 36 36 36 33.668"/>
+      <polygon fill="#d22f27" points="36 18 32.113 18 24 22.868 24 24 26 24 36 18"/>
+      <polygon fill="#d22f27" points="6 20.332 12.113 24 16 24 6 18 6 20.332"/>
+      <polygon fill="#d22f27" points="6 36 9.887 36 18 31.132 18 30 16 30 6 36"/>
+    </g>
+    <circle cx="20.5" cy="26.5" r="2.5" fill="#1e50a0"/>
+    <polygon fill="#fcea2b" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round" points="19.531 28 20.526 25 21.385 27.954 19 26.174 22 26.1 19.531 28"/>
+    <circle cx="27" cy="26.5" r="1" fill="#fcea2b"/>
+    <circle cx="14" cy="26.5" r="1" fill="#fcea2b"/>
+    <circle cx="20.5" cy="32" r="1" fill="#fcea2b"/>
+    <circle cx="20.5" cy="21" r="1" fill="#fcea2b"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
 </svg>

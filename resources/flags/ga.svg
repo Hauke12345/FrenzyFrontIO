@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" id="flag-icons-ga" viewBox="0 0 640 480">
-  <g fill-rule="evenodd">
-    <path fill="#ffe700" d="M640 480H0V0h640z"/>
-    <path fill="#36a100" d="M640 160H0V0h640z"/>
-    <path fill="#006dbc" d="M640 480H0V320h640z"/>
+<svg id="emoji" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+  <g id="color">
+    <rect x="5" y="17" width="62" height="38" fill="#61b2e4"/>
+    <rect x="5" y="30" width="62" height="12" fill="#fcea2b"/>
+    <rect x="5" y="17" width="62" height="13" fill="#5c9e31"/>
+  </g>
+  <g id="line">
+    <rect x="5" y="17" width="62" height="38" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
   </g>
 </svg>
