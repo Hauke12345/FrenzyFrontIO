@@ -28,7 +28,7 @@ export enum GameEnv {
 }
 export function getConfig(
   gameConfig: GameConfig,
-  userSettings: UserSettings,
+  userSettings: UserSettings | null = null,
 ): Config {
   const sc = getServerConfig();
   switch (process.env.GAME_ENV) {

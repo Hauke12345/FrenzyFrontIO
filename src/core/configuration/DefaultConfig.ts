@@ -52,7 +52,7 @@ export class DefaultConfig implements Config {
     return this._serverConfig;
   }
 
-  userSettings(): UserSettings {
+  userSettings(): UserSettings | null {
     return this._userSettings;
   }
 
