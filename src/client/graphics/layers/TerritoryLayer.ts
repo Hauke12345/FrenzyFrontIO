@@ -66,7 +66,7 @@ export class TerritoryLayer implements Layer {
     this.game.updatesSinceLastTick()[GameUpdateType.Unit].forEach((u) => {
       const update = u as UnitUpdate;
       if (update.unitType == UnitType.DefensePost && update.isActive) {
-        const tile = this.game.ref(update.pos.x, update.pos.y);
+        const tile = update.pos;
         this.game
           .bfs(
             tile,

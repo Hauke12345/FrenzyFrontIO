@@ -35,8 +35,8 @@ export class UnitImpl implements Unit {
       troops: this._troops,
       ownerID: this._owner.smallID(),
       isActive: this._active,
-      pos: { x: this.mg.x(this._tile), y: this.mg.y(this._tile) },
-      lastPos: { x: this.mg.x(this._lastTile), y: this.mg.y(this._lastTile) },
+      pos: this._tile,
+      lastPos: this._lastTile,
       health: this.hasHealth() ? this._health : undefined,
       constructionType: this._constructionType,
     };

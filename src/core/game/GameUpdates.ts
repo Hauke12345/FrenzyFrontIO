@@ -10,7 +10,7 @@ import {
   Tick,
   UnitType,
 } from "./Game";
-import { TileUpdate } from "./GameMap";
+import { TileRef, TileUpdate } from "./GameMap";
 
 export interface GameUpdateViewData {
   tick: number;
@@ -63,8 +63,8 @@ export interface UnitUpdate {
   id: number;
   ownerID: number;
   // TODO: make these tilerefs
-  pos: MapPos;
-  lastPos: MapPos;
+  pos: TileRef;
+  lastPos: TileRef;
   isActive: boolean;
   health?: number;
   constructionType?: UnitType;
