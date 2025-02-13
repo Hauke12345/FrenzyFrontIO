@@ -34,7 +34,7 @@ import { DefenseGrid } from "./DefensePostGrid";
 
 export class UnitView {
   public _wasUpdated = true;
-  public lastPos: MapPos[] = [];
+  public lastPos: TileRef[] = [];
 
   constructor(
     private gameView: GameView,
@@ -48,14 +48,14 @@ export class UnitView {
   }
 
   lastTiles(): TileRef[] {
-    return this.lastPos.map((pos) => this.gameView.ref(pos.x, pos.y));
+    return this.lastPos;
   }
 
   lastTile(): TileRef {
     if (this.lastPos.length == 0) {
-      return this.gameView.ref(this.data.pos.x, this.data.pos.y);
+      return this.data.pos;
     }
-    return this.gameView.ref(this.lastPos[0].x, this.lastPos[0].y);
+    return this.lastPos[0];
   }
 
   update(data: UnitUpdate) {
@@ -75,7 +75,7 @@ export class UnitView {
     return this.data.troops;
   }
   tile(): TileRef {
-    return this.gameView.ref(this.data.pos.x, this.data.pos.y);
+    return this.data.pos;
   }
   owner(): PlayerView {
     return this.gameView.playerBySmallID(this.data.ownerID) as PlayerView;

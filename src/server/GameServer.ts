@@ -131,6 +131,11 @@ export class GameServer {
         (c) => c.clientID != client.clientID,
       );
     });
+    client.ws.on("error", (error: Error) => {
+      if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
+        client.ws.close(1002);
+      }
+    });
 
     // In case a client joined the game late and missed the start message.
     if (this._hasStarted) {
