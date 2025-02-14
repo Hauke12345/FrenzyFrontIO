@@ -59,6 +59,7 @@ export class FlagInput extends LitElement {
       backdrop-filter: blur(12px);
       padding: 10px;
       border-radius: 8px;
+      z-index: 3;
     }
 
     .flag-search {
@@ -71,9 +72,11 @@ export class FlagInput extends LitElement {
 
     .flag-dropdown {
       overflow-y: auto;
+      overflow-x: hidden;
       display: flex;
       flex-direction: row;
       flex-wrap: wrap;
+      justify-content: space-evenly;
       gap: 1rem;
     }
 
@@ -98,9 +101,7 @@ export class FlagInput extends LitElement {
 
     @media (max-width: 768px) {
       .flag-modal {
-        left: 0px;
-        width: calc(100% - 16px);
-        height: 50vh;
+        width: 80vw;
       }
 
       .dropdown-item {
