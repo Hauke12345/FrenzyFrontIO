@@ -301,7 +301,7 @@ export class DefaultConfig implements Config {
     if (defender.isPlayer()) {
       return {
         attackerTroopLoss:
-          within(defender.troops() / (2.5 * attackTroops), 0.1, 10) * mag,
+          within(defender.troops() / attackTroops, 0.5, 2) * mag,
         defenderTroopLoss: defender.troops() / defender.numTilesOwned(),
         tilesPerTickUsed:
           within(defender.troops() / (5 * attackTroops), 0.2, 1.5) * speed,
@@ -360,9 +360,9 @@ export class DefaultConfig implements Config {
         case Difficulty.Medium:
           return 5_000 * (playerInfo?.nation?.strength ?? 1);
         case Difficulty.Hard:
-          return 15_000 * (playerInfo?.nation?.strength ?? 1);
-        case Difficulty.Impossible:
           return 20_000 * (playerInfo?.nation?.strength ?? 1);
+        case Difficulty.Impossible:
+          return 50_000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
     return this.creativeMode() ? 1_000_000 : 25_000;
@@ -387,11 +387,11 @@ export class DefaultConfig implements Config {
       case Difficulty.Easy:
         return maxPop * 0.5;
       case Difficulty.Medium:
-        return maxPop * 0.7;
-      case Difficulty.Hard:
         return maxPop * 1;
-      case Difficulty.Impossible:
+      case Difficulty.Hard:
         return maxPop * 1.5;
+      case Difficulty.Impossible:
+        return maxPop * 2;
     }
   }
 
