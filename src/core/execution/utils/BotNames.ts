@@ -1,7 +1,6 @@
 export const BOT_NAME_PREFIXES = [
   "Akkadian",
   "Babylonian",
-  "Assyrian",
   "Sumerian",
   "Hittite",
   "Phoenician",
@@ -160,7 +159,6 @@ export const BOT_NAME_PREFIXES = [
   "Armenian",
   "Georgian",
   "Phoenician",
-  "Assyrian",
   "Chaldean",
   "Kurdish",
   "Turkic",
