@@ -416,10 +416,10 @@ export class DefaultConfig implements Config {
           toAdd *= 1;
           break;
         case Difficulty.Hard:
-          toAdd *= 1.2;
+          toAdd *= 1.1;
           break;
         case Difficulty.Impossible:
-          toAdd *= 1.5;
+          toAdd *= 1.2;
           break;
       }
     }
