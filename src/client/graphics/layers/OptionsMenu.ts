@@ -52,7 +52,8 @@ export class OptionsMenu extends LitElement implements Layer {
   private hasWinner = false;
 
   private onExitButtonClick() {
-    window.location.reload();
+    // redirect to the home page
+    window.location.href = "/";
   }
 
   createRenderRoot() {
