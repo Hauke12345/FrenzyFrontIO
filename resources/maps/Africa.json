@@ -1,1 +1,32 @@
-
+{
+  "name": "Africa",
+  "width": 4149,
+  "height": 4414,
+  "nations": [
+    {
+      "coordinates": [2472, 4113],
+      "name": "South Africa",
+      "strength": 2,
+      "flag": "za"
+    },
+    {
+      "coordinates": [3282, 1479],
+      "name": "Sudan",
+      "strength": 2,
+      "flag": "sd"
+    },
+    {
+      "coordinates": [3816, 3481],
+      "name": "Madagascar",
+      "strength": 1,
+      "flag": "mg"
+    },
+    {
+      "coordinates": [2268, 2113],
+      "name": "Central African Republic",
+      "strength": 3,
+      "flag": "cf"
+    },
+    }
+  ]
+}
