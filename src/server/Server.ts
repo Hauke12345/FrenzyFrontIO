@@ -10,6 +10,7 @@ import {
   GameRecord,
   GameRecordSchema,
   LogSeverity,
+  ServerStartGameMessageSchema,
 } from "../core/Schemas";
 import {
   GameEnv,
@@ -19,7 +20,7 @@ import {
 import { slog } from "./StructuredLog";
 import { Client } from "./Client";
 import { GamePhase, GameServer } from "./GameServer";
-import { archive } from "./Archive";
+import { archive, gameRecordExists, readGameRecord } from "./Archive";
 import { DiscordBot } from "./DiscordBot";
 import {
   sanitizeUsername,
@@ -176,13 +177,14 @@ app.put("/private_lobby/:id", (req, res) => {
   });
 });
 
-app.get("/lobby/:id/exists", (req, res) => {
+app.get("/lobby/:id/exists", async (req, res) => {
   const lobbyId = req.params.id;
-  console.log(`checking lobby ${lobbyId} exists`);
-  const lobbyExists = gm.hasActiveGame(lobbyId);
-
+  let gameExists = gm.hasActiveGame(lobbyId);
+  if (!gameExists) {
+    gameExists = await gameRecordExists(lobbyId);
+  }
   res.json({
-    exists: lobbyExists,
+    exists: gameExists,
   });
 });
 
@@ -212,7 +214,7 @@ app.get("*", function (req, res) {
 });
 
 wss.on("connection", (ws, req) => {
-  ws.on("message", (message: string) => {
+  ws.on("message", async (message: string) => {
     try {
       const clientMsg: ClientMessage = ClientMessageSchema.parse(
         JSON.parse(message),
@@ -233,7 +235,7 @@ wss.on("connection", (ws, req) => {
           return;
         }
         clientMsg.username = sanitizeUsername(clientMsg.username);
-        gm.addClient(
+        const wasFound = gm.addClient(
           new Client(
             clientMsg.clientID,
             clientMsg.persistentID,
@@ -244,6 +246,19 @@ wss.on("connection", (ws, req) => {
           clientMsg.gameID,
           clientMsg.lastTurn,
         );
+        if (!wasFound) {
+          console.log(`game ${clientMsg.gameID} not found, loading from gcs`);
+          const record = await readGameRecord(clientMsg.gameID);
+          ws.send(
+            JSON.stringify(
+              ServerStartGameMessageSchema.parse({
+                type: "start",
+                turns: record.turns,
+                config: record.gameConfig,
+              }),
+            ),
+          );
+        }
       }
       if (clientMsg.type == "log") {
         slog({

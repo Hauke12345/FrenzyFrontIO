@@ -128,6 +128,52 @@ async function archiveToGCS(gameRecord: GameRecord) {
   console.log(`${gameRecord.id}: game record successfully written to GCS`);
 }
 
+export async function readGameRecord(gameId: GameID): Promise<GameRecord> {
+  try {
+    const file = bucket.file(gameId);
+
+    // Check if file exists
+    const [exists] = await file.exists();
+    if (!exists) {
+      throw new Error(`Game record ${gameId} not found in GCS`);
+    }
+
+    // Download and parse file content
+    const [content] = await file.download();
+    const gameRecord = JSON.parse(content.toString());
+
+    // Validate the parsed content against the schema
+    const validatedRecord = GameRecordSchema.parse(gameRecord);
+
+    console.log(`${gameId}: Successfully read game record from GCS`);
+    return validatedRecord;
+  } catch (error) {
+    console.error(`${gameId}: Error reading game record from GCS: ${error}`, {
+      message: error?.message || error,
+      stack: error?.stack,
+      name: error?.name,
+      ...(error && typeof error === "object" ? error : {}),
+    });
+    throw error;
+  }
+}
+
+export async function gameRecordExists(gameId: GameID): Promise<boolean> {
+  try {
+    const file = bucket.file(gameId);
+    const [exists] = await file.exists();
+    return exists;
+  } catch (error) {
+    console.error(`${gameId}: Error checking archive existence: ${error}`, {
+      message: error?.message || error,
+      stack: error?.stack,
+      name: error?.name,
+      ...(error && typeof error === "object" ? error : {}),
+    });
+    return false;
+  }
+}
+
 function anonymizeIPv4(ipv4: string): string | null {
   const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
 

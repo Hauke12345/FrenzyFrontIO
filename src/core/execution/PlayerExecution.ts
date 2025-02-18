@@ -121,15 +121,15 @@ export class PlayerExecution implements Execution {
 
   private surroundedBySamePlayer(cluster: Set<TileRef>): false | Player {
     const enemies = new Set<number>();
-    for (const ref of cluster) {
+    for (const tile of cluster) {
       if (
-        this.mg.isOceanShore(ref) ||
-        this.mg.neighbors(ref).some((n) => !this.mg.hasOwner(n))
+        this.mg.isOceanShore(tile) ||
+        this.mg.neighbors(tile).some((n) => !this.mg.hasOwner(n))
       ) {
         return false;
       }
       this.mg
-        .neighbors(ref)
+        .neighbors(tile)
         .filter((n) => this.mg.ownerID(n) != this.player.smallID())
         .forEach((p) => enemies.add(this.mg.ownerID(p)));
       if (enemies.size != 1) {

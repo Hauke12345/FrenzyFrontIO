@@ -1,46 +1,16 @@
-import { Executor } from "../core/execution/ExecutionManager";
-import {
-  Cell,
-  Game,
-  PlayerID,
-  GameMapType,
-  Difficulty,
-  GameType,
-} from "../core/game/Game";
+import { PlayerID, GameMapType, Difficulty, GameType } from "../core/game/Game";
 import { EventBus } from "../core/EventBus";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
-import {
-  InputHandler,
-  MouseUpEvent,
-  ZoomEvent,
-  DragEvent,
-  MouseDownEvent,
-} from "./InputHandler";
-import {
-  ClientID,
-  ClientIntentMessageSchema,
-  ClientJoinMessageSchema,
-  ClientMessageSchema,
-  GameConfig,
-  GameID,
-  Intent,
-  ServerMessage,
-  ServerMessageSchema,
-  ServerSyncMessage,
-  Turn,
-} from "../core/Schemas";
-import {
-  loadTerrainFromFile,
-  loadTerrainMap,
-} from "../core/game/TerrainMapLoader";
+import { InputHandler, MouseUpEvent } from "./InputHandler";
+import { ClientID, GameConfig, GameID, ServerMessage } from "../core/Schemas";
+import { loadTerrainMap } from "../core/game/TerrainMapLoader";
 import {
   SendAttackIntentEvent,
   SendSpawnIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import { MessageType } from "../core/game/Game";
-import { DisplayMessageUpdate, ErrorUpdate } from "../core/game/GameUpdates";
+import { ErrorUpdate } from "../core/game/GameUpdates";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { getConfig, getServerConfig } from "../core/configuration/Config";
@@ -218,6 +188,14 @@ export class ClientGameRunner {
         for (const turn of message.turns) {
           if (turn.turnNumber < this.turnsSeen) {
             continue;
+          }
+          while (turn.turnNumber - 1 > this.turnsSeen) {
+            this.worker.sendTurn({
+              turnNumber: this.turnsSeen,
+              gameID: turn.gameID,
+              intents: [],
+            });
+            this.turnsSeen++;
           }
           this.worker.sendTurn(turn);
           this.turnsSeen++;

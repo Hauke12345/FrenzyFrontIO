@@ -24,13 +24,13 @@ export class GameManager {
     return this.games.filter((g) => g.phase() == phase);
   }
 
-  addClient(client: Client, gameID: GameID, lastTurn: number) {
+  addClient(client: Client, gameID: GameID, lastTurn: number): boolean {
     const game = this.games.find((g) => g.id == gameID);
-    if (!game) {
-      console.log(`game id ${gameID} not found`);
-      return;
+    if (game) {
+      game.addClient(client, lastTurn);
+      return true;
     }
-    game.addClient(client, lastTurn);
+    return false;
   }
 
   updateGameConfig(gameID: GameID, gameConfig: GameConfig) {
