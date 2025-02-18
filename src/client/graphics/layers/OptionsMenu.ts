@@ -57,8 +57,8 @@ export class OptionsMenu extends LitElement implements Layer {
       const isConfirmed = confirm("Are you sure you want to exit the game?");
       if (!isConfirmed) return;
     }
-
-    window.location.reload();
+    // redirect to the home page
+    window.location.href = "/";
   }
 
   createRenderRoot() {

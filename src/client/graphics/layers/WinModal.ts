@@ -287,7 +287,7 @@ export class WinModal extends LitElement implements Layer {
 
   private _handleExit() {
     this.hide();
-    window.location.reload();
+    window.location.href = "/";
   }
 
   init() {
