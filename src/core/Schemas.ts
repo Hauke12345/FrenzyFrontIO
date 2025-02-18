@@ -267,6 +267,7 @@ export const ServerMessageSchema = z.union([
 const ClientBaseMessageSchema = z.object({
   type: z.enum(["winner", "join", "intent", "ping", "log"]),
   clientID: ID,
+  persistentID: SafeString.nullable(), // WARNING: persistent id is private.
   gameID: ID,
 });
 
@@ -294,7 +295,6 @@ export const ClientIntentMessageSchema = ClientBaseMessageSchema.extend({
 // WARNING: never send this message to clients.
 export const ClientJoinMessageSchema = ClientBaseMessageSchema.extend({
   type: z.literal("join"),
-  persistentID: SafeString, // WARNING: persistent id is private.
   lastTurn: z.number(), // The last turn the client saw.
   username: SafeString,
 });

@@ -26,10 +26,6 @@ import {
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
-import { UsernameInput } from "./UsernameInput";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
-import { JoinPrivateLobbyModal } from "./JoinPrivateLobbyModal";
-import { SinglePlayerModal } from "./SinglePlayerModal";
 import { PlayerView } from "../core/game/GameView";
 
 export class PauseGameEvent implements GameEvent {
@@ -175,6 +171,7 @@ export class Transport {
               ClientPingMessageSchema.parse({
                 type: "ping",
                 clientID: this.lobbyConfig.clientID,
+                persistentID: this.lobbyConfig.persistentID,
                 gameID: this.lobbyConfig.gameID,
               }),
             ),
@@ -437,6 +434,7 @@ export class Transport {
       const msg = ClientSendWinnerSchema.parse({
         type: "winner",
         clientID: this.lobbyConfig.clientID,
+        persistentID: this.lobbyConfig.persistentID,
         gameID: this.lobbyConfig.gameID,
         winner: event.winner,
       });
@@ -455,6 +453,7 @@ export class Transport {
       const msg = ClientIntentMessageSchema.parse({
         type: "intent",
         clientID: this.lobbyConfig.clientID,
+        persistentID: this.lobbyConfig.persistentID,
         gameID: this.lobbyConfig.gameID,
         intent: intent,
       });
