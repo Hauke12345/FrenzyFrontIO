@@ -62,6 +62,17 @@ export class AttackExecution implements Execution {
     }
     this.mg = mg;
 
+    if (!mg.hasPlayer(this._ownerID)) {
+      console.warn(`player ${this._ownerID} not found`);
+      this.active = false;
+      return;
+    }
+    if (this._targetID != null && !mg.hasPlayer(this._targetID)) {
+      console.warn(`target ${this._targetID} not found`);
+      this.active = false;
+      return;
+    }
+
     this._owner = mg.player(this._ownerID);
     this.target =
       this._targetID == this.mg.terraNullius().id()
@@ -90,8 +101,8 @@ export class AttackExecution implements Execution {
         .config()
         .attackAmount(this._owner, this.target);
     }
-    this.startTroops = Math.min(this._owner.troops(), this.startTroops);
     if (this.removeTroops) {
+      this.startTroops = Math.min(this._owner.troops(), this.startTroops);
       this._owner.removeTroops(this.startTroops);
     }
     this.attack = this._owner.createAttack(

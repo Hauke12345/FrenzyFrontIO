@@ -52,6 +52,10 @@ export class ControlPanel extends LitElement implements Layer {
   @state()
   private _goldPerSecond: number;
 
+  private _lastPopulationIncreaseRate: number;
+
+  private _popRateIsIncreasing: boolean = true;
+
   init() {
     this.attackRatio = 0.2;
     this.uiState.attackRatio = this.attackRatio;
@@ -63,10 +67,17 @@ export class ControlPanel extends LitElement implements Layer {
       this.setVisibile(true);
     }
 
-    const player = this.game.playerByClientID(this.clientID);
+    const player = this.game.myPlayer();
     if (player == null || !player.isAlive()) {
       this.setVisibile(false);
       return;
+    }
+
+    const popIncreaseRate = player.population() - this._population;
+    if (this.game.ticks() % 5 == 0) {
+      this._popRateIsIncreasing =
+        popIncreaseRate >= this._lastPopulationIncreaseRate;
+      this._lastPopulationIncreaseRate = popIncreaseRate;
     }
 
     this._population = player.population();
@@ -78,6 +89,7 @@ export class ControlPanel extends LitElement implements Layer {
     this._goldPerSecond = this.game.config().goldAdditionRate(player) * 10;
 
     this.currentTroopRatio = player.troops() / player.population();
+    this.requestUpdate();
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -163,7 +175,12 @@ export class ControlPanel extends LitElement implements Layer {
             <span
               >${renderTroops(this._population)} /
               ${renderTroops(this._maxPopulation)}
-              (+${renderTroops(this.popRate)})</span
+              <span
+                class="${this._popRateIsIncreasing
+                  ? "text-green-500"
+                  : "text-yellow-500"}"
+                >(+${renderTroops(this.popRate)})</span
+              ></span
             >
           </div>
           <div class="flex justify-between">

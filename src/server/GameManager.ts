@@ -9,6 +9,7 @@ import { PseudoRandom } from "../core/PseudoRandom";
 
 export class GameManager {
   private lastNewLobby: number = 0;
+  private mapsPlaylist: GameMapType[] = [];
 
   private games: GameServer[] = [];
 
@@ -77,6 +78,31 @@ export class GameManager {
     }
   }
 
+  private getNextMap(): GameMapType {
+    if (this.mapsPlaylist.length > 0) {
+      return this.mapsPlaylist.shift();
+    }
+    while (true) {
+      this.mapsPlaylist = Object.values(GameMapType);
+      this.mapsPlaylist.push(GameMapType.World);
+      this.mapsPlaylist.push(GameMapType.Europe);
+      this.random.shuffleArray(this.mapsPlaylist);
+      if (this.allNonConsecutive(this.mapsPlaylist)) {
+        return this.mapsPlaylist.shift();
+      }
+    }
+  }
+
+  private allNonConsecutive(maps: GameMapType[]): boolean {
+    // Check for consecutive duplicates in the maps array
+    for (let i = 0; i < maps.length - 1; i++) {
+      if (maps[i] === maps[i + 1]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   tick() {
     const lobbies = this.gamesByPhase(GamePhase.Lobby);
     const active = this.gamesByPhase(GamePhase.Active);
@@ -87,7 +113,7 @@ export class GameManager {
       this.lastNewLobby = now;
       lobbies.push(
         new GameServer(generateID(), now, true, this.config, {
-          gameMap: this.random.randElement(Object.values(GameMapType)),
+          gameMap: this.getNextMap(),
           gameType: GameType.Public,
           difficulty: Difficulty.Medium,
           disableBots: false,

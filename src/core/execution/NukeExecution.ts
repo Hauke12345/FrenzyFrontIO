@@ -33,6 +33,12 @@ export class NukeExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.senderID)) {
+      console.warn(`NukeExecution: sender ${this.senderID} not found`);
+      this.active = false;
+      return;
+    }
+
     this.mg = mg;
     this.player = mg.player(this.senderID);
     this.random = new PseudoRandom(ticks);
@@ -120,18 +126,13 @@ export class NukeExecution implements Execution {
       return (d <= magnitude.inner || rand.chance(2)) && d <= magnitude.outer;
     });
 
-    const ratio = Object.fromEntries(
-      this.mg
-        .players()
-        .map((p) => [p.id(), (p.troops() + p.workers()) / p.numTilesOwned()]),
-    );
     const attacked = new Map<Player, number>();
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
         const mp = this.mg.player(owner.id());
         mp.relinquish(tile);
-        mp.removeTroops(2 * ratio[mp.id()]);
+        mp.removeTroops((5 * mp.population()) / mp.numTilesOwned());
         if (!attacked.has(mp)) {
           attacked.set(mp, 0);
         }

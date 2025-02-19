@@ -103,6 +103,19 @@ export class GameServer {
         const clientMsg: ClientMessage = ClientMessageSchema.parse(
           JSON.parse(message),
         );
+        if (this.allClients.has(clientMsg.clientID)) {
+          const client = this.allClients.get(clientMsg.clientID);
+          if (client.persistentID != clientMsg.persistentID) {
+            console.warn(
+              `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
+            );
+            return;
+          }
+        }
+
+        // Clear out persistent id to make sure it doesn't get sent to other clients.
+        clientMsg.persistentID = null;
+
         if (clientMsg.type == "intent") {
           if (clientMsg.gameID == this.id) {
             this.addIntent(clientMsg.intent);

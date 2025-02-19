@@ -19,6 +19,20 @@ export class BreakAllianceExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.requestorID)) {
+      console.warn(
+        `BreakAllianceExecution requester ${this.requestorID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(
+        `BreakAllianceExecution: recipient ${this.recipientID} not found`,
+      );
+      this.active = false;
+      return;
+    }
     this.requestor = mg.player(this.requestorID);
     this.recipient = mg.player(this.recipientID);
     this.mg = mg;
