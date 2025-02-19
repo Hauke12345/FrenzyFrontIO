@@ -10,6 +10,7 @@ export class UserSettings {
 
   set(key: string, value: boolean) {
     localStorage.setItem(key, value ? "true" : "false");
+    document.body.classList.toggle("dark");
   }
 
   emojis() {
