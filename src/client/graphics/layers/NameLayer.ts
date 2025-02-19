@@ -46,14 +46,13 @@ export class NameLayer implements Layer {
   private container: HTMLDivElement;
   private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
-  private theme: Theme;
+  private theme: Theme = this.game.config().theme();
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
     private clientID: ClientID,
   ) {
-    this.theme = game.config().theme();
     this.traitorIconImage = new Image();
     this.traitorIconImage.src = traitorIcon;
     this.allianceIconImage = new Image();
@@ -71,6 +70,10 @@ export class NameLayer implements Layer {
 
   shouldTransform(): boolean {
     return false;
+  }
+
+  redraw() {
+    this.theme = this.game.config().theme();
   }
 
   public init() {
@@ -98,9 +101,6 @@ export class NameLayer implements Layer {
       this.firstPlace = sorted[0];
     }
 
-    if (this.theme !== this.game.config().theme()) {
-      this.theme = this.game.config().theme();
-    }
     for (const player of this.game.playerViews()) {
       if (player.isAlive()) {
         if (!this.seenPlayers.has(player)) {

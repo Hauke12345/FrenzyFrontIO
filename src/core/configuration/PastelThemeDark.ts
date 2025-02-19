@@ -13,12 +13,12 @@ import { simpleHash } from "../Util";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
 
-export const pastelTheme = new (class implements Theme {
+export const pastelThemeDark = new (class implements Theme {
   private rand = new PseudoRandom(123);
 
-  private background = colord({ r: 60, g: 60, b: 60 });
+  private background = colord({ r: 0, g: 0, b: 0 });
   private land = colord({ r: 194, g: 193, b: 148 });
-  private shore = colord({ r: 204, g: 203, b: 158 });
+  private shore = colord({ r: 134, g: 133, b: 88 });
   private falloutColors = [
     colord({ r: 120, g: 255, b: 71 }), // Original color
     colord({ r: 130, g: 255, b: 85 }), // Slightly lighter
@@ -26,8 +26,8 @@ export const pastelTheme = new (class implements Theme {
     colord({ r: 125, g: 255, b: 75 }), // Warmer tint
     colord({ r: 115, g: 250, b: 68 }), // Cooler tint
   ];
-  private water = colord({ r: 70, g: 132, b: 180 });
-  private shorelineWater = colord({ r: 100, g: 143, b: 255 });
+  private water = colord({ r: 14, g: 11, b: 30 });
+  private shorelineWater = colord({ r: 50, g: 50, b: 50 });
 
   private territoryColors: Colord[] = [
     colord({ r: 230, g: 100, b: 100 }), // Bright Red
@@ -253,7 +253,7 @@ export const pastelTheme = new (class implements Theme {
   }
 
   textColor(playerInfo: PlayerInfo): string {
-    return playerInfo.playerType == PlayerType.Human ? "#000000" : "#4D4D4D";
+    return playerInfo.playerType == PlayerType.Human ? "#ffffff" : "#dbdbdb";
   }
 
   borderColor(playerInfo: PlayerInfo): Colord {
@@ -295,21 +295,21 @@ export const pastelTheme = new (class implements Theme {
         return this.water;
       case TerrainType.Plains:
         return colord({
-          r: 190,
-          g: 220 - 2 * mag,
-          b: 138,
+          r: 140,
+          g: 170 - 2 * mag,
+          b: 88,
         });
       case TerrainType.Highland:
         return colord({
-          r: 200 + 2 * mag,
-          g: 183 + 2 * mag,
-          b: 138 + 2 * mag,
+          r: 150 + 2 * mag,
+          g: 133 + 2 * mag,
+          b: 88 + 2 * mag,
         });
       case TerrainType.Mountain:
         return colord({
-          r: 230 + mag / 2,
-          g: 230 + mag / 2,
-          b: 230 + mag / 2,
+          r: 180 + mag / 2,
+          g: 180 + mag / 2,
+          b: 180 + mag / 2,
         });
     }
   }

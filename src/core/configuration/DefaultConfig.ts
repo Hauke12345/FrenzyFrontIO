@@ -20,7 +20,8 @@ import { UserSettings } from "../game/UserSettings";
 import { GameConfig } from "../Schemas";
 import { assertNever, within } from "../Util";
 import { Config, GameEnv, ServerConfig, Theme } from "./Config";
-import { pastelTheme, pastelThemeDark } from "./PastelTheme";
+import { pastelTheme } from "./PastelTheme";
+import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
   abstract env(): GameEnv;
