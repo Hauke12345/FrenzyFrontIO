@@ -33,6 +33,7 @@ import { DonateExecution } from "./DonateExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
+import { NoOpExecution } from "./NoOpExecution";
 
 export class Executor {
   // private random = new PseudoRandom(999)
@@ -52,11 +53,26 @@ export class Executor {
   }
 
   createExec(intent: Intent): Execution {
+    if (intent.type != "spawn") {
+      if (!this.mg.hasPlayer(intent.playerID)) {
+        console.warn(
+          `player ${intent.playerID} not found on intent ${intent.type}`,
+        );
+        return new NoOpExecution();
+      }
+      const player = this.mg.player(intent.playerID);
+      if (player.clientID() != intent.clientID) {
+        console.warn(
+          `intent ${intent.type} has incorrect clientID ${intent.clientID} for player ${player.name()} with clientID ${player.clientID()}`,
+        );
+        return new NoOpExecution();
+      }
+    }
     switch (intent.type) {
       case "attack": {
         return new AttackExecution(
           intent.troops,
-          intent.attackerID,
+          intent.playerID,
           intent.targetID,
           null,
         );
@@ -77,40 +93,40 @@ export class Executor {
         );
       case "boat":
         return new TransportShipExecution(
-          intent.attackerID,
+          intent.playerID,
           intent.targetID,
           this.mg.ref(intent.x, intent.y),
           intent.troops,
         );
       case "allianceRequest":
-        return new AllianceRequestExecution(intent.requestor, intent.recipient);
+        return new AllianceRequestExecution(intent.playerID, intent.recipient);
       case "allianceRequestReply":
         return new AllianceRequestReplyExecution(
           intent.requestor,
-          intent.recipient,
+          intent.playerID,
           intent.accept,
         );
       case "breakAlliance":
-        return new BreakAllianceExecution(intent.requestor, intent.recipient);
+        return new BreakAllianceExecution(intent.playerID, intent.recipient);
       case "targetPlayer":
-        return new TargetPlayerExecution(intent.requestor, intent.target);
+        return new TargetPlayerExecution(intent.playerID, intent.target);
       case "emoji":
         return new EmojiExecution(
-          intent.sender,
+          intent.playerID,
           intent.recipient,
           intent.emoji,
         );
       case "donate":
         return new DonateExecution(
-          intent.sender,
+          intent.playerID,
           intent.recipient,
           intent.troops,
         );
       case "troop_ratio":
-        return new SetTargetTroopRatioExecution(intent.player, intent.ratio);
+        return new SetTargetTroopRatioExecution(intent.playerID, intent.ratio);
       case "build_unit":
         return new ConstructionExecution(
-          intent.player,
+          intent.playerID,
           this.mg.ref(intent.x, intent.y),
           intent.unit,
         );

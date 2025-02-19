@@ -43,7 +43,7 @@ export class MirvExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
-    if (!this.mg.hasPlayer(this.senderID)) {
+    if (!mg.hasPlayer(this.senderID)) {
       console.warn(`MIRVExecution: player ${this.senderID} not found`);
       this.active = false;
       return;

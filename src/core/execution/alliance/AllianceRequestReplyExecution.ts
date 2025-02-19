@@ -20,6 +20,20 @@ export class AllianceRequestReplyExecution implements Execution {
   ) {}
 
   init(mg: Game, ticks: number): void {
+    if (!mg.hasPlayer(this.requestorID)) {
+      console.warn(
+        `AllianceRequestReplyExecution requester ${this.requestorID} not found`,
+      );
+      this.active = false;
+      return;
+    }
+    if (!mg.hasPlayer(this.recipientID)) {
+      console.warn(
+        `AllianceRequestReplyExecution recipient ${this.recipientID} not found`,
+      );
+      this.active = false;
+      return;
+    }
     this.mg = mg;
     this.requestor = mg.player(this.requestorID);
     this.recipient = mg.player(this.recipientID);

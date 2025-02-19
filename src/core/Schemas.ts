@@ -133,11 +133,12 @@ const BaseIntentSchema = z.object({
     "build_unit",
   ]),
   clientID: ID,
+  playerID: ID,
 });
 
 export const AttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("attack"),
-  attackerID: ID,
+  playerID: ID,
   targetID: ID.nullable(),
   troops: z.number().nullable(),
 });
@@ -154,7 +155,7 @@ export const SpawnIntentSchema = BaseIntentSchema.extend({
 
 export const BoatAttackIntentSchema = BaseIntentSchema.extend({
   type: z.literal("boat"),
-  attackerID: ID,
+  playerID: ID,
   targetID: ID.nullable(),
   troops: z.number().nullable(),
   x: z.number(),
@@ -163,52 +164,52 @@ export const BoatAttackIntentSchema = BaseIntentSchema.extend({
 
 export const AllianceRequestIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceRequest"),
-  requestor: ID,
+  playerID: ID,
   recipient: ID,
 });
 
 export const AllianceRequestReplyIntentSchema = BaseIntentSchema.extend({
   type: z.literal("allianceRequestReply"),
   requestor: ID, // The one who made the original alliance request
-  recipient: ID,
+  playerID: ID,
   accept: z.boolean(),
 });
 
 export const BreakAllianceIntentSchema = BaseIntentSchema.extend({
   type: z.literal("breakAlliance"),
-  requestor: ID, // The one who made the original alliance request
+  playerID: ID,
   recipient: ID,
 });
 
 export const TargetPlayerIntentSchema = BaseIntentSchema.extend({
   type: z.literal("targetPlayer"),
-  requestor: ID,
+  playerID: ID,
   target: ID,
 });
 
 export const EmojiIntentSchema = BaseIntentSchema.extend({
   type: z.literal("emoji"),
-  sender: ID,
+  playerID: ID,
   recipient: z.union([ID, z.literal(AllPlayers)]),
   emoji: EmojiSchema,
 });
 
 export const DonateIntentSchema = BaseIntentSchema.extend({
   type: z.literal("donate"),
-  sender: ID,
+  playerID: ID,
   recipient: ID,
   troops: z.number().nullable(),
 });
 
 export const TargetTroopRatioIntentSchema = BaseIntentSchema.extend({
   type: z.literal("troop_ratio"),
-  player: ID,
+  playerID: ID,
   ratio: z.number().min(0).max(1),
 });
 
 export const BuildUnitIntentSchema = BaseIntentSchema.extend({
   type: z.literal("build_unit"),
-  player: ID,
+  playerID: ID,
   unit: z.nativeEnum(UnitType),
   x: z.number(),
   y: z.number(),
