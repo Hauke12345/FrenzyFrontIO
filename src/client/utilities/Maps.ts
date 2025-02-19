@@ -23,7 +23,7 @@ export function getMapsImage(map: GameMapType): string {
     case GameMapType.BlackSea:
       return blackSea;
     case GameMapType.Africa:
-      return africa;  // Corrected the case for Africa
+      return africa;
     default:
       return "";
   }
