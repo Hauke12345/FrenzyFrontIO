@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { GameMapType } from "../../core/game/Game";
+import { getMapsImage } from "../utilities/Maps";
 
 // Add map descriptions
 export const MapDescription: Record<keyof typeof GameMapType, string> = {
@@ -12,14 +13,6 @@ export const MapDescription: Record<keyof typeof GameMapType, string> = {
   BlackSea: "Black Sea",
   Africa: "Africa",
 };
-
-import world from "../../../resources/maps/WorldMap.png";
-import oceania from "../../../resources/maps/Oceania.png";
-import europe from "../../../resources/maps/Europe.png";
-import mena from "../../../resources/maps/Mena.png";
-import northAmerica from "../../../resources/maps/NorthAmerica.png";
-import blackSea from "../../../resources/maps/BlackSea.png";
-import africa from "../../../resources/maps/Africa.png";
 
 @customElement("map-display")
 export class MapDisplay extends LitElement {
@@ -75,35 +68,14 @@ export class MapDisplay extends LitElement {
     }
   `;
 
-  private getMapsImage(map: GameMapType): string {
-    switch (map) {
-      case GameMapType.World:
-        return world;
-      case GameMapType.Oceania:
-        return oceania;
-      case GameMapType.Europe:
-        return europe;
-      case GameMapType.Mena:
-        return mena;
-      case GameMapType.NorthAmerica:
-        return northAmerica;
-      case GameMapType.BlackSea:
-        return blackSea;
-      case GameMapType.Africa:
-        return africa;
-      default:
-        return "";
-    }
-  }
-
   render() {
     const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
 
     return html`
       <div class="option-card ${this.selected ? "selected" : ""}">
-        ${this.getMapsImage(mapValue)
+        ${getMapsImage(mapValue)
           ? html`<img
-              src="${this.getMapsImage(mapValue)}"
+              src="${getMapsImage(mapValue)}"
               alt="${this.mapKey}"
               class="option-image"
             />`
