@@ -4,6 +4,8 @@ import europe from "../../../resources/maps/Europe.png";
 import mena from "../../../resources/maps/Mena.png";
 import northAmerica from "../../../resources/maps/NorthAmerica.png";
 import blackSea from "../../../resources/maps/BlackSea.png";
+import africa from "../../../resources/maps/Africa.png";
+
 import { GameMapType } from "../../core/game/Game";
 
 export function getMapsImage(map: GameMapType): string {
@@ -20,6 +22,8 @@ export function getMapsImage(map: GameMapType): string {
       return northAmerica;
     case GameMapType.BlackSea:
       return blackSea;
+    case GameMapType.Africa:
+      return africa;
     default:
       return "";
   }
