@@ -79,10 +79,28 @@ export class GameManager {
   }
 
   private getNextMap(): GameMapType {
-    if (this.mapsPlaylist.length == 0) {
-      this.mapsPlaylist = this.random.shuffleArray(Object.values(GameMapType));
+    if (this.mapsPlaylist.length > 0) {
+      return this.mapsPlaylist.shift();
     }
-    return this.mapsPlaylist.shift();
+    while (true) {
+      this.mapsPlaylist = Object.values(GameMapType);
+      this.mapsPlaylist.push(GameMapType.World);
+      this.mapsPlaylist.push(GameMapType.Europe);
+      this.random.shuffleArray(this.mapsPlaylist);
+      if (this.allNonConsecutive(this.mapsPlaylist)) {
+        return this.mapsPlaylist.shift();
+      }
+    }
+  }
+
+  private allNonConsecutive(maps: GameMapType[]): boolean {
+    // Check for consecutive duplicates in the maps array
+    for (let i = 0; i < maps.length - 1; i++) {
+      if (maps[i] === maps[i + 1]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   tick() {
