@@ -5,8 +5,7 @@ import "./components/Maps";
 
 @customElement("help-modal")
 export class HelpModal extends LitElement {
-  @state() private isModalOpen = true;
-  // @state() private isModalOpen = false;
+  @state() private isModalOpen = false;
 
   // Added #helpModal infront of everything to prevent leaks of css in other elements outside this one
   private styles = css`
