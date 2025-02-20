@@ -397,75 +397,78 @@ export class EventsDisplay extends LitElement implements Layer {
       <div
         class="${this._hidden
           ? "w-fit px-[10px] py-[5px]"
-          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vw] overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-3xl lg:w-full lg:w-auto"
+          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-3xl lg:w-full lg:w-auto"
       >
-        <div class="w-full bg-black/10 sticky top-0 px-[10px]">
+        <div>
+          <div class="w-full bg-black/80 sticky top-0 px-[10px]">
+            <button
+              class="text-white cursor-pointer pointer-events-auto ${this
+                ._hidden
+                ? "hidden"
+                : ""}"
+              @click=${() => (this._hidden = true)}
+            >
+              Hide
+            </button>
+          </div>
           <button
             class="text-white cursor-pointer pointer-events-auto ${this._hidden
+              ? ""
+              : "hidden"}"
+            @click=${() => (this._hidden = false)}
+          >
+            Events
+          </button>
+          <table
+            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
+              ._hidden
               ? "hidden"
               : ""}"
-            @click=${() => (this._hidden = true)}
+            style="pointer-events: auto;"
           >
-            Hide
-          </button>
-        </div>
-        <button
-          class="text-white cursor-pointer pointer-events-auto ${this._hidden
-            ? ""
-            : "hidden"}"
-          @click=${() => (this._hidden = false)}
-        >
-          Events
-        </button>
-        <table
-          class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
-            ._hidden
-            ? "hidden"
-            : ""}"
-          style="pointer-events: auto;"
-        >
-          <tbody>
-            ${this.events.map(
-              (event, index) => html`
-                <tr
-                  class="border-b border-opacity-0 ${this.getMessageTypeClasses(
-                    event.type,
-                  )}"
-                >
-                  <td class="lg:p-3 p-1 text-left">
-                    ${event.unsafeDescription
-                      ? unsafeHTML(onlyImages(event.description))
-                      : event.description}
-                    ${event.buttons
-                      ? html`
-                          <div class="flex flex-wrap gap-1.5 mt-1">
-                            ${event.buttons.map(
-                              (btn) => html`
-                                <button
-                                  class="inline-block px-3 py-1 text-white rounded text-sm cursor-pointer transition-colors duration-300
+            <tbody>
+              ${this.events.map(
+                (event, index) => html`
+                  <tr
+                    class="border-b border-opacity-0 ${this.getMessageTypeClasses(
+                      event.type,
+                    )}"
+                  >
+                    <td class="lg:p-3 p-1 text-left">
+                      ${event.unsafeDescription
+                        ? unsafeHTML(onlyImages(event.description))
+                        : event.description}
+                      ${event.buttons
+                        ? html`
+                            <div class="flex flex-wrap gap-1.5 mt-1">
+                              ${event.buttons.map(
+                                (btn) => html`
+                                  <button
+                                    class="inline-block px-3 py-1 text-white rounded text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
-                                    ? "bg-blue-500 hover:bg-blue-600"
-                                    : "bg-green-600 hover:bg-green-700"}"
-                                  @click=${() => {
-                                    btn.action();
-                                    this.removeEvent(index);
-                                    this.requestUpdate();
-                                  }}
-                                >
-                                  ${btn.text}
-                                </button>
-                              `,
-                            )}
-                          </div>
-                        `
-                      : ""}
-                  </td>
-                </tr>
-              `,
-            )}
-            ${this.renderAttacks()}
-          </tbody>
-        </table>
+                                      ? "bg-blue-500 hover:bg-blue-600"
+                                      : "bg-green-600 hover:bg-green-700"}"
+                                    @click=${() => {
+                                      btn.action();
+                                      this.removeEvent(index);
+                                      this.requestUpdate();
+                                    }}
+                                  >
+                                    ${btn.text}
+                                  </button>
+                                `,
+                              )}
+                            </div>
+                          `
+                        : ""}
+                    </td>
+                  </tr>
+                `,
+              )}
+              ${this.renderAttacks()}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
   }
