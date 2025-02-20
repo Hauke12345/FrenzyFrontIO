@@ -1,6 +1,7 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import Countries from "./data/countries.json";
+import { UserSettings } from "../core/game/UserSettings";
 
 const flagKey: string = "flag";
 
@@ -9,40 +10,12 @@ export class FlagInput extends LitElement {
   @state() private flag: string = "";
   @state() private search: string = "";
   @state() private showModal: boolean = false;
+  private userSettings: UserSettings = new UserSettings();
 
   static styles = css`
-    .hidden {
-      display: none;
+    .dark-mode .flag-button {
+      background: rgba(55, 65, 81, 0.7);
     }
-
-    .flag-container {
-      display: flex;
-      position: relative;
-    }
-
-    .flag-button {
-      display: flex;
-      border: 1px solid rgba(0, 0, 0, 0.3);
-      background: rgba(255, 255, 255, 0.7);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 8px;
-    }
-
-    .selected-flag {
-      width: 48px;
-    }
-    // .flag-button {
-    //   display: flex;
-    //   border: 0px;
-    //   background: none;
-    //   cursor: pointer;
-    //   padding: 0px;
-    // }
-
-    // .selected-flag {
-    //   width: 50px;
-    // }
 
     .flag-modal {
       display: flex;
@@ -68,6 +41,12 @@ export class FlagInput extends LitElement {
       border: none;
       text-align: center;
       font-size: 1.3rem;
+    }
+
+    .dark-mode .flag-search {
+      background: rgb(55, 65, 81);
+      color: white;
+      border: 1px solid rgb(209, 213, 219);
     }
 
     .flag-dropdown {
@@ -115,7 +94,11 @@ export class FlagInput extends LitElement {
   }
 
   private setFlag(flag: string) {
-    this.flag = flag;
+    if (flag == "") {
+      this.flag = "";
+    } else {
+      this.flag = flag;
+    }
     this.showModal = false;
     this.storeFlag(flag);
   }
@@ -156,35 +139,38 @@ export class FlagInput extends LitElement {
     this.dispatchFlagEvent();
   }
 
+  createRenderRoot() {
+    return this;
+  }
+
   render() {
     return html`
-      <div class="flag-container">
+      <div class="flex relative">
         <button
           @click=${() => (this.showModal = !this.showModal)}
-          class="flag-button"
+          class="border p-[4px] rounded-lg flex cursor-pointer border-black/30 dark:border-gray-300/60 bg-white/70 dark:bg-[rgba(55,65,81,0.7)]"
           title="Pick a flag!"
         >
-          <img class="selected-flag" src="/flags/${this.flag || "xx"}.svg" />
+          <img class="size-[48px]" src="/flags/${this.flag || "xx"}.svg" />
         </button>
         ${this.showModal
           ? html`
-              <div class="flag-modal ${this.showModal ? "" : "hidden"}">
+              <div
+                class="text-white flex flex-col gap-[0.5rem] absolute top-[60px] left-[0px] w-[780%] h-[500px] max-h-[50vh] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
+                  .showModal
+                  ? ""
+                  : "hidden"}"
+              >
                 <input
-                  class="flag-search"
+                  class="h-[2rem] border-none text-center border border-gray-300 rounded-xl shadow-sm text-2xl text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300/60 dark:bg-gray-700 dark:text-white"
                   type="text"
                   placeholder="Search..."
                   @change=${this.handleSearch}
                   @keyup=${this.handleSearch}
                 />
-                <div class="flag-dropdown">
-                  <!-- Show each flag as button -->
-                  <button
-                    @click=${() => this.setFlag("")}
-                    class="dropdown-item"
-                  >
-                    <img class="country-flag" src="/flags/xx.svg" />
-                    <span class="country-name">None</span>
-                  </button>
+                <div
+                  class="flex flex-wrap justify-evenly gap-[1rem] overflow-y-auto overflow-x-hidden"
+                >
                   ${Countries.filter(
                     (country) =>
                       country.name
@@ -197,10 +183,10 @@ export class FlagInput extends LitElement {
                     (country) => html`
                       <button
                         @click=${() => this.setFlag(country.code)}
-                        class="dropdown-item"
+                        class="text-center cursor-pointer border-none bg-none opacity-70 sm:w-[calc(33.3333%-15px) w-[calc(100%/4-15px)]"
                       >
                         <img
-                          class="country-flag"
+                          class="country-flag w-full h-auto"
                           src="/flags/${country.code}.svg"
                         />
                         <span class="country-name">${country.name}</span>

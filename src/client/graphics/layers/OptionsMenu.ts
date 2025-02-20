@@ -7,6 +7,7 @@ import { GameView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { UserSettings } from "../../../core/game/UserSettings";
+import { RefreshGraphicsEvent } from "../../InputHandler";
 
 const button = ({
   classes = "",
@@ -83,6 +84,7 @@ export class OptionsMenu extends LitElement implements Layer {
   private onToggleDarkModeButtonClick() {
     this.userSettings.toggleDarkMode();
     this.requestUpdate();
+    this.eventBus.emit(new RefreshGraphicsEvent());
   }
 
   init() {
@@ -156,11 +158,11 @@ export class OptionsMenu extends LitElement implements Layer {
             title: "Toggle Emojis",
             children: "🙂: " + (this.userSettings.emojis() ? "On" : "Off"),
           })}
-          <!-- ${button({
+          ${button({
             onClick: this.onToggleDarkModeButtonClick,
             title: "Dark Mode",
             children: "🌙: " + (this.userSettings.darkMode() ? "On" : "Off"),
-          })} -->
+          })}
         </div>
       </div>
     `;

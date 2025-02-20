@@ -21,6 +21,7 @@ import { GameConfig } from "../Schemas";
 import { assertNever, within } from "../Util";
 import { Config, GameEnv, ServerConfig, Theme } from "./Config";
 import { pastelTheme } from "./PastelTheme";
+import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
   abstract env(): GameEnv;
@@ -245,7 +246,7 @@ export class DefaultConfig implements Config {
     return 400;
   }
   theme(): Theme {
-    return pastelTheme;
+    return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
   }
 
   attackLogic(
