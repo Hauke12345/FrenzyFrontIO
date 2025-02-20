@@ -287,9 +287,9 @@ export const pastelThemeDark = new (class implements Theme {
         }
         if (gm.magnitude(tile) < 10) {
           return colord({
-            r: Math.max(w.r - 10 + mag, 0),
-            g: Math.max(w.g - 10 + mag, 0),
-            b: Math.max(w.b - 10 + mag, 0),
+            r: Math.max(w.r + 9 - mag, 0),
+            g: Math.max(w.g + 9 - mag, 0),
+            b: Math.max(w.b + 9 - mag, 0),
           });
         }
         return this.water;
