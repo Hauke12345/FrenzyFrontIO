@@ -17,6 +17,7 @@ import { PublicLobby } from "./PublicLobby";
 import { UserSettings } from "../core/game/UserSettings";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import { GameType } from "../core/game/Game";
 
 class Client {
   private gameStop: () => void;
@@ -108,6 +109,11 @@ class Client {
       document.body.classList.remove("dark");
     }
     page("/join/:lobbyId", (ctx) => {
+      if (ctx.init && sessionStorage.getItem("inLobby")) {
+        // On page reload, go back home
+        page.redirect("/");
+        return;
+      }
       const lobbyId = ctx.params.lobbyId;
 
       this.joinModal.open(lobbyId);
@@ -125,9 +131,10 @@ class Client {
       consolex.log("joining lobby, stopping existing game");
       this.gameStop();
     }
+    const gameType = event.detail.gameType;
     this.gameStop = joinLobby(
       {
-        gameType: event.detail.gameType,
+        gameType: gameType,
         flag: (): string => this.flagInput.getCurrentFlag(),
         playerName: (): string => this.usernameInput.getCurrentUsername(),
         gameID: lobby.id,
@@ -143,6 +150,10 @@ class Client {
       () => {
         this.joinModal.close();
         this.publicLobby.stop();
+        if (gameType != GameType.Singleplayer) {
+          window.history.pushState({}, "", `/join/${lobby.id}`);
+          sessionStorage.setItem("inLobby", "true");
+        }
       },
     );
   }
