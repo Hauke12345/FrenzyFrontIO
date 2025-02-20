@@ -72,38 +72,45 @@ export class WarshipExecution implements Execution {
     if (this.target != null && !this.target.isActive()) {
       this.target = null;
     }
-    if (this.target == null) {
-      const ships = this.mg
-        .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
-        .filter(
-          (u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130,
-        )
-        .filter((u) => u.owner() != this.warship.owner())
-        .filter((u) => u != this.warship)
-        .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
-        .filter((u) => !this.alreadySentShell.has(u));
+    const ships = this.mg
+      .units(UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip)
+      .filter((u) => this.mg.manhattanDist(u.tile(), this.warship.tile()) < 130)
+      .filter((u) => u.owner() != this.warship.owner())
+      .filter((u) => u != this.warship)
+      .filter((u) => !u.owner().isAlliedWith(this.warship.owner()))
+      .filter((u) => !this.alreadySentShell.has(u));
 
-      this.target = ships.sort(distSortUnit(this.mg, this.warship))[0] ?? null;
-      if (this.target == null || this.target.type() != UnitType.TradeShip) {
-        // Patrol unless we are hunting down a tradeship
-        const result = this.pathfinder.nextTile(
-          this.warship.tile(),
-          this.patrolTile,
-        );
-        switch (result.type) {
-          case PathFindResultType.Completed:
-            this.patrolTile = this.randomTile();
-            break;
-          case PathFindResultType.NextTile:
-            this.warship.move(result.tile);
-            break;
-          case PathFindResultType.Pending:
-            return;
-          case PathFindResultType.PathNotFound:
-            consolex.log(`path not found to patrol tile`);
-            this.patrolTile = this.randomTile();
-            break;
-        }
+    this.target =
+      ships.sort((a, b) => {
+        // First compare by Warship type
+        if (a.type() === UnitType.Warship && b.type() !== UnitType.Warship)
+          return -1;
+        if (a.type() !== UnitType.Warship && b.type() === UnitType.Warship)
+          return 1;
+
+        // If both are same type, sort by distance
+        return distSortUnit(this.mg, this.warship)(a, b);
+      })[0] ?? null;
+
+    if (this.target == null || this.target.type() != UnitType.TradeShip) {
+      // Patrol unless we are hunting down a tradeship
+      const result = this.pathfinder.nextTile(
+        this.warship.tile(),
+        this.patrolTile,
+      );
+      switch (result.type) {
+        case PathFindResultType.Completed:
+          this.patrolTile = this.randomTile();
+          break;
+        case PathFindResultType.NextTile:
+          this.warship.move(result.tile);
+          break;
+        case PathFindResultType.Pending:
+          return;
+        case PathFindResultType.PathNotFound:
+          consolex.log(`path not found to patrol tile`);
+          this.patrolTile = this.randomTile();
+          break;
       }
     }
     if (
