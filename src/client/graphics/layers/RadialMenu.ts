@@ -116,11 +116,12 @@ export class RadialMenu implements Layer {
       if (!this.g.isValidCoord(clickedCell.x, clickedCell.y)) {
         return;
       }
+      const tile = this.g.ref(clickedCell.x, clickedCell.y);
       const p = this.g.playerByClientID(this.clientID);
       if (p == null) {
         return;
       }
-      this.buildMenu.showMenu(p, clickedCell);
+      this.buildMenu.showMenu(tile);
     });
     this.createMenuElement();
   }
@@ -328,7 +329,7 @@ export class RadialMenu implements Layer {
     tile: TileRef,
   ) {
     this.activateMenuElement(Slot.Build, "#ebe250", buildIcon, () => {
-      this.buildMenu.showMenu(myPlayer, this.clickedCell);
+      this.buildMenu.showMenu(tile);
     });
     if (this.g.hasOwner(tile)) {
       this.activateMenuElement(Slot.Info, "#64748B", infoIcon, () => {

@@ -120,6 +120,7 @@ export function createRenderer(
     new UnitLayer(game, eventBus, clientID),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
+    buildMenu,
     new RadialMenu(
       eventBus,
       game,
@@ -174,7 +175,7 @@ export class GameRenderer {
       });
     });
 
-    this.layers.forEach((l) => l.init());
+    this.layers.forEach((l) => l.init?.());
 
     document.body.appendChild(this.canvas);
     window.addEventListener("resize", () => this.resizeCanvas());

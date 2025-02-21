@@ -20,6 +20,8 @@ import cityIcon from "../../../../resources/images/CityIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
 import { renderNumber } from "../../Utils";
 import { GameView, PlayerView } from "../../../core/game/GameView";
+import { TileRef } from "../../../core/game/GameMap";
+import { Layer } from "./Layer";
 
 interface BuildItemDisplay {
   unitType: UnitType;
@@ -73,12 +75,17 @@ const buildTable: BuildItemDisplay[][] = [
 ];
 
 @customElement("build-menu")
-export class BuildMenu extends LitElement {
+export class BuildMenu extends LitElement implements Layer {
   public game: GameView;
   public eventBus: EventBus;
-  private myPlayer: PlayerView;
-  private clickedCell: Cell;
+  private clickedTile: TileRef;
   private playerActions: PlayerActions | null;
+
+  tick() {
+    if (!this._hidden) {
+      this.refresh();
+    }
+  }
 
   static styles = css`
     :host {
@@ -225,7 +232,7 @@ export class BuildMenu extends LitElement {
   private _hidden = true;
 
   private canBuild(item: BuildItemDisplay): boolean {
-    if (this.myPlayer == null || this.playerActions == null) {
+    if (this.game?.myPlayer() == null || this.playerActions == null) {
       return false;
     }
     const unit = this.playerActions.buildableUnits.filter(
@@ -238,7 +245,7 @@ export class BuildMenu extends LitElement {
   }
 
   private cost(item: BuildItemDisplay): number {
-    for (const bu of this.playerActions.buildableUnits) {
+    for (const bu of this.playerActions?.buildableUnits ?? []) {
       if (bu.type == item.unitType) {
         return bu.cost;
       }
@@ -248,7 +255,10 @@ export class BuildMenu extends LitElement {
 
   public onBuildSelected = (item: BuildItemDisplay) => {
     this.eventBus.emit(
-      new BuildUnitIntentEvent(item.unitType, this.clickedCell),
+      new BuildUnitIntentEvent(
+        item.unitType,
+        new Cell(this.game.x(this.clickedTile), this.game.y(this.clickedTile)),
+      ),
     );
     this.hideMenu();
   };
@@ -280,7 +290,7 @@ export class BuildMenu extends LitElement {
                     <span class="build-description">${item.description}</span>
                     <span class="build-cost">
                       ${renderNumber(
-                        this.game && this.myPlayer ? this.cost(item) : 0,
+                        this.game && this.game.myPlayer() ? this.cost(item) : 0,
                       )}
                       <img
                         src=${goldCoinIcon}
@@ -305,15 +315,18 @@ export class BuildMenu extends LitElement {
     this.requestUpdate();
   }
 
-  showMenu(player: PlayerView, clickedCell: Cell) {
-    player
-      .actions(this.game.ref(clickedCell.x, clickedCell.y))
+  showMenu(clickedTile: TileRef) {
+    this.clickedTile = clickedTile;
+    this._hidden = false;
+    this.refresh();
+  }
+
+  private refresh() {
+    this.game
+      .myPlayer()
+      .actions(this.clickedTile)
       .then((actions) => {
-        console.log(`got actions: ${JSON.stringify(actions)}`);
         this.playerActions = actions;
-        this.myPlayer = player;
-        this.clickedCell = clickedCell;
-        this._hidden = false;
         this.requestUpdate();
       });
   }

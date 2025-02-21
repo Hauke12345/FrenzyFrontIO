@@ -2,23 +2,26 @@ export function renderTroops(troops: number): string {
   return renderNumber(troops / 10);
 }
 
-export function renderNumber(num: number) {
+export function renderNumber(num: number): string {
   num = Math.max(num, 0);
-  let numStr = "";
+
   if (num >= 10_000_000) {
-    numStr = (num / 1000000).toFixed(1) + "M";
+    const value = Math.floor(num / 100000) / 10;
+    return value.toFixed(1) + "M";
   } else if (num >= 1_000_000) {
-    numStr = (num / 1000000).toFixed(2) + "M";
+    const value = Math.floor(num / 10000) / 100;
+    return value.toFixed(2) + "M";
   } else if (num >= 100000) {
-    numStr = Math.floor(num / 1000) + "K";
+    return Math.floor(num / 1000) + "K";
   } else if (num >= 10000) {
-    numStr = (num / 1000).toFixed(1) + "K";
+    const value = Math.floor(num / 100) / 10;
+    return value.toFixed(1) + "K";
   } else if (num >= 1000) {
-    numStr = (num / 1000).toFixed(2) + "K";
+    const value = Math.floor(num / 10) / 100;
+    return value.toFixed(2) + "K";
   } else {
-    numStr = Math.floor(num).toString();
+    return Math.floor(num).toString();
   }
-  return numStr;
 }
 
 export function createCanvas(): HTMLCanvasElement {
