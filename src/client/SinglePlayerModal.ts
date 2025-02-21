@@ -297,7 +297,7 @@ export class SinglePlayerModal extends LitElement {
                     @change=${this.handleDisableBotsChange}
                     .checked=${this.disableBots}
                   />
-                  <div class="option-card-title">Disable Bots</div>
+                  <div class="option-card-title">Disable Nations</div>
                 </label>
 
                 <label
