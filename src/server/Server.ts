@@ -32,6 +32,7 @@ import dotenv from "dotenv";
 import crypto from "crypto";
 dotenv.config();
 import rateLimit from "express-rate-limit";
+import { RateLimiterMemory } from "rate-limiter-flexible";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,15 +62,19 @@ app.use(
   }),
 );
 
-app.set("trust proxy", 2);
-app.use(
-  rateLimit({
-    windowMs: 1000, // 1 second
-    max: 20, // 20 requests per IP per second
-  }),
-);
+const rateLimiter = new RateLimiterMemory({
+  points: 20, // 20 messages
+  duration: 1, // per 1 second
+});
 
-const gm = new GameManager(serverConfig);
+const gm = new GameManager(getServerConfig());
+
+const bot = new DiscordBot();
+try {
+  await bot.start();
+} catch (error) {
+  console.error("Failed to start bot:", error);
+}
 
 let lobbiesString = "";
 
@@ -241,6 +246,17 @@ app.get("*", function (req, res) {
 
 wss.on("connection", (ws, req) => {
   ws.on("message", async (message: string) => {
+    let ip = "";
+    try {
+      const forwarded = req.headers["x-forwarded-for"];
+      ip = Array.isArray(forwarded)
+        ? forwarded[0]
+        : forwarded || req.socket.remoteAddress;
+      await rateLimiter.consume(ip);
+    } catch (error) {
+      console.warn(`rate limit exceede for ${ip}`);
+      return;
+    }
     try {
       const clientMsg: ClientMessage = ClientMessageSchema.parse(
         JSON.parse(message),
