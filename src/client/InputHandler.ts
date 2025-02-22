@@ -184,10 +184,12 @@ export class InputHandler {
       }
 
       if (e.code === "Digit1") {
+        e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(-10));
       }
 
       if (e.code === "Digit2") {
+        e.preventDefault();
         this.eventBus.emit(new AttackRatioEvent(10));
       }
 
