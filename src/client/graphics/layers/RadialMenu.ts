@@ -8,6 +8,7 @@ import {
 } from "../../../core/game/Game";
 import { ClientID } from "../../../core/Schemas";
 import {
+  CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
   ShowBuildMenuEvent,
@@ -124,7 +125,20 @@ export class RadialMenu implements Layer {
       }
       this.buildMenu.showMenu(tile);
     });
+
+    this.eventBus.on(CloseViewEvent, () => this.closeMenu());
+
     this.createMenuElement();
+  }
+
+  private closeMenu() {
+    if (this.isVisible) {
+      this.hideRadialMenu();
+    }
+
+    if (this.buildMenu.isVisible) {
+      this.buildMenu.hideMenu();
+    }
   }
 
   private createMenuElement() {

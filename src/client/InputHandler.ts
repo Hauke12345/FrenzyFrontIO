@@ -48,6 +48,8 @@ export class AlternateViewEvent implements GameEvent {
   constructor(public readonly alternateView: boolean) {}
 }
 
+export class CloseViewEvent implements GameEvent {}
+
 export class RefreshGraphicsEvent implements GameEvent {}
 
 export class ShowBuildMenuEvent implements GameEvent {
@@ -147,6 +149,11 @@ export class InputHandler {
           this.alternateView = true;
           this.eventBus.emit(new AlternateViewEvent(true));
         }
+      }
+
+      if (e.code === "Escape") {
+        e.preventDefault();
+        this.eventBus.emit(new CloseViewEvent());
       }
 
       // Add all movement keys to activeKeys
