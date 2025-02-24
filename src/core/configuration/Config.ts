@@ -77,8 +77,10 @@ export interface Config {
   percentageTilesOwnedToWin(): number;
   numBots(): number;
   spawnNPCs(): boolean;
-  spawnBots(): boolean;
-  creativeMode(): boolean;
+  bots(): number;
+  infiniteGold(): boolean;
+  infiniteTroops(): boolean;
+  instantBuild(): boolean;
   numSpawnPhaseTurns(): number;
   userSettings(): UserSettings;
 

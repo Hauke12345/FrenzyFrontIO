@@ -151,9 +151,11 @@ class Client {
         clientID: generateID(),
         map: event.detail.map,
         difficulty: event.detail.difficulty,
-        disableBots: event.detail.disableBots,
+        infiniteGold: event.detail.infiniteGold,
+        infiniteTroops: event.detail.infiniteTroops,
+        instantBuild: event.detail.instantBuild,
+        bots: event.detail.bots,
         disableNPCs: event.detail.disableNPCs,
-        creativeMode: event.detail.creativeMode,
       },
       () => {
         this.joinModal.close();

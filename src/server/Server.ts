@@ -225,9 +225,11 @@ app.put(
     gm.updateGameConfig(lobbyID, {
       gameMap: req.body.gameMap,
       difficulty: req.body.difficulty,
-      disableBots: req.body.disableBots,
+      infiniteGold: req.body.infiniteGold,
+      infiniteTroops: req.body.infiniteTroops,
+      instantBuild: req.body.instantBuild,
+      bots: req.body.bots,
       disableNPCs: req.body.disableNPCs,
-      creativeMode: req.body.creativeMode,
     });
     res.status(200).json({ success: true });
   }),

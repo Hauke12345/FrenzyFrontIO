@@ -63,7 +63,7 @@ export class GameRunner {
   ) {}
 
   init() {
-    if (this.game.config().spawnBots()) {
+    if (this.game.config().bots() > 0) {
       this.game.addExecution(
         ...this.execManager.spawnBots(this.game.config().numBots()),
       );

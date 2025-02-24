@@ -89,11 +89,17 @@ export class DefaultConfig implements Config {
   spawnNPCs(): boolean {
     return !this._gameConfig.disableNPCs;
   }
-  spawnBots(): boolean {
-    return !this._gameConfig.disableBots;
+  bots(): number {
+    return this._gameConfig.bots;
   }
-  creativeMode(): boolean {
-    return this._gameConfig.creativeMode;
+  instantBuild(): boolean {
+    return this._gameConfig.instantBuild;
+  }
+  infiniteGold(): boolean {
+    return this._gameConfig.infiniteGold;
+  }
+  infiniteTroops(): boolean {
+    return this._gameConfig.infiniteTroops;
   }
   tradeShipGold(dist: number): Gold {
     return 10000 + 100 * Math.pow(dist, 1.1);
@@ -112,7 +118,7 @@ export class DefaultConfig implements Config {
       case UnitType.Warship:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode()
+            p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
                 250_000,
@@ -128,7 +134,7 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode()
+            p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_000_000,
@@ -138,24 +144,24 @@ export class DefaultConfig implements Config {
                   ) * 125_000,
                 ),
           territoryBound: true,
-          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };
       case UnitType.AtomBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 750_000,
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 750_000,
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 5_000_000,
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 5_000_000,
           territoryBound: false,
         };
       case UnitType.MIRV:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode()
+            p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : 15_000_000,
           territoryBound: false,
@@ -173,14 +179,14 @@ export class DefaultConfig implements Config {
       case UnitType.MissileSilo:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode() ? 0 : 1_000_000,
+            p.type() == PlayerType.Human && this.infiniteGold() ? 0 : 1_000_000,
           territoryBound: true,
-          constructionDuration: this.creativeMode() ? 0 : 10 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
         };
       case UnitType.DefensePost:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode()
+            p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   250_000,
@@ -189,12 +195,12 @@ export class DefaultConfig implements Config {
                     50_000,
                 ),
           territoryBound: true,
-          constructionDuration: this.creativeMode() ? 0 : 5 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.City:
         return {
           cost: (p: Player) =>
-            p.type() == PlayerType.Human && this.creativeMode()
+            p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
                   1_000_000,
@@ -204,7 +210,7 @@ export class DefaultConfig implements Config {
                   ) * 125_000,
                 ),
           territoryBound: true,
-          constructionDuration: this.creativeMode() ? 0 : 2 * 10,
+          constructionDuration: this.instantBuild() ? 0 : 2 * 10,
         };
       case UnitType.Construction:
         return {
@@ -252,7 +258,7 @@ export class DefaultConfig implements Config {
     return this._gameConfig.gameType == GameType.Singleplayer ? 100 : 300;
   }
   numBots(): number {
-    return 400;
+    return this.bots();
   }
   theme(): Theme {
     return this.userSettings().darkMode() ? pastelThemeDark : pastelTheme;
@@ -395,12 +401,12 @@ export class DefaultConfig implements Config {
           return 50_000 * (playerInfo?.nation?.strength ?? 1);
       }
     }
-    return this.creativeMode() ? 1_000_000 : 25_000;
+    return this.infiniteTroops() ? 1_000_000 : 25_000;
   }
 
   maxPopulation(player: Player | PlayerView): number {
     let maxPop =
-      player.type() == PlayerType.Human && this.creativeMode()
+      player.type() == PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
           player.units(UnitType.City).length * this.cityPopulationIncrease();

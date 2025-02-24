@@ -54,9 +54,11 @@ export class GameManager {
         gameMap: GameMapType.World,
         gameType: GameType.Private,
         difficulty: Difficulty.Medium,
-        disableBots: false,
         disableNPCs: false,
-        creativeMode: false,
+        infiniteGold: false,
+        infiniteTroops: false,
+        instantBuild: false,
+        bots: 400,
       }),
     );
     return id;
@@ -139,9 +141,11 @@ export class GameManager {
           gameMap: this.getNextMap(),
           gameType: GameType.Public,
           difficulty: Difficulty.Medium,
-          disableBots: false,
+          infiniteGold: false,
+          infiniteTroops: false,
+          instantBuild: false,
           disableNPCs: false,
-          creativeMode: false,
+          bots: 400,
         }),
       );
     }
