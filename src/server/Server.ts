@@ -32,6 +32,7 @@ import crypto from "crypto";
 dotenv.config();
 import rateLimit from "express-rate-limit";
 import { RateLimiterMemory } from "rate-limiter-flexible";
+import * as si from "systeminformation";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -385,6 +386,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 function startServer() {
   setInterval(() => tick(), 1000);
   setInterval(() => updateLobbies(), 100);
+  setInterval(async () => {
+    await getCurrentCpuUsage();
+    console.log("---");
+  }, 5 * 1000);
 
   initializeSecrets();
 
@@ -469,6 +474,17 @@ async function getSecret(secretName: string, ge: GameEnv) {
   const name = `projects/openfrontio/secrets/${secretName}/versions/latest`;
   const [version] = await secretManager.accessSecretVersion({ name });
   return version.payload?.data?.toString();
+}
+
+async function getCurrentCpuUsage(): Promise<void> {
+  const cpuData = await si.currentLoad();
+  console.log(`Current CPU Load: ${cpuData.currentLoad.toFixed(2)}%`);
+  console.log(
+    `Current CPU Load (User): ${cpuData.currentLoadUser.toFixed(2)}%`,
+  );
+  console.log(
+    `Current CPU Load (System): ${cpuData.currentLoadSystem.toFixed(2)}%`,
+  );
 }
 
 startServer();
