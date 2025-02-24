@@ -8,10 +8,21 @@ export interface slogMsg {
   gameID?: GameID;
   clientID?: ClientID;
   persistentID?: string;
+  stack?: string; // Added stack property
 }
 
 export function slog(msg: slogMsg): void {
   msg.severity = msg.severity ?? LogSeverity.Info;
+
+  // Format stack trace if available
+  if (msg.stack) {
+    // Keep the stack trace in the log data
+    if (!msg.data) {
+      msg.data = { stack: msg.stack };
+    } else if (typeof msg.data === "object") {
+      msg.data.stack = msg.stack;
+    }
+  }
 
   if (process.env.GAME_ENV == "dev") {
     // Avoid blowing up the log during development.
@@ -20,6 +31,10 @@ export function slog(msg: slogMsg): void {
     }
     if (msg.severity != LogSeverity.Debug) {
       console.log(msg.msg);
+      // Print stack trace in development for errors
+      if (msg.severity === LogSeverity.Error && msg.stack) {
+        console.error(msg.stack);
+      }
     }
   } else {
     try {
@@ -28,6 +43,9 @@ export function slog(msg: slogMsg): void {
       console.error("Failed to stringify log message:", error);
       // Fallback to basic logging
       console.log(`${msg.severity}: ${msg.msg}`);
+      if (msg.severity === LogSeverity.Error && msg.stack) {
+        console.error(msg.stack);
+      }
     }
   }
 }

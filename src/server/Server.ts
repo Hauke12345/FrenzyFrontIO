@@ -1,4 +1,4 @@
-import express, { json } from "express";
+import express, { json, Request, Response, NextFunction } from "express";
 import http from "http";
 import { WebSocketServer } from "ws";
 import path from "path";
@@ -26,7 +26,6 @@ import {
   sanitizeUsername,
   validateUsername,
 } from "../core/validations/username";
-import { Request, Response } from "express";
 import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 import dotenv from "dotenv";
 import crypto from "crypto";
@@ -83,15 +82,40 @@ try {
 
 let lobbiesString = "";
 
+// Async error wrapper with rate limiting support
+const asyncHandler =
+  (fn: Function, limiter = null) =>
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Apply rate limiting if a limiter is provided
+      if (limiter) {
+        const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+        try {
+          await limiter.consume(clientIP);
+        } catch (error) {
+          console.warn(`Rate limited for IP ${clientIP}`);
+          return res.status(429).json({ error: "Too many requests" });
+        }
+      }
+
+      // Execute the route handler
+      await fn(req, res, next);
+    } catch (error) {
+      // Pass any errors to Express error handler
+      next(error);
+    }
+  };
+
 // Discord OAuth callback endpoint
-app.get("/auth/callback", async (req: Request, res: Response) => {
-  const { code } = req.query;
+app.get(
+  "/auth/callback",
+  asyncHandler(async (req: Request, res: Response) => {
+    const { code } = req.query;
 
-  if (!code) {
-    return res.status(400).send("No code provided");
-  }
+    if (!code) {
+      return res.status(400).send("No code provided");
+    }
 
-  try {
     // Exchange code for access token
     const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
@@ -136,11 +160,8 @@ app.get("/auth/callback", async (req: Request, res: Response) => {
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
     });
     res.redirect(`/`);
-  } catch (error) {
-    console.error("Auth error:", error);
-    res.status(500).send("Authentication failed");
-  }
-});
+  }),
+);
 
 app.get("/auth/discord", (req: Request, res: Response) => {
   console.log("Redirecting to Discord OAuth...");
@@ -155,33 +176,22 @@ app.get("/lobbies", (req: Request, res: Response) => {
   res.send(lobbiesString);
 });
 
-app.post("/private_lobby", async (req, res) => {
-  let clientIP = "";
-  try {
-    clientIP = req.ip || req.socket.remoteAddress || "unknown";
-    await updateRateLimiter.consume(clientIP);
-  } catch (error) {
-    console.warn(`create private lobby rate limited for IP ${clientIP}`);
-    return;
-  }
-  const id = gm.createPrivateGame();
-  console.log(`ip ${clientIP} creating private lobby with id ${id}`);
-  res.json({
-    id: id,
-  });
-});
+app.post(
+  "/private_lobby",
+  asyncHandler(async (req, res) => {
+    throw Error("uh oh");
+    const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+    const id = gm.createPrivateGame();
+    console.log(`ip ${clientIP} creating private lobby with id ${id}`);
+    res.json({
+      id: id,
+    });
+  }, updateRateLimiter),
+);
 
-app.post("/archive_singleplayer_game", async (req, res) => {
-  let clientIP = "";
-  try {
-    clientIP = req.ip || req.socket.remoteAddress || "unknown";
-    await updateRateLimiter.consume(clientIP);
-  } catch (error) {
-    console.warn(`archive singleplayer game limited for IP ${clientIP}`);
-    return;
-  }
-
-  try {
+app.post(
+  "/archive_singleplayer_game",
+  asyncHandler(async (req, res) => {
     const gameRecord: GameRecord = req.body;
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
 
@@ -196,78 +206,84 @@ app.post("/archive_singleplayer_game", async (req, res) => {
     res.json({
       success: true,
     });
-  } catch (error) {
-    slog({
-      logKey: "complete_single_player_game_record",
-      msg: `Failed to complete game record: ${error}`,
-      severity: LogSeverity.Error,
+  }, updateRateLimiter),
+);
+
+app.post(
+  "/start_private_lobby/:id",
+  asyncHandler(async (req, res) => {
+    const clientIP = req.ip || req.socket.remoteAddress || "unknown";
+    console.log(`starting private lobby with id ${req.params.id}`);
+    gm.startPrivateGame(req.params.id);
+    res.status(200).json({ success: true });
+  }, updateRateLimiter),
+);
+
+app.put(
+  "/private_lobby/:id",
+  asyncHandler(async (req, res) => {
+    const lobbyID = req.params.id;
+    gm.updateGameConfig(lobbyID, {
+      gameMap: req.body.gameMap,
+      difficulty: req.body.difficulty,
+      disableBots: req.body.disableBots,
+      disableNPCs: req.body.disableNPCs,
+      creativeMode: req.body.creativeMode,
     });
-    res.status(400).json({ error: "Invalid game record format" });
-  }
-});
+    res.status(200).json({ success: true });
+  }),
+);
 
-app.post("/start_private_lobby/:id", async (req, res) => {
-  let clientIP = "";
-  try {
-    clientIP = req.ip || req.socket.remoteAddress || "unknown";
-    await updateRateLimiter.consume(clientIP);
-  } catch (error) {
-    console.warn(`start private lobby rate limited for IP ${clientIP}`);
-    return;
-  }
-  console.log(`starting private lobby with id ${req.params.id}`);
-  gm.startPrivateGame(req.params.id);
-});
+app.get(
+  "/lobby/:id/exists",
+  asyncHandler(async (req, res) => {
+    const lobbyId = req.params.id;
+    let gameExists = gm.hasActiveGame(lobbyId);
+    if (!gameExists) {
+      gameExists = await gameRecordExists(lobbyId);
+    }
+    res.json({
+      exists: gameExists,
+    });
+  }),
+);
 
-app.put("/private_lobby/:id", async (req, res) => {
-  const lobbyID = req.params.id;
-  gm.updateGameConfig(lobbyID, {
-    gameMap: req.body.gameMap,
-    difficulty: req.body.difficulty,
-    disableBots: req.body.disableBots,
-    disableNPCs: req.body.disableNPCs,
-    creativeMode: req.body.creativeMode,
-  });
-});
+app.get(
+  "/lobby/:id",
+  asyncHandler(async (req, res) => {
+    const game = gm.game(req.params.id);
+    if (game == null) {
+      console.log(`lobby ${req.params.id} not found`);
+      return res.status(404).json({ error: "Game not found" });
+    }
+    res.json({
+      players: game.activeClients.map((c) => ({
+        username: c.username,
+        clientID: c.clientID,
+      })),
+    });
+  }),
+);
 
-app.get("/lobby/:id/exists", async (req, res) => {
-  const lobbyId = req.params.id;
-  let gameExists = gm.hasActiveGame(lobbyId);
-  if (!gameExists) {
-    gameExists = await gameRecordExists(lobbyId);
-  }
-  res.json({
-    exists: gameExists,
-  });
-});
+app.get(
+  "/private_lobby/:id",
+  asyncHandler(async (req, res) => {
+    res.json({
+      hi: "5",
+    });
+  }),
+);
 
-app.get("/lobby/:id", (req, res) => {
-  const game = gm.game(req.params.id);
-  if (game == null) {
-    console.log(`lobby ${req.params.id} not found`);
-    return res.status(404).json({ error: "Game not found" });
-  }
-  res.json({
-    players: game.activeClients.map((c) => ({
-      username: c.username,
-      clientID: c.clientID,
-    })),
-  });
-});
-
-app.get("/private_lobby/:id", (req, res) => {
-  res.json({
-    hi: "5",
-  });
-});
-
-app.get("/debug-ip", (req, res) => {
-  res.send({
-    "x-forwarded-for": req.headers["x-forwarded-for"],
-    "real-ip": req.ip,
-    "raw-headers": req.rawHeaders,
-  });
-});
+app.get(
+  "/debug-ip",
+  asyncHandler(async (req, res) => {
+    res.send({
+      "x-forwarded-for": req.headers["x-forwarded-for"],
+      "real-ip": req.ip,
+      "raw-headers": req.rawHeaders,
+    });
+  }),
+);
 
 app.get("*", function (req, res) {
   // SPA routing
@@ -289,7 +305,7 @@ wss.on("connection", (ws, req) => {
     }
     try {
       const clientMsg: ClientMessage = ClientMessageSchema.parse(
-        JSON.parse(message),
+        JSON.parse(message.toString()),
       );
       if (clientMsg.type == "join") {
         const forwarded = req.headers["x-forwarded-for"];
@@ -353,6 +369,18 @@ wss.on("connection", (ws, req) => {
   });
 });
 
+// Global error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(`Error in ${req.method} ${req.path}:`, err);
+  slog({
+    logKey: "server_error",
+    msg: `Unhandled exception in ${req.method} ${req.path}: ${err.message}`,
+    severity: LogSeverity.Error,
+    stack: err.stack,
+  });
+  res.status(500).json({ error: "An unexpected error occurred" });
+});
+
 function startServer() {
   setInterval(() => tick(), 1000);
   setInterval(() => updateLobbies(), 100);
@@ -385,6 +413,28 @@ function updateLobbies() {
       .sort((a, b) => a.msUntilStart - b.msUntilStart),
   });
 }
+
+// Process-level unhandled exception handlers
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+  slog({
+    logKey: "uncaught_exception",
+    msg: `Uncaught exception: ${err.message}`,
+    severity: LogSeverity.Error,
+    stack: err.stack,
+  });
+  // Note: We're not exiting the process to maintain uptime
+  // but be aware the app might be in an inconsistent state
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled rejection at:", promise, "reason:", reason);
+  slog({
+    logKey: "unhandled_rejection",
+    msg: `Unhandled promise rejection: ${reason}`,
+    severity: LogSeverity.Error,
+  });
+});
 
 // Initialize secrets and start server
 async function initializeSecrets() {
