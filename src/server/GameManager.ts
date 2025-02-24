@@ -57,7 +57,7 @@ export class GameManager {
         disableBots: false,
         disableNPCs: false,
         creativeMode: false,
-      })
+      }),
     );
     return id;
   }
@@ -66,7 +66,7 @@ export class GameManager {
     const game = this.games
       .filter((g) => g.id == gameID)
       .filter(
-        (g) => g.phase() == GamePhase.Lobby || g.phase() == GamePhase.Active
+        (g) => g.phase() == GamePhase.Lobby || g.phase() == GamePhase.Active,
       );
     return game.length > 0;
   }
@@ -92,6 +92,8 @@ export class GameManager {
         (map) => !ignoreMaps.includes(map),
       );
       this.mapsPlaylist.push(GameMapType.World);
+      this.mapsPlaylist.push(GameMapType.World);
+      this.mapsPlaylist.push(GameMapType.Europe);
       this.mapsPlaylist.push(GameMapType.Europe);
       this.random.shuffleArray(this.mapsPlaylist);
       if (this.allNonConsecutive(this.mapsPlaylist)) {
@@ -126,7 +128,7 @@ export class GameManager {
           disableBots: false,
           disableNPCs: false,
           creativeMode: false,
-        })
+        }),
       );
     }
 

@@ -59,7 +59,7 @@ app.use(
   rateLimit({
     windowMs: 1000, // 1 second
     max: 20, // 20 requests per IP per second
-  })
+  }),
 );
 
 const rateLimiter = new RateLimiterMemory({
@@ -289,7 +289,7 @@ wss.on("connection", (ws, req) => {
     }
     try {
       const clientMsg: ClientMessage = ClientMessageSchema.parse(
-        JSON.parse(message)
+        JSON.parse(message),
       );
       if (clientMsg.type == "join") {
         const forwarded = req.headers["x-forwarded-for"];
@@ -302,7 +302,7 @@ wss.on("connection", (ws, req) => {
         const { isValid, error } = validateUsername(clientMsg.username);
         if (!isValid) {
           console.log(
-            `game ${clientMsg.gameID}, client ${clientMsg.clientID} received invalid username, ${error}`
+            `game ${clientMsg.gameID}, client ${clientMsg.clientID} received invalid username, ${error}`,
           );
           return;
         }
@@ -313,10 +313,10 @@ wss.on("connection", (ws, req) => {
             clientMsg.persistentID,
             ip,
             clientMsg.username,
-            ws
+            ws,
           ),
           clientMsg.gameID,
-          clientMsg.lastTurn
+          clientMsg.lastTurn,
         );
         if (!wasFound) {
           console.log(`game ${clientMsg.gameID} not found, loading from gcs`);
