@@ -179,7 +179,6 @@ app.get("/lobbies", (req: Request, res: Response) => {
 app.post(
   "/private_lobby",
   asyncHandler(async (req, res) => {
-    throw Error("uh oh");
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
     const id = gm.createPrivateGame();
     console.log(`ip ${clientIP} creating private lobby with id ${id}`);
