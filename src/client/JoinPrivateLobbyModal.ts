@@ -216,6 +216,13 @@ export class JoinPrivateLobbyModal extends LitElement {
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
+
+    @media screen and (max-width: 768px) {
+      .modal-content {
+        max-height: calc(100vh - 42px);
+        max-width: 100vw;
+        width: 100%;
+      }
   `;
 
   render() {

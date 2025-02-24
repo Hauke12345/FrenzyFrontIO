@@ -178,6 +178,13 @@ export class HelpModal extends LitElement {
       -webkit-mask: url(/images/XIcon.svg) no-repeat center / cover;
       mask: url(/images/XIcon.svg) no-repeat center / cover;
     }
+
+    @media screen and (max-width: 768px) {
+      #helpModal .modal-content {
+        max-height: 100vh;
+        max-width: 100vw;
+        width: 100%;
+      }
   `;
 
   createRenderRoot() {
