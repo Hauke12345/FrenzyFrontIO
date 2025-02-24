@@ -13,8 +13,10 @@ export class HostLobbyModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs = false;
-  @state() private disableBots = false;
-  @state() private creativeMode = false;
+  @state() private bots: number = 400;
+  @state() private infiniteGold: boolean = false;
+  @state() private infiniteTroops: boolean = false;
+  @state() private instantBuild: boolean = false;
   @state() private lobbyId = "";
   @state() private copySuccess = false;
   @state() private players: string[] = [];
@@ -301,6 +303,10 @@ export class HostLobbyModal extends LitElement {
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
+    #bots-count {
+      width: 80%;
+    }
+
     @media screen and (max-width: 768px) {
       .modal-content {
         max-height: calc(100vh - 42px);
@@ -397,18 +403,20 @@ export class HostLobbyModal extends LitElement {
             <div class="options-section">
               <div class="option-title">Options</div>
               <div class="option-cards">
-                <label
-                  for="disable-bots"
-                  class="option-card ${this.disableBots ? "selected" : ""}"
-                >
-                  <div class="checkbox-icon"></div>
+                <label for="bots-count" class="option-card">
                   <input
-                    type="checkbox"
-                    id="disable-bots"
-                    @change=${this.handleDisableBotsChange}
-                    .checked=${this.disableBots}
+                    type="range"
+                    id="bots-count"
+                    min="0"
+                    max="400"
+                    step="1"
+                    @input=${this.handleBotsChange}
+                    @change=${this.handleBotsChange}
+                    .value="${this.bots}"
                   />
-                  <div class="option-card-title">Disable Bots</div>
+                  <div class="option-card-title">
+                    Bots: ${this.bots == 0 ? "Disabled" : this.bots}
+                  </div>
                 </label>
 
                 <label
@@ -422,21 +430,49 @@ export class HostLobbyModal extends LitElement {
                     @change=${this.handleDisableNPCsChange}
                     .checked=${this.disableNPCs}
                   />
-                  <div class="option-card-title">Disable NPCs</div>
+                  <div class="option-card-title">Disable Nations</div>
                 </label>
 
                 <label
-                  for="creative-mode"
-                  class="option-card ${this.creativeMode ? "selected" : ""}"
+                  for="instant-build"
+                  class="option-card ${this.instantBuild ? "selected" : ""}"
                 >
                   <div class="checkbox-icon"></div>
                   <input
                     type="checkbox"
-                    id="creative-mode"
-                    @change=${this.handleCreativeModeChange}
-                    .checked=${this.creativeMode}
+                    id="instant-build"
+                    @change=${this.handleInstantBuildChange}
+                    .checked=${this.instantBuild}
                   />
-                  <div class="option-card-title">Creative Mode</div>
+                  <div class="option-card-title">Instant build</div>
+                </label>
+
+                <label
+                  for="infinite-gold"
+                  class="option-card ${this.infiniteGold ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="infinite-gold"
+                    @change=${this.handleInfiniteGoldChange}
+                    .checked=${this.infiniteGold}
+                  />
+                  <div class="option-card-title">Infinite gold</div>
+                </label>
+
+                <label
+                  for="infinite-troops"
+                  class="option-card ${this.infiniteTroops ? "selected" : ""}"
+                >
+                  <div class="checkbox-icon"></div>
+                  <input
+                    type="checkbox"
+                    id="infinite-troops"
+                    @change=${this.handleInfiniteTroopsChange}
+                    .checked=${this.infiniteTroops}
+                  />
+                  <div class="option-card-title">Infinite troops</div>
                 </label>
               </div>
             </div>
@@ -485,9 +521,11 @@ export class HostLobbyModal extends LitElement {
               },
               map: this.selectedMap,
               difficulty: this.selectedDifficulty,
-              disableBots: this.disableBots,
               disableNPCs: this.disableNPCs,
-              creativeMode: this.creativeMode,
+              bots: this.bots,
+              infiniteGold: this.infiniteGold,
+              infiniteTroops: this.infiniteTroops,
+              instantBuild: this.instantBuild,
             },
             bubbles: true,
             composed: true,
@@ -516,21 +554,30 @@ export class HostLobbyModal extends LitElement {
     this.putGameConfig();
   }
 
-  private async handleDisableBotsChange(e: Event) {
-    this.disableBots = Boolean((e.target as HTMLInputElement).checked);
-    consolex.log(`updating disable bots to ${this.disableBots}`);
+  private handleBotsChange(e: Event) {
+    const value = parseInt((e.target as HTMLInputElement).value);
+    if (isNaN(value) || value < 0 || value > 400) {
+      return;
+    }
+    this.bots = value;
+    this.putGameConfig();
+  }
+  private handleInstantBuildChange(e: Event) {
+    this.instantBuild = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+  private handleInfiniteGoldChange(e: Event) {
+    this.infiniteGold = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
+  }
+  private handleInfiniteTroopsChange(e: Event) {
+    this.infiniteTroops = Boolean((e.target as HTMLInputElement).checked);
     this.putGameConfig();
   }
 
   private async handleDisableNPCsChange(e: Event) {
     this.disableNPCs = Boolean((e.target as HTMLInputElement).checked);
     consolex.log(`updating disable npcs to ${this.disableNPCs}`);
-    this.putGameConfig();
-  }
-
-  private async handleCreativeModeChange(e: Event) {
-    this.creativeMode = Boolean((e.target as HTMLInputElement).checked);
-    consolex.log(`updating creative mode to ${this.creativeMode}`);
     this.putGameConfig();
   }
 
@@ -543,9 +590,11 @@ export class HostLobbyModal extends LitElement {
       body: JSON.stringify({
         gameMap: this.selectedMap,
         difficulty: this.selectedDifficulty,
-        disableBots: this.disableBots,
         disableNPCs: this.disableNPCs,
-        creativeMode: this.creativeMode,
+        bots: this.bots,
+        infiniteGold: this.infiniteGold,
+        infiniteTroops: this.infiniteTroops,
+        instantBuild: this.instantBuild,
       }),
     });
   }

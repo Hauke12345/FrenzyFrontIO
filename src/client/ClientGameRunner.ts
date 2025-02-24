@@ -28,9 +28,11 @@ export interface LobbyConfig {
   gameID: GameID;
   map: GameMapType | null;
   difficulty: Difficulty | null;
-  disableBots: boolean | null;
+  infiniteGold: boolean | null;
+  infiniteTroops: boolean | null;
+  instantBuild: boolean | null;
+  bots: number | null;
   disableNPCs: boolean | null;
-  creativeMode: boolean | null;
 }
 
 export function joinLobby(
@@ -53,9 +55,11 @@ export function joinLobby(
       gameType: GameType.Singleplayer,
       gameMap: lobbyConfig.map,
       difficulty: lobbyConfig.difficulty,
-      disableBots: lobbyConfig.disableBots,
       disableNPCs: lobbyConfig.disableNPCs,
-      creativeMode: lobbyConfig.creativeMode,
+      bots: lobbyConfig.bots,
+      infiniteGold: lobbyConfig.infiniteGold,
+      infiniteTroops: lobbyConfig.infiniteTroops,
+      instantBuild: lobbyConfig.instantBuild,
     };
   }
 

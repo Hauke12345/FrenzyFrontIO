@@ -63,14 +63,20 @@ export class GameServer {
     if (gameConfig.difficulty != null) {
       this.gameConfig.difficulty = gameConfig.difficulty;
     }
-    if (gameConfig.disableBots != null) {
-      this.gameConfig.disableBots = gameConfig.disableBots;
-    }
     if (gameConfig.disableNPCs != null) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.creativeMode != null) {
-      this.gameConfig.creativeMode = gameConfig.creativeMode;
+    if (gameConfig.bots != null) {
+      this.gameConfig.bots = gameConfig.bots;
+    }
+    if (gameConfig.infiniteGold != null) {
+      this.gameConfig.infiniteGold = gameConfig.infiniteGold;
+    }
+    if (gameConfig.infiniteTroops != null) {
+      this.gameConfig.infiniteTroops = gameConfig.infiniteTroops;
+    }
+    if (gameConfig.instantBuild != null) {
+      this.gameConfig.instantBuild = gameConfig.instantBuild;
     }
   }
 
