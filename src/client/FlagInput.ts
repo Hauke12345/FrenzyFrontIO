@@ -13,71 +13,6 @@ export class FlagInput extends LitElement {
   private userSettings: UserSettings = new UserSettings();
 
   static styles = css`
-    .dark-mode .flag-button {
-      background: rgba(55, 65, 81, 0.7);
-    }
-
-    .flag-modal {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      position: absolute;
-      top: 60px;
-      left: 0;
-      width: 560px;
-      height: 500px;
-      max-height: 50vh;
-      background-color: rgb(35 35 35 / 0.8);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 3;
-    }
-
-    .flag-search {
-      height: 2rem;
-      border-radius: 8px;
-      border: none;
-      text-align: center;
-      font-size: 1.3rem;
-    }
-
-    .dark-mode .flag-search {
-      background: rgb(55, 65, 81);
-      color: white;
-      border: 1px solid rgb(209, 213, 219);
-    }
-
-    .flag-dropdown {
-      overflow-y: auto;
-      overflow-x: hidden;
-      display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: space-evenly;
-      gap: 1rem;
-    }
-
-    .dropdown-item {
-      opacity: 0.7;
-      width: calc(100% / 4 - 15px);
-      text-align: center;
-      color: white;
-      cursor: pointer;
-      border: none;
-      background: none;
-    }
-
-    .dropdown-item:hover {
-      opacity: 1;
-    }
-
-    .country-flag {
-      width: 100%;
-      height: auto;
-    }
-
     @media (max-width: 768px) {
       .flag-modal {
         width: 80vw;
@@ -156,7 +91,7 @@ export class FlagInput extends LitElement {
         ${this.showModal
           ? html`
               <div
-                class="text-white flex flex-col gap-[0.5rem] absolute top-[60px] left-[0px] w-[780%] h-[500px] max-h-[50vh] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
+                class="text-white flex flex-col gap-[0.5rem] absolute top-[60px] left-[0px] w-[780%] h-[500px] max-h-[50vh] max-w-[87vw] bg-gray-900/80 backdrop-blur-md p-[10px] rounded-[8px] z-[3] ${this
                   .showModal
                   ? ""
                   : "hidden"}"
@@ -183,7 +118,7 @@ export class FlagInput extends LitElement {
                     (country) => html`
                       <button
                         @click=${() => this.setFlag(country.code)}
-                        class="text-center cursor-pointer border-none bg-none opacity-70 sm:w-[calc(33.3333%-15px) w-[calc(100%/4-15px)]"
+                        class="text-center cursor-pointer border-none bg-none opacity-70 sm:w-[calc(33.3333%-15px) w-[calc(100%/3-15px)] md:w-[calc(100%/4-15px)]"
                       >
                         <img
                           class="country-flag w-full h-auto"
