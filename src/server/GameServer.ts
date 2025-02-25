@@ -3,11 +3,8 @@ import {
   ClientMessage,
   ClientMessageSchema,
   GameConfig,
-  GameRecordSchema,
   Intent,
   PlayerRecord,
-  ServerPingMessageSchema,
-  ServerStartGameMessage,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
   Turn,
@@ -161,6 +158,12 @@ export class GameServer {
         if (clientMsg.type == "ping") {
           this.lastPingUpdate = Date.now();
           client.lastPing = Date.now();
+        }
+        if (clientMsg.type == "hash") {
+          console.log(
+            `client ${clientMsg.clientID} got hash ${clientMsg.hash} on tick ${clientMsg.tick}`,
+          );
+          client.hashes.set(clientMsg.tick, clientMsg.hash);
         }
         if (clientMsg.type == "winner") {
           this.winner = clientMsg.winner;

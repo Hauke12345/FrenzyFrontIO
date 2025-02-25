@@ -48,7 +48,8 @@ export type ClientMessage =
   | ClientPingMessage
   | ClientIntentMessage
   | ClientJoinMessage
-  | ClientLogMessage;
+  | ClientLogMessage
+  | ClientHashMessage;
 export type ServerMessage =
   | ServerSyncMessage
   | ServerStartGameMessage
@@ -65,6 +66,7 @@ export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
+export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export type GameRecord = z.infer<typeof GameRecordSchema>;
@@ -268,7 +270,7 @@ export const ServerMessageSchema = z.union([
 // Client
 
 const ClientBaseMessageSchema = z.object({
-  type: z.enum(["winner", "join", "intent", "ping", "log"]),
+  type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
   clientID: ID,
   persistentID: SafeString.nullable(), // WARNING: persistent id is private.
   gameID: ID,
@@ -277,6 +279,12 @@ const ClientBaseMessageSchema = z.object({
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
   winner: ID.nullable(),
+});
+
+export const ClientHashSchema = ClientBaseMessageSchema.extend({
+  type: z.literal("hash"),
+  hash: z.number(),
+  tick: z.number(),
 });
 
 export const ClientLogMessageSchema = ClientBaseMessageSchema.extend({
@@ -308,6 +316,7 @@ export const ClientMessageSchema = z.union([
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
   ClientLogMessageSchema,
+  ClientHashSchema,
 ]);
 
 export const PlayerRecordSchema = z.object({

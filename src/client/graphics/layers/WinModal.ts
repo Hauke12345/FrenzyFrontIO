@@ -208,7 +208,7 @@ export class WinModal extends LitElement implements Layer {
       }
       this.show();
     }
-    this.game.updatesSinceLastTick()[GameUpdateType.WinUpdate].forEach((wu) => {
+    this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
       this.eventBus.emit(new SendWinnerEvent(winner.clientID()));
       if (winner == this.game.myPlayer()) {
