@@ -9,6 +9,7 @@ import {
   Player,
   PlayerID,
   PlayerType,
+  Tick,
   UnitType,
 } from "../core/game/Game";
 import {
@@ -23,6 +24,7 @@ import {
   GameConfig,
   ClientLogMessageSchema,
   ClientSendWinnerSchema,
+  ClientMessageSchema,
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
@@ -107,6 +109,12 @@ export class SendSetTargetTroopRatioEvent implements GameEvent {
 export class SendWinnerEvent implements GameEvent {
   constructor(public readonly winner: ClientID) {}
 }
+export class SendHashEvent implements GameEvent {
+  constructor(
+    public readonly tick: Tick,
+    public readonly hash: number,
+  ) {}
+}
 
 export class Transport {
   private socket: WebSocket;
@@ -159,6 +167,7 @@ export class Transport {
     this.eventBus.on(SendLogEvent, (e) => this.onSendLogEvent(e));
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
   }
 
   private startPing() {
@@ -437,6 +446,26 @@ export class Transport {
         persistentID: this.lobbyConfig.persistentID,
         gameID: this.lobbyConfig.gameID,
         winner: event.winner,
+      });
+      this.sendMsg(JSON.stringify(msg));
+    } else {
+      console.log(
+        "WebSocket is not open. Current state:",
+        this.socket.readyState,
+      );
+      console.log("attempting reconnect");
+    }
+  }
+
+  private onSendHashEvent(event: SendHashEvent) {
+    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+      const msg = ClientMessageSchema.parse({
+        type: "hash",
+        clientID: this.lobbyConfig.clientID,
+        persistentID: this.lobbyConfig.persistentID,
+        gameID: this.lobbyConfig.gameID,
+        tick: event.tick,
+        hash: event.hash,
       });
       this.sendMsg(JSON.stringify(msg));
     } else {

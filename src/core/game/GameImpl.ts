@@ -241,19 +241,27 @@ export class GameImpl implements Game {
 
     this.execs.push(...inited);
     this.unInitExecs = unInited;
-    this._ticks++;
-    if (this._ticks % 100 == 0) {
-      let hash = 1;
-      this._players.forEach((p) => {
-        hash += p.hash();
-      });
-      consolex.log(`tick ${this._ticks}: hash ${hash}`);
-    }
     for (const player of this._players.values()) {
       // Players change each to so always add them
       this.addUpdate(player.toUpdate());
     }
+    if (this.ticks() % 10 == 0) {
+      this.addUpdate({
+        type: GameUpdateType.Hash,
+        tick: this.ticks(),
+        hash: this.hash(),
+      });
+    }
+    this._ticks++;
     return this.updates;
+  }
+
+  private hash(): number {
+    let hash = 1;
+    this._players.forEach((p) => {
+      hash += p.hash();
+    });
+    return hash;
   }
 
   terraNullius(): TerraNullius {
@@ -494,14 +502,14 @@ export class GameImpl implements Game {
 
   sendEmojiUpdate(msg: EmojiMessage): void {
     this.addUpdate({
-      type: GameUpdateType.EmojiUpdate,
+      type: GameUpdateType.Emoji,
       emoji: msg,
     });
   }
 
   setWinner(winner: Player): void {
     this.addUpdate({
-      type: GameUpdateType.WinUpdate,
+      type: GameUpdateType.Win,
       winnerID: winner.smallID(),
     });
   }

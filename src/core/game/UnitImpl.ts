@@ -135,7 +135,7 @@ export class UnitImpl implements Unit {
   }
 
   hash(): number {
-    return this.tile() + simpleHash(this.type());
+    return this.tile() + simpleHash(this.type()) * this._id;
   }
 
   toString(): string {

@@ -6,11 +6,16 @@ import { ClientID, GameConfig, GameID, ServerMessage } from "../core/Schemas";
 import { loadTerrainMap } from "../core/game/TerrainMapLoader";
 import {
   SendAttackIntentEvent,
+  SendHashEvent,
   SendSpawnIntentEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
-import { ErrorUpdate } from "../core/game/GameUpdates";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  HashUpdate,
+} from "../core/game/GameUpdates";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { consolex, initRemoteSender } from "../core/Consolex";
 import { getConfig, getServerConfig } from "../core/configuration/Config";
@@ -171,6 +176,9 @@ export class ClientGameRunner {
         showErrorModal(gu.errMsg, gu.stack, this.clientID);
         return;
       }
+      gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
+        this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
+      });
       this.gameView.update(gu);
       this.renderer.tick();
     });
