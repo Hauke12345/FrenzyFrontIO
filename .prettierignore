@@ -4,6 +4,7 @@
 *.jpg
 *.jpeg
 *.gif
+*.svg
 *.webp
 *.txt
 .prettierignore
