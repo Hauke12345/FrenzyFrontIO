@@ -1,4 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
+import { UserSettings } from "../core/game/UserSettings";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
@@ -82,6 +83,8 @@ export class InputHandler {
 
   private readonly PAN_SPEED = 5;
   private readonly ZOOM_SPEED = 10;
+
+  private userSettings: UserSettings = new UserSettings();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -265,10 +268,12 @@ export class InputHandler {
     if (dist < 10) {
       if (event.pointerType == "touch") {
         event.preventDefault();
-        console.log("firing context menu event");
-        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
-      } else {
+      }
+
+      if (!this.userSettings.leftClickOpensMenu() || event.shiftKey) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
+      } else {
+        this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }
     }
   }
