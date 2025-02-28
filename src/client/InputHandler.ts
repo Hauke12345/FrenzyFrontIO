@@ -1,10 +1,22 @@
 import { EventBus, GameEvent } from "../core/EventBus";
 import { UserSettings } from "../core/game/UserSettings";
+import { Game } from "../core/game/Game";
+import { UnitView } from "../core/game/GameView";
 
 export class MouseUpEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
+  ) {}
+}
+
+/**
+ * Event emitted when a unit is selected or deselected
+ */
+export class UnitSelectionEvent implements GameEvent {
+  constructor(
+    public readonly unit: UnitView | null,
+    public readonly isSelected: boolean,
   ) {}
 }
 

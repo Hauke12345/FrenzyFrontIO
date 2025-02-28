@@ -14,6 +14,7 @@ import { ControlPanel } from "./layers/ControlPanel";
 import { UIState } from "./UIState";
 import { BuildMenu } from "./layers/BuildMenu";
 import { UnitLayer } from "./layers/UnitLayer";
+import { UILayer } from "./layers/UILayer";
 import { StructureLayer } from "./layers/StructureLayer";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { consolex } from "../../core/Consolex";
@@ -118,6 +119,7 @@ export function createRenderer(
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
     new UnitLayer(game, eventBus, clientID, transformHandler),
+    new UILayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
     buildMenu,
