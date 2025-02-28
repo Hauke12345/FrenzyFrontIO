@@ -308,6 +308,14 @@ export function startWorker() {
   server.listen(PORT, () => {
     console.log(`Worker ${workerId} running on http://localhost:${PORT}`);
     console.log(`Handling requests with path prefix /w${workerId}/`);
+    // Signal to the master process that this worker is ready
+    if (process.send) {
+      process.send({
+        type: "WORKER_READY",
+        workerId: workerId,
+      });
+      console.log(`Worker ${workerId} signaled ready state to master`);
+    }
   });
 
   // Global error handler

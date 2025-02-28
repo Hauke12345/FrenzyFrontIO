@@ -585,7 +585,7 @@ export class HostLobbyModal extends LitElement {
 
   private async putGameConfig() {
     const response = await fetch(
-      `${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
+      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
       {
         method: "PUT",
         headers: {
@@ -610,7 +610,7 @@ export class HostLobbyModal extends LitElement {
     );
     this.close();
     const response = await fetch(
-      `${getServerConfig().workerPath(this.lobbyId)}/start_game/${this.lobbyId}`,
+      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/start_game/${this.lobbyId}`,
       {
         method: "POST",
         headers: {

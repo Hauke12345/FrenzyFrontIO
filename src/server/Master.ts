@@ -11,6 +11,7 @@ import rateLimit from "express-rate-limit";
 import { fileURLToPath } from "url";
 
 const config = getServerConfig();
+const readyWorkers = new Set();
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +55,31 @@ export async function startMaster() {
     console.log(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
 
+  cluster.on("message", (worker, message) => {
+    if (message.type === "WORKER_READY") {
+      const workerId = message.workerId;
+      readyWorkers.add(workerId);
+      console.log(
+        `Worker ${workerId} is ready. (${readyWorkers.size}/${config.numWorkers()} ready)`,
+      );
+
+      // Start scheduling when all workers are ready
+      if (readyWorkers.size === config.numWorkers()) {
+        console.log("All workers ready, starting game scheduling");
+        // let the workers start up
+        const scheduleLobbies = () => {
+          schedulePublicGame().catch((error) => {
+            console.error("Error scheduling public game:", error);
+          });
+        };
+
+        scheduleLobbies();
+        setInterval(scheduleLobbies, config.gameCreationRate());
+        setInterval(() => fetchLobbies(), 250);
+      }
+    }
+  });
+
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
     const workerId = (worker as any).process?.env?.WORKER_ID;
@@ -80,18 +106,6 @@ export async function startMaster() {
   const PORT = 3000;
   server.listen(PORT, () => {
     console.log(`Master HTTP server listening on port ${PORT}`);
-  });
-  sleep(5000).then(() => {
-    // let the workers start up
-    const scheduleLobbies = () => {
-      schedulePublicGame().catch((error) => {
-        console.error("Error scheduling public game:", error);
-      });
-    };
-
-    scheduleLobbies();
-    setInterval(scheduleLobbies, config.gameCreationRate());
-    setInterval(() => fetchLobbies(), 250);
   });
 }
 

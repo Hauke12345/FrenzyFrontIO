@@ -1,8 +1,8 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state, query } from "lit/decorators.js";
-import { GameMapType, GameType } from "../core/game/Game";
+import { LitElement, css, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { getServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
-import { getConfig, getServerConfig } from "../core/configuration/Config";
+import { GameMapType, GameType } from "../core/game/Game";
 import { GameInfo } from "../core/Schemas";
 
 @customElement("join-private-lobby-modal")
@@ -360,7 +360,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     consolex.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = "Checking lobby..."; // Set initial message
 
-    const url = `${window.location.origin}/${getServerConfig().workerPath(lobbyId)}/game/${lobbyId}/exists`;
+    const url = `/${getServerConfig().workerPath(lobbyId)}/game/${lobbyId}/exists`;
     fetch(url, {
       method: "GET",
       headers: {
@@ -400,7 +400,7 @@ export class JoinPrivateLobbyModal extends LitElement {
     if (!this.lobbyIdInput?.value) return;
 
     fetch(
-      `${getServerConfig().workerPath(this.lobbyIdInput.value)}/lobby/${this.lobbyIdInput.value}`,
+      `/${getServerConfig().workerPath(this.lobbyIdInput.value)}/game/${this.lobbyIdInput.value}`,
       {
         method: "GET",
         headers: {
