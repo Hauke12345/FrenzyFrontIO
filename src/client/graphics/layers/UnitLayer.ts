@@ -77,18 +77,25 @@ export class UnitLayer implements Layer {
   }
 
   /**
-   * Find warships near the given cell within a configurable radius
+   * Find player-owned warships near the given cell within a configurable radius
    * @param cell The cell to check
-   * @returns Array of warships in range, sorted by distance (closest first)
+   * @returns Array of player's warships in range, sorted by distance (closest first)
    */
   private findWarshipsNearCell(cell: { x: number; y: number }): UnitView[] {
     const clickRef = this.game.ref(cell.x, cell.y);
 
+    // Make sure we have the current player
+    if (this.myPlayer == null) {
+      this.myPlayer = this.game.playerByClientID(this.clientID);
+    }
+
+    // Only select warships owned by the player
     return this.game
       .units(UnitType.Warship)
       .filter(
         (unit) =>
           unit.isActive() &&
+          unit.owner() === this.myPlayer && // Only allow selecting own warships
           this.game.manhattanDist(unit.tile(), clickRef) <=
             this.WARSHIP_SELECTION_RADIUS,
       )
