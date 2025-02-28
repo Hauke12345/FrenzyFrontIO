@@ -117,7 +117,7 @@ export function createRenderer(
     new TerrainLayer(game),
     new TerritoryLayer(game, eventBus),
     new StructureLayer(game, eventBus),
-    new UnitLayer(game, eventBus, clientID),
+    new UnitLayer(game, eventBus, clientID, transformHandler),
     new NameLayer(game, transformHandler, clientID),
     eventsDisplay,
     buildMenu,
