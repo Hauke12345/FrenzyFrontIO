@@ -124,6 +124,24 @@ export class UnitLayer implements Layer {
     }
   }
 
+  /**
+   * Clear the selection box at a specific position
+   */
+  private clearSelectionBox(x: number, y: number, size: number) {
+    for (let px = x - size; px <= x + size; px++) {
+      for (let py = y - size; py <= y + size; py++) {
+        if (
+          px === x - size ||
+          px === x + size ||
+          py === y - size ||
+          py === y + size
+        ) {
+          this.clearCell(px, py);
+        }
+      }
+    }
+  }
+
   private onUnitSelection(event: UnitSelectionEvent) {
     if (event.unit && event.unit.type() === UnitType.Warship) {
       if (event.isSelected) {
@@ -136,18 +154,7 @@ export class UnitLayer implements Layer {
         // Also clear any lingering selection box
         if (this.lastSelectionBoxCenter) {
           const { x, y, size } = this.lastSelectionBoxCenter;
-          for (let px = x - size; px <= x + size; px++) {
-            for (let py = y - size; py <= y + size; py++) {
-              if (
-                px === x - size ||
-                px === x + size ||
-                py === y - size ||
-                py === y + size
-              ) {
-                this.clearCell(px, py);
-              }
-            }
-          }
+          this.clearSelectionBox(x, y, size);
           this.lastSelectionBoxCenter = null;
         }
       }
@@ -166,18 +173,7 @@ export class UnitLayer implements Layer {
         this.lastSelectionBoxCenter.unit === unit
       ) {
         const { x, y, size } = this.lastSelectionBoxCenter;
-        for (let px = x - size; px <= x + size; px++) {
-          for (let py = y - size; py <= y + size; py++) {
-            if (
-              px === x - size ||
-              px === x + size ||
-              py === y - size ||
-              py === y + size
-            ) {
-              this.clearCell(px, py);
-            }
-          }
-        }
+        this.clearSelectionBox(x, y, size);
         this.lastSelectionBoxCenter = null;
       }
 
@@ -366,45 +362,10 @@ export class UnitLayer implements Layer {
       const lastY = this.lastSelectionBoxCenter.y;
 
       // Clear the previous selection box
-      for (let x = lastX - lastSize; x <= lastX + lastSize; x++) {
-        for (let y = lastY - lastSize; y <= lastY + lastSize; y++) {
-          if (
-            x === lastX - lastSize ||
-            x === lastX + lastSize ||
-            y === lastY - lastSize ||
-            y === lastY + lastSize
-          ) {
-            this.clearCell(x, y);
-          }
-        }
-      }
+      this.clearSelectionBox(lastX, lastY, lastSize);
 
-      // Redraw the tiles at the previous location
-      for (const t of this.game.bfs(
-        this.lastSelectionBoxCenter.unit.lastTile(),
-        euclDistFN(this.lastSelectionBoxCenter.unit.lastTile(), 5),
-      )) {
-        const tileX = this.game.x(t);
-        const tileY = this.game.y(t);
-        // Only redraw if it's near the selection border
-        if (
-          Math.abs(tileX - lastX) <= lastSize + 1 &&
-          Math.abs(tileY - lastY) <= lastSize + 1
-        ) {
-          if (this.game.hasOwner(t)) {
-            const owner = this.game.owner(t);
-            if (owner.isPlayer()) {
-              this.paintCell(
-                tileX,
-                tileY,
-                this.relationship(unit),
-                this.theme.territoryColor(owner.info()),
-                255,
-              );
-            }
-          }
-        }
-      }
+      // We don't need to redraw the territory since the unit layer sits on top of the territory layer
+      // and clearing just the selection box pixels won't affect the territory underneath
     }
 
     // Draw the selection box
