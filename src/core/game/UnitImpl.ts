@@ -22,8 +22,8 @@ export class UnitImpl implements Unit {
     private _id: number,
     public _owner: PlayerImpl,
   ) {
-    // default to half health (or 1 is no health specified)
-    this._health = (this.mg.unitInfo(_type).maxHealth ?? 2) / 2;
+    // default to 60% health (or 1.2 is no health specified)
+    this._health = (this.mg.unitInfo(_type).maxHealth ?? 2) * 0.6;
     this._lastTile = _tile;
   }
 
