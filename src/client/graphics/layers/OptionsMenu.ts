@@ -107,7 +107,7 @@ export class OptionsMenu extends LitElement implements Layer {
   tick() {
     this.hasWinner =
       this.hasWinner ||
-      this.game.updatesSinceLastTick()[GameUpdateType.WinUpdate].length > 0;
+      this.game.updatesSinceLastTick()[GameUpdateType.Win].length > 0;
     if (this.game.inSpawnPhase()) {
       this.timer = 0;
     } else if (!this.hasWinner && this.game.ticks() % 10 == 0) {
@@ -127,7 +127,7 @@ export class OptionsMenu extends LitElement implements Layer {
         @contextmenu=${(e) => e.preventDefault()}
       >
         <div
-          class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-lg backdrop-blur-md"
+          class="bg-opacity-60 bg-gray-900 p-1 lg:p-2 rounded-es-sm lg:rounded-lg backdrop-blur-md"
         >
           <div class="flex items-stretch gap-1 lg:gap-2">
             ${button({

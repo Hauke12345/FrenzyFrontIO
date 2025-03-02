@@ -35,8 +35,9 @@ export enum GameUpdateType {
   BrokeAlliance,
   AllianceExpired,
   TargetPlayer,
-  EmojiUpdate,
-  WinUpdate,
+  Emoji,
+  Win,
+  Hash,
 }
 
 export type GameUpdate =
@@ -50,7 +51,8 @@ export type GameUpdate =
   | DisplayMessageUpdate
   | TargetPlayerUpdate
   | EmojiUpdate
-  | WinUpdate;
+  | WinUpdate
+  | HashUpdate;
 
 export interface TileUpdateWrapper {
   type: GameUpdateType.Tile;
@@ -135,7 +137,7 @@ export interface TargetPlayerUpdate {
 }
 
 export interface EmojiUpdate {
-  type: GameUpdateType.EmojiUpdate;
+  type: GameUpdateType.Emoji;
   emoji: EmojiMessage;
 }
 
@@ -147,6 +149,12 @@ export interface DisplayMessageUpdate {
 }
 
 export interface WinUpdate {
-  type: GameUpdateType.WinUpdate;
+  type: GameUpdateType.Win;
   winnerID: number;
+}
+
+export interface HashUpdate {
+  type: GameUpdateType.Hash;
+  tick: Tick;
+  hash: number;
 }

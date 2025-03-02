@@ -1,7 +1,9 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state, query } from "lit/decorators.js";
-import { GameMapType, GameType } from "../core/game/Game";
+import { LitElement, css, html } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { getServerConfig } from "../core/configuration/Config";
 import { consolex } from "../core/Consolex";
+import { GameMapType, GameType } from "../core/game/Game";
+import { GameInfo } from "../core/Schemas";
 
 @customElement("join-private-lobby-modal")
 export class JoinPrivateLobbyModal extends LitElement {
@@ -231,6 +233,11 @@ export class JoinPrivateLobbyModal extends LitElement {
         class="modal-overlay"
         style="display: ${this.isModalOpen ? "flex" : "none"}"
       >
+        <div
+          style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"
+          class="${this.isModalOpen ? "" : "hidden"}"
+          @click=${this.close}
+        ></div>
         <div class="modal-content">
           <span class="close" @click=${this.closeAndLeave}>&times;</span>
           <div class="title">Join Private Lobby</div>
@@ -358,13 +365,16 @@ export class JoinPrivateLobbyModal extends LitElement {
     consolex.log(`Joining lobby with ID: ${lobbyId}`);
     this.message = "Checking lobby..."; // Set initial message
 
-    fetch(`/lobby/${lobbyId}/exists`, {
+    const url = `/${getServerConfig().workerPath(lobbyId)}/game/${lobbyId}/exists`;
+    fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     })
-      .then((response) => response.json())
+      .then((response) => {
+        return response.json();
+      })
       .then((data) => {
         if (data.exists) {
           this.message = "Joined successfully! Waiting for game to start...";
@@ -372,7 +382,7 @@ export class JoinPrivateLobbyModal extends LitElement {
           this.dispatchEvent(
             new CustomEvent("join-lobby", {
               detail: {
-                lobby: { id: lobbyId },
+                lobby: { gameID: lobbyId },
                 gameType: GameType.Private,
                 map: GameMapType.World,
               },
@@ -394,15 +404,18 @@ export class JoinPrivateLobbyModal extends LitElement {
   private async pollPlayers() {
     if (!this.lobbyIdInput?.value) return;
 
-    fetch(`/lobby/${this.lobbyIdInput.value}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+    fetch(
+      `/${getServerConfig().workerPath(this.lobbyIdInput.value)}/game/${this.lobbyIdInput.value}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    })
+    )
       .then((response) => response.json())
-      .then((data) => {
-        this.players = data.players.map((p) => p.username);
+      .then((data: GameInfo) => {
+        this.players = data.clients.map((p) => p.username);
       })
       .catch((error) => {
         consolex.error("Error polling players:", error);

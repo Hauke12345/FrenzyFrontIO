@@ -1,24 +1,25 @@
+import { RateLimiterMemory } from "rate-limiter-flexible";
+import WebSocket from "ws";
 import {
   ClientID,
   ClientMessage,
   ClientMessageSchema,
   GameConfig,
-  GameRecordSchema,
+  GameInfo,
   Intent,
   PlayerRecord,
-  ServerPingMessageSchema,
-  ServerStartGameMessage,
+  ServerDesyncSchema,
   ServerStartGameMessageSchema,
   ServerTurnMessageSchema,
   Turn,
 } from "../core/Schemas";
-import { Config, ServerConfig } from "../core/configuration/Config";
-import { Client } from "./Client";
-import WebSocket from "ws";
-import { slog } from "./StructuredLog";
 import { CreateGameRecord } from "../core/Util";
+import { ServerConfig } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import { archive } from "./Archive";
-import { RateLimiterMemory } from "rate-limiter-flexible";
+import { Client } from "./Client";
+import { slog } from "./StructuredLog";
+import { gatekeeper } from "./Gatekeeper";
 
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -27,10 +28,7 @@ export enum GamePhase {
 }
 
 export class GameServer {
-  private rateLimiter = new RateLimiterMemory({
-    points: 50,
-    duration: 1, // per 1 second
-  });
+  private outOfSyncClients = new Set<ClientID>();
 
   private maxGameDuration = 3 * 60 * 60 * 1000; // 3 hours
 
@@ -51,7 +49,7 @@ export class GameServer {
   constructor(
     public readonly id: string,
     public readonly createdAt: number,
-    public readonly isPublic: boolean,
+    public readonly highTraffic: boolean,
     private config: ServerConfig,
     public gameConfig: GameConfig,
   ) {}
@@ -97,6 +95,7 @@ export class GameServer {
     });
 
     if (
+      this.gameConfig.gameType == GameType.Public &&
       this.activeClients.filter(
         (c) => c.ip == client.ip && c.clientID != client.clientID,
       ).length >= 3
@@ -122,52 +121,55 @@ export class GameServer {
 
     this.allClients.set(client.clientID, client);
 
-    client.ws.on("message", async (message: string) => {
-      try {
-        await this.rateLimiter.consume(client.ip);
-      } catch (error) {
-        console.warn(`Rate limit exceeded for ${client.ip}`);
-        return;
-      }
-      try {
-        const clientMsg: ClientMessage = ClientMessageSchema.parse(
-          JSON.parse(message),
-        );
-        if (this.allClients.has(clientMsg.clientID)) {
-          const client = this.allClients.get(clientMsg.clientID);
-          if (client.persistentID != clientMsg.persistentID) {
-            console.warn(
-              `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
-            );
-            return;
+    client.ws.on(
+      "message",
+      gatekeeper.wsHandler(client.ip, async (message: string) => {
+        try {
+          let clientMsg: ClientMessage = null;
+          try {
+            clientMsg = ClientMessageSchema.parse(JSON.parse(message));
+          } catch (error) {
+            throw Error(`error parsing schema for ${client.ip}`);
           }
-        }
-
-        // Clear out persistent id to make sure it doesn't get sent to other clients.
-        clientMsg.persistentID = null;
-
-        if (clientMsg.type == "intent") {
-          if (clientMsg.gameID == this.id) {
-            this.addIntent(clientMsg.intent);
-          } else {
-            console.warn(
-              `${this.id}: client ${clientMsg.clientID} sent to wrong game`,
-            );
+          if (this.allClients.has(clientMsg.clientID)) {
+            const client = this.allClients.get(clientMsg.clientID);
+            if (client.persistentID != clientMsg.persistentID) {
+              console.warn(
+                `Client ID ${clientMsg.clientID} sent incorrect id ${clientMsg.persistentID}, does not match persistent id ${client.persistentID}`,
+              );
+              return;
+            }
           }
+
+          // Clear out persistent id to make sure it doesn't get sent to other clients.
+          clientMsg.persistentID = null;
+
+          if (clientMsg.type == "intent") {
+            if (clientMsg.gameID == this.id) {
+              this.addIntent(clientMsg.intent);
+            } else {
+              console.warn(
+                `${this.id}: client ${clientMsg.clientID} sent to wrong game`,
+              );
+            }
+          }
+          if (clientMsg.type == "ping") {
+            this.lastPingUpdate = Date.now();
+            client.lastPing = Date.now();
+          }
+          if (clientMsg.type == "hash") {
+            client.hashes.set(clientMsg.tick, clientMsg.hash);
+          }
+          if (clientMsg.type == "winner") {
+            this.winner = clientMsg.winner;
+          }
+        } catch (error) {
+          console.log(
+            `error handline websocket request in game server: ${error}`,
+          );
         }
-        if (clientMsg.type == "ping") {
-          this.lastPingUpdate = Date.now();
-          client.lastPing = Date.now();
-        }
-        if (clientMsg.type == "winner") {
-          this.winner = clientMsg.winner;
-        }
-      } catch (error) {
-        console.log(
-          `error handline websocket request in game server: ${error}`,
-        );
-      }
-    });
+      }),
+    );
     client.ws.on("close", () => {
       console.log(`${this.id}: client ${client.clientID} disconnected`);
       this.activeClients = this.activeClients.filter(
@@ -195,7 +197,7 @@ export class GameServer {
       return this._startTime;
     } else {
       //game hasn't started yet, only works for public games
-      return this.createdAt + this.config.lobbyLifetime();
+      return this.createdAt + this.config.lobbyLifetime(this.highTraffic);
     }
   }
 
@@ -221,15 +223,19 @@ export class GameServer {
   }
 
   private sendStartGameMsg(ws: WebSocket, lastTurn: number) {
-    ws.send(
-      JSON.stringify(
-        ServerStartGameMessageSchema.parse({
-          type: "start",
-          turns: this.turns.slice(lastTurn),
-          config: this.gameConfig,
-        }),
-      ),
-    );
+    try {
+      ws.send(
+        JSON.stringify(
+          ServerStartGameMessageSchema.parse({
+            type: "start",
+            turns: this.turns.slice(lastTurn),
+            config: this.gameConfig,
+          }),
+        ),
+      );
+    } catch (error) {
+      throw new Error(`error sending start message for game ${this.id}`);
+    }
   }
 
   private endTurn() {
@@ -241,18 +247,27 @@ export class GameServer {
     this.turns.push(pastTurn);
     this.intents = [];
 
-    const msg = JSON.stringify(
-      ServerTurnMessageSchema.parse({
-        type: "turn",
-        turn: pastTurn,
-      }),
-    );
+    this.maybeSendDesync();
+
+    let msg = "";
+    try {
+      msg = JSON.stringify(
+        ServerTurnMessageSchema.parse({
+          type: "turn",
+          turn: pastTurn,
+        }),
+      );
+    } catch (error) {
+      console.log(`error sending message for game ${this.id}`);
+      return;
+    }
+
     this.activeClients.forEach((c) => {
       c.ws.send(msg);
     });
   }
 
-  async endGame() {
+  async end() {
     // Close all WebSocket connections
     clearInterval(this.endTurnIntervalID);
     this.allClients.forEach((client) => {
@@ -337,7 +352,7 @@ export class GameServer {
     const noRecentPings = now > this.lastPingUpdate + 20 * 1000;
     const noActive = this.activeClients.length == 0;
 
-    if (!this.isPublic) {
+    if (this.gameConfig.gameType != GameType.Public) {
       if (this._hasStarted) {
         if (noActive && noRecentPings) {
           console.log(`${this.id}: private game: ${this.id} complete`);
@@ -350,11 +365,12 @@ export class GameServer {
       }
     }
 
-    if (now - this.createdAt < this.config.lobbyLifetime()) {
+    if (now - this.createdAt < this.config.lobbyLifetime(this.highTraffic)) {
       return GamePhase.Lobby;
     }
     const warmupOver =
-      now > this.createdAt + this.config.lobbyLifetime() + 30 * 1000;
+      now >
+      this.createdAt + this.config.lobbyLifetime(this.highTraffic) + 30 * 1000;
     if (noActive && warmupOver && noRecentPings) {
       return GamePhase.Finished;
     }
@@ -364,5 +380,116 @@ export class GameServer {
 
   hasStarted(): boolean {
     return this._hasStarted;
+  }
+
+  public gameInfo(): GameInfo {
+    return {
+      gameID: this.id,
+      clients: this.activeClients.map((c) => ({
+        username: c.username,
+        clientID: c.clientID,
+      })),
+      gameConfig: this.gameConfig,
+      msUntilStart: this.isPublic()
+        ? this.createdAt + this.config.lobbyLifetime(this.highTraffic)
+        : undefined,
+    };
+  }
+
+  public isPublic(): boolean {
+    return this.gameConfig.gameType == GameType.Public;
+  }
+
+  private maybeSendDesync() {
+    if (this.activeClients.length <= 1) {
+      return;
+    }
+    if (this.turns.length % 10 == 0 && this.turns.length != 0) {
+      const lastHashTurn = this.turns.length - 10;
+
+      let { mostCommonHash, outOfSyncClients } =
+        this.findOutOfSyncClients(lastHashTurn);
+
+      if (
+        outOfSyncClients.length >= Math.floor(this.activeClients.length / 2)
+      ) {
+        // If half clients out of sync assume all are out of sync.
+        outOfSyncClients = this.activeClients;
+      }
+
+      for (const oos of outOfSyncClients) {
+        if (!this.outOfSyncClients.has(oos.clientID)) {
+          console.warn(
+            `Game ${this.id}: has out of sync client ${oos.clientID} on turn ${lastHashTurn}`,
+          );
+          this.outOfSyncClients.add(oos.clientID);
+        }
+      }
+      return;
+      // TODO: renable this once desync issue fixed
+
+      const serverDesync = ServerDesyncSchema.safeParse({
+        type: "desync",
+        turn: lastHashTurn,
+        correctHash: mostCommonHash,
+        clientsWithCorrectHash:
+          this.activeClients.length - outOfSyncClients.length,
+        totalActiveClients: this.activeClients.length,
+      });
+      if (serverDesync.success) {
+        const desyncMsg = JSON.stringify(serverDesync.data);
+        for (const c of outOfSyncClients) {
+          console.log(
+            `game: ${this.id}: sending desync to client ${c.clientID}`,
+          );
+          c.ws.send(desyncMsg);
+        }
+      } else {
+        console.warn(`failed to create desync message ${serverDesync.error}`);
+      }
+    }
+  }
+
+  findOutOfSyncClients(turnNumber: number): {
+    mostCommonHash: number | null;
+    outOfSyncClients: Client[];
+  } {
+    const counts = new Map<number, number>();
+
+    // Count occurrences of each hash
+    for (const client of this.activeClients) {
+      if (client.hashes.has(turnNumber)) {
+        const clientHash = client.hashes.get(turnNumber)!;
+        counts.set(clientHash, (counts.get(clientHash) || 0) + 1);
+      }
+    }
+
+    // Find the most common hash
+    let mostCommonHash: number | null = null;
+    let maxCount = 0;
+
+    for (const [hash, count] of counts.entries()) {
+      if (count > maxCount) {
+        mostCommonHash = hash;
+        maxCount = count;
+      }
+    }
+
+    // Create a list of clients whose hash doesn't match the most common one
+    const outOfSyncClients: Client[] = [];
+
+    for (const client of this.activeClients) {
+      if (client.hashes.has(turnNumber)) {
+        const clientHash = client.hashes.get(turnNumber)!;
+        if (clientHash !== mostCommonHash) {
+          outOfSyncClients.push(client);
+        }
+      }
+    }
+
+    return {
+      mostCommonHash,
+      outOfSyncClients,
+    };
   }
 }

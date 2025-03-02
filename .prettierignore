@@ -4,7 +4,11 @@
 *.jpg
 *.jpeg
 *.gif
+*.svg
 *.webp
 *.txt
 .prettierignore
 .gitignore
+Dockerfile
+*.conf
+.gitmodules

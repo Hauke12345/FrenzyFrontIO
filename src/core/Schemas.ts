@@ -48,44 +48,50 @@ export type ClientMessage =
   | ClientPingMessage
   | ClientIntentMessage
   | ClientJoinMessage
-  | ClientLogMessage;
+  | ClientLogMessage
+  | ClientHashMessage;
 export type ServerMessage =
   | ServerSyncMessage
   | ServerStartGameMessage
-  | ServerPingMessage;
+  | ServerPingMessage
+  | ServerDesyncMessage;
 
 export type ServerSyncMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
   typeof ServerStartGameMessageSchema
 >;
 export type ServerPingMessage = z.infer<typeof ServerPingMessageSchema>;
+export type ServerDesyncMessage = z.infer<typeof ServerDesyncSchema>;
 
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientPingMessage = z.infer<typeof ClientPingMessageSchema>;
 export type ClientIntentMessage = z.infer<typeof ClientIntentMessageSchema>;
 export type ClientJoinMessage = z.infer<typeof ClientJoinMessageSchema>;
 export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
+export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
 export type GameRecord = z.infer<typeof GameRecordSchema>;
 
 const PlayerTypeSchema = z.nativeEnum(PlayerType);
 
+export interface GameInfo {
+  gameID: GameID;
+  clients?: ClientInfo[];
+  numClients?: number;
+  msUntilStart?: number;
+  gameConfig?: GameConfig;
+}
+export interface ClientInfo {
+  clientID: ClientID;
+  username: string;
+}
 export enum LogSeverity {
   Debug = "DEBUG",
   Info = "INFO",
   Warn = "WARN",
   Error = "ERROR",
   Fatal = "FATAL",
-}
-
-// TODO: create Cell schema
-
-export interface Lobby {
-  id: string;
-  msUntilStart?: number;
-  numClients?: number;
-  gameConfig?: GameConfig;
 }
 
 const GameConfigSchema = z.object({
@@ -240,7 +246,7 @@ export const TurnSchema = z.object({
 // Server
 
 const ServerBaseMessageSchema = z.object({
-  type: SafeString,
+  type: z.enum(["turn", "ping", "start", "desync"]),
 });
 
 export const ServerTurnMessageSchema = ServerBaseMessageSchema.extend({
@@ -259,16 +265,25 @@ export const ServerStartGameMessageSchema = ServerBaseMessageSchema.extend({
   config: GameConfigSchema,
 });
 
+export const ServerDesyncSchema = ServerBaseMessageSchema.extend({
+  type: z.literal("desync"),
+  turn: z.number(),
+  correctHash: z.number().nullable(),
+  clientsWithCorrectHash: z.number(),
+  totalActiveClients: z.number(),
+});
+
 export const ServerMessageSchema = z.union([
   ServerTurnMessageSchema,
   ServerStartGameMessageSchema,
   ServerPingMessageSchema,
+  ServerDesyncSchema,
 ]);
 
 // Client
 
 const ClientBaseMessageSchema = z.object({
-  type: z.enum(["winner", "join", "intent", "ping", "log"]),
+  type: z.enum(["winner", "join", "intent", "ping", "log", "hash"]),
   clientID: ID,
   persistentID: SafeString.nullable(), // WARNING: persistent id is private.
   gameID: ID,
@@ -277,6 +292,12 @@ const ClientBaseMessageSchema = z.object({
 export const ClientSendWinnerSchema = ClientBaseMessageSchema.extend({
   type: z.literal("winner"),
   winner: ID.nullable(),
+});
+
+export const ClientHashSchema = ClientBaseMessageSchema.extend({
+  type: z.literal("hash"),
+  hash: z.number(),
+  tick: z.number(),
 });
 
 export const ClientLogMessageSchema = ClientBaseMessageSchema.extend({
@@ -308,6 +329,7 @@ export const ClientMessageSchema = z.union([
   ClientIntentMessageSchema,
   ClientJoinMessageSchema,
   ClientLogMessageSchema,
+  ClientHashSchema,
 ]);
 
 export const PlayerRecordSchema = z.object({
