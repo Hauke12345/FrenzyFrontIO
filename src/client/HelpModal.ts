@@ -1,5 +1,5 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -234,6 +234,10 @@ export class HelpModal extends LitElement {
                 </tr>
                 <tr>
                   <td>1 / 2</td>
+                  <td>Decrease/Increase attack ratio</td>
+                </tr>
+                <tr>
+                  <td>Shift + scroll down / scroll up</td>
                   <td>Decrease/Increase attack ratio</td>
                 </tr>
                 <tr>
