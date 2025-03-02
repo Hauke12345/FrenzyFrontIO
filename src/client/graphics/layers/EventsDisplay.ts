@@ -25,6 +25,7 @@ import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { onlyImages, sanitize } from "../../../core/Util";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { renderTroops } from "../../Utils";
+import { GoToPlayerEvent } from "./Leaderboard";
 
 interface Event {
   description: string;
@@ -33,6 +34,7 @@ interface Event {
     text: string;
     className: string;
     action: () => void;
+    preventClose?: boolean;
   }[];
   type: MessageType;
   highlight?: boolean;
@@ -53,6 +55,15 @@ export class EventsDisplay extends LitElement implements Layer {
   @state() private incomingAttacks: AttackUpdate[] = [];
   @state() private outgoingAttacks: AttackUpdate[] = [];
   @state() private _hidden: boolean = false;
+  @state() private newEvents: number = 0;
+
+  private toggleHidden() {
+    this._hidden = !this._hidden;
+    if (this._hidden) {
+      this.newEvents = 0;
+    }
+    this.requestUpdate();
+  }
 
   private updateMap = new Map([
     [GameUpdateType.DisplayEvent, (u) => this.onDisplayMessageEvent(u)],
@@ -63,7 +74,7 @@ export class EventsDisplay extends LitElement implements Layer {
     ],
     [GameUpdateType.BrokeAlliance, (u) => this.onBrokeAllianceEvent(u)],
     [GameUpdateType.TargetPlayer, (u) => this.onTargetPlayerEvent(u)],
-    [GameUpdateType.EmojiUpdate, (u) => this.onEmojiMessageEvent(u)],
+    [GameUpdateType.Emoji, (u) => this.onEmojiMessageEvent(u)],
   ]);
 
   constructor() {
@@ -119,6 +130,9 @@ export class EventsDisplay extends LitElement implements Layer {
 
   private addEvent(event: Event) {
     this.events = [...this.events, event];
+    if (this._hidden == true) {
+      this.newEvents++;
+    }
     this.requestUpdate();
   }
 
@@ -169,6 +183,12 @@ export class EventsDisplay extends LitElement implements Layer {
     this.addEvent({
       description: `${requestor.name()} requests an alliance!`,
       buttons: [
+        {
+          text: "Focus",
+          className: "btn-gray",
+          action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
+          preventClose: true,
+        },
         {
           text: "Accept",
           className: "btn",
@@ -397,7 +417,7 @@ export class EventsDisplay extends LitElement implements Layer {
       <div
         class="${this._hidden
           ? "w-fit px-[10px] py-[5px]"
-          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-3xl lg:w-full lg:w-auto"
+          : ""} rounded-md bg-black bg-opacity-60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
       >
         <div>
           <div class="w-full bg-black/80 sticky top-0 px-[10px]">
@@ -406,7 +426,7 @@ export class EventsDisplay extends LitElement implements Layer {
                 ._hidden
                 ? "hidden"
                 : ""}"
-              @click=${() => (this._hidden = true)}
+              @click=${this.toggleHidden}
             >
               Hide
             </button>
@@ -415,9 +435,15 @@ export class EventsDisplay extends LitElement implements Layer {
             class="text-white cursor-pointer pointer-events-auto ${this._hidden
               ? ""
               : "hidden"}"
-            @click=${() => (this._hidden = false)}
+            @click=${this.toggleHidden}
           >
             Events
+            <span
+              class="${this.newEvents
+                ? ""
+                : "hidden"} inline-block px-2 bg-red-500 rounded-sm"
+              >${this.newEvents}</span
+            >
           </button>
           <table
             class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs ${this
@@ -447,10 +473,14 @@ export class EventsDisplay extends LitElement implements Layer {
                                     class="inline-block px-3 py-1 text-white rounded text-sm cursor-pointer transition-colors duration-300
                             ${btn.className.includes("btn-info")
                                       ? "bg-blue-500 hover:bg-blue-600"
-                                      : "bg-green-600 hover:bg-green-700"}"
+                                      : btn.className.includes("btn-gray")
+                                        ? "bg-gray-500 hover:bg-gray-600"
+                                        : "bg-green-600 hover:bg-green-700"}"
                                     @click=${() => {
                                       btn.action();
-                                      this.removeEvent(index);
+                                      if (!btn.preventClose) {
+                                        this.removeEvent(index);
+                                      }
                                       this.requestUpdate();
                                     }}
                                   >

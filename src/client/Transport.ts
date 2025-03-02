@@ -9,6 +9,7 @@ import {
   Player,
   PlayerID,
   PlayerType,
+  Tick,
   UnitType,
 } from "../core/game/Game";
 import {
@@ -23,6 +24,7 @@ import {
   GameConfig,
   ClientLogMessageSchema,
   ClientSendWinnerSchema,
+  ClientMessageSchema,
 } from "../core/Schemas";
 import { LobbyConfig } from "./ClientGameRunner";
 import { LocalServer } from "./LocalServer";
@@ -100,12 +102,26 @@ export class SendDonateIntentEvent implements GameEvent {
   ) {}
 }
 
+export class SendEmbargoIntentEvent implements GameEvent {
+  constructor(
+    public readonly sender: PlayerView,
+    public readonly target: PlayerView,
+    public readonly action: "start" | "stop",
+  ) {}
+}
+
 export class SendSetTargetTroopRatioEvent implements GameEvent {
   constructor(public readonly ratio: number) {}
 }
 
 export class SendWinnerEvent implements GameEvent {
   constructor(public readonly winner: ClientID) {}
+}
+export class SendHashEvent implements GameEvent {
+  constructor(
+    public readonly tick: Tick,
+    public readonly hash: number,
+  ) {}
 }
 
 export class Transport {
@@ -151,6 +167,9 @@ export class Transport {
     );
     this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
     this.eventBus.on(SendDonateIntentEvent, (e) => this.onSendDonateIntent(e));
+    this.eventBus.on(SendEmbargoIntentEvent, (e) =>
+      this.onSendEmbargoIntent(e),
+    );
     this.eventBus.on(SendSetTargetTroopRatioEvent, (e) =>
       this.onSendSetTargetTroopRatioEvent(e),
     );
@@ -159,6 +178,7 @@ export class Transport {
     this.eventBus.on(SendLogEvent, (e) => this.onSendLogEvent(e));
     this.eventBus.on(PauseGameEvent, (e) => this.onPauseGameEvent(e));
     this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
   }
 
   private startPing() {
@@ -219,9 +239,10 @@ export class Transport {
   ) {
     this.startPing();
     this.maybeKillSocket();
-    const wsHost = process.env.WEBSOCKET_URL || window.location.host;
+    const wsHost = window.location.host;
     const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    this.socket = new WebSocket(`${wsProtocol}//${wsHost}`);
+    const workerPath = this.serverConfig.workerPath(this.lobbyConfig.gameID);
+    this.socket = new WebSocket(`${wsProtocol}//${wsHost}/${workerPath}`);
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
@@ -237,7 +258,9 @@ export class Transport {
         const serverMsg = ServerMessageSchema.parse(JSON.parse(event.data));
         this.onmessage(serverMsg);
       } catch (error) {
-        console.error("Failed to process server message:", error);
+        console.error(
+          `Failed to process server message ${event.data}: ${error}`,
+        );
       }
     };
     this.socket.onerror = (err) => {
@@ -397,6 +420,16 @@ export class Transport {
     });
   }
 
+  private onSendEmbargoIntent(event: SendEmbargoIntentEvent) {
+    this.sendIntent({
+      type: "embargo",
+      clientID: this.lobbyConfig.clientID,
+      playerID: this.lobbyConfig.playerID,
+      targetID: event.target.id(),
+      action: event.action,
+    });
+  }
+
   private onSendSetTargetTroopRatioEvent(event: SendSetTargetTroopRatioEvent) {
     this.sendIntent({
       type: "troop_ratio",
@@ -437,6 +470,26 @@ export class Transport {
         persistentID: this.lobbyConfig.persistentID,
         gameID: this.lobbyConfig.gameID,
         winner: event.winner,
+      });
+      this.sendMsg(JSON.stringify(msg));
+    } else {
+      console.log(
+        "WebSocket is not open. Current state:",
+        this.socket.readyState,
+      );
+      console.log("attempting reconnect");
+    }
+  }
+
+  private onSendHashEvent(event: SendHashEvent) {
+    if (this.isLocal || this.socket.readyState === WebSocket.OPEN) {
+      const msg = ClientMessageSchema.parse({
+        type: "hash",
+        clientID: this.lobbyConfig.clientID,
+        persistentID: this.lobbyConfig.persistentID,
+        gameID: this.lobbyConfig.gameID,
+        tick: event.tick,
+        hash: event.hash,
       });
       this.sendMsg(JSON.stringify(msg));
     } else {

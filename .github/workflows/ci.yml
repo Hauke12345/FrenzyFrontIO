@@ -1,7 +1,5 @@
 name: CI
-
 on: [push, pull_request]
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -9,7 +7,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
       - name: Setup node
         uses: actions/setup-node@v4
         with:

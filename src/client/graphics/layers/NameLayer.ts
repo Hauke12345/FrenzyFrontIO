@@ -11,8 +11,10 @@ import { Layer } from "./Layer";
 import { TransformHandler } from "../TransformHandler";
 import traitorIcon from "../../../../resources/images/TraitorIcon.svg";
 import allianceIcon from "../../../../resources/images/AllianceIcon.svg";
+import allianceRequestIcon from "../../../../resources/images/AllianceRequestIcon.svg";
 import crownIcon from "../../../../resources/images/CrownIcon.svg";
 import targetIcon from "../../../../resources/images/TargetIcon.svg";
+import embargoIcon from "../../../../resources/images/EmbargoIcon.svg";
 import { ClientID } from "../../../core/Schemas";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { createCanvas, renderTroops } from "../../Utils";
@@ -40,9 +42,11 @@ export class NameLayer implements Layer {
   private renders: RenderInfo[] = [];
   private seenPlayers: Set<PlayerView> = new Set();
   private traitorIconImage: HTMLImageElement;
+  private allianceRequestIconImage: HTMLImageElement;
   private allianceIconImage: HTMLImageElement;
   private targetIconImage: HTMLImageElement;
   private crownIconImage: HTMLImageElement;
+  private embargoIconImage: HTMLImageElement;
   private container: HTMLDivElement;
   private myPlayer: PlayerView | null = null;
   private firstPlace: PlayerView | null = null;
@@ -57,10 +61,14 @@ export class NameLayer implements Layer {
     this.traitorIconImage.src = traitorIcon;
     this.allianceIconImage = new Image();
     this.allianceIconImage.src = allianceIcon;
+    this.allianceRequestIconImage = new Image();
+    this.allianceRequestIconImage.src = allianceRequestIcon;
     this.crownIconImage = new Image();
     this.crownIconImage.src = crownIcon;
     this.targetIconImage = new Image();
     this.targetIconImage.src = targetIcon;
+    this.embargoIconImage = new Image();
+    this.embargoIconImage.src = embargoIcon;
   }
 
   resizeCanvas() {
@@ -162,6 +170,7 @@ export class NameLayer implements Layer {
     iconsDiv.style.justifyContent = "center";
     iconsDiv.style.alignItems = "center";
     iconsDiv.style.zIndex = "2";
+    iconsDiv.style.opacity = "0.8";
     element.appendChild(iconsDiv);
 
     const nameDiv = document.createElement("div");
@@ -314,6 +323,23 @@ export class NameLayer implements Layer {
       existingAlliance.remove();
     }
 
+    // Alliance request icon
+    const data = '[data-icon="alliance-request"]';
+    const existingRequestAlliance = iconsDiv.querySelector(data);
+    if (myPlayer != null && render.player.isRequestingAllianceWith(myPlayer)) {
+      if (!existingRequestAlliance) {
+        iconsDiv.appendChild(
+          this.createIconElement(
+            this.allianceRequestIconImage.src,
+            iconSize,
+            "alliance-request",
+          ),
+        );
+      }
+    } else if (existingRequestAlliance) {
+      existingRequestAlliance.remove();
+    }
+
     // Target icon
     const existingTarget = iconsDiv.querySelector('[data-icon="target"]');
     if (
@@ -357,6 +383,24 @@ export class NameLayer implements Layer {
       }
     } else if (existingEmoji) {
       existingEmoji.remove();
+    }
+
+    const existingEmbargo = iconsDiv.querySelector('[data-icon="embargo"]');
+    const hasEmbargo =
+      render.player.hasEmbargoAgainst(myPlayer) ||
+      myPlayer.hasEmbargoAgainst(render.player);
+    if (myPlayer && hasEmbargo) {
+      if (!existingEmbargo) {
+        iconsDiv.appendChild(
+          this.createIconElement(
+            this.embargoIconImage.src,
+            iconSize,
+            "embargo",
+          ),
+        );
+      }
+    } else if (existingEmbargo) {
+      existingEmbargo.remove();
     }
 
     // Update all icon sizes

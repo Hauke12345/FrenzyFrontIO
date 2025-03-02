@@ -1,5 +1,5 @@
-import { LitElement, html, css } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import "./components/Difficulties";
 import "./components/Maps";
 
@@ -207,11 +207,17 @@ export class HelpModal extends LitElement {
         class="modal-overlay"
         style="display: ${this.isModalOpen ? "flex" : "none"}"
       >
+      <div
+        class="absolute left-0 top-0 w-full h-full ${
+          this.isModalOpen ? "" : "hidden"
+        }"
+        @click=${this.close}
+      ></div>
         <div class="modal-content">
           <span class="close" @click=${this.close}>&times;</span>
 
           <div class="flex flex-col items-center">
-            <div class="text-center text-2xl font-bold mb-4">Keybinds</div>
+            <div class="text-center text-2xl font-bold mb-4">Hotkeys</div>
             <table>
               <thead>
                 <tr>
@@ -221,8 +227,16 @@ export class HelpModal extends LitElement {
               </thead>
               <tbody class="text-left">
                 <tr>
+                  <td>CTRL + Left Click</td>
+                  <td>Open build menu</td>
+                </tr>
+                <tr>
                   <td>Space</td>
                   <td>Alternate view</td>
+                </tr>
+                <tr>
+                  <td>C</td>
+                  <td>Center camera on player</td>
                 </tr>
                 <tr>
                   <td>Q / E</td>
@@ -234,6 +248,10 @@ export class HelpModal extends LitElement {
                 </tr>
                 <tr>
                   <td>1 / 2</td>
+                  <td>Decrease/Increase attack ratio</td>
+                </tr>
+                <tr>
+                  <td>Shift + scroll down / scroll up</td>
                   <td>Decrease/Increase attack ratio</td>
                 </tr>
                 <tr>
@@ -303,7 +321,8 @@ export class HelpModal extends LitElement {
               <p class="mb-4">Right clicking (or touch on mobile) opens the radial menu. From there you can:</p>
               <ul>
                 <li class="mb-4"><div class="inline-block icon build-icon"></div> - Open the build menu.</li>
-                <li class="mb-4"><div class="inline-block icon info-icon"></div> - Open the Info menu.</li>
+                <li class="mb-4">
+                  <img src="/images/InfoIcon.svg" class="inline-block icon" style="fill: white; background: transparent;"/> - Open the Info menu.</li>
                 <li class="mb-4"><div class="inline-block icon boat-icon"></div> - Send a boat to attack at the selected location (only available if you have access to water).</li>
                 <li class="mb-4"><div class="inline-block icon cancel-icon"></div> - Close the menu.</li>
               </ul>
@@ -455,5 +474,6 @@ export class HelpModal extends LitElement {
 
   public close() {
     this.isModalOpen = false;
+    console.log("closing modal");
   }
 }

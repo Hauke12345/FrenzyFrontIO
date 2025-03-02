@@ -1,7 +1,7 @@
 import { MessageType } from "./Game";
 import { UnitUpdate } from "./GameUpdates";
 import { GameUpdateType } from "./GameUpdates";
-import { simpleHash, within } from "../Util";
+import { simpleHash, toInt, within, withinInt } from "../Util";
 import { Unit, TerraNullius, UnitType, Player, UnitInfo } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
@@ -9,7 +9,7 @@ import { TileRef } from "./GameMap";
 
 export class UnitImpl implements Unit {
   private _active = true;
-  private _health: number;
+  private _health: bigint;
   private _lastTile: TileRef = null;
 
   private _constructionType: UnitType = undefined;
@@ -21,9 +21,10 @@ export class UnitImpl implements Unit {
     private _troops: number,
     private _id: number,
     public _owner: PlayerImpl,
+    private _dstPort?: Unit,
   ) {
-    // default to half health (or 1 is no health specified)
-    this._health = (this.mg.unitInfo(_type).maxHealth ?? 2) / 2;
+    // default to 60% health (or 1.2 is no health specified)
+    this._health = toInt((this.mg.unitInfo(_type).maxHealth ?? 2) * 0.6);
     this._lastTile = _tile;
   }
 
@@ -37,7 +38,7 @@ export class UnitImpl implements Unit {
       isActive: this._active,
       pos: this._tile,
       lastPos: this._lastTile,
-      health: this.hasHealth() ? this._health : undefined,
+      health: this.hasHealth() ? Number(this._health) : undefined,
       constructionType: this._constructionType,
     };
   }
@@ -65,7 +66,7 @@ export class UnitImpl implements Unit {
     return this._troops;
   }
   health(): number {
-    return this._health;
+    return Number(this._health);
   }
   hasHealth(): boolean {
     return this.info().maxHealth != undefined;
@@ -94,7 +95,11 @@ export class UnitImpl implements Unit {
   }
 
   modifyHealth(delta: number): void {
-    this._health = within(this._health + delta, 0, this.info().maxHealth ?? 1);
+    this._health = withinInt(
+      this._health + toInt(delta),
+      0n,
+      toInt(this.info().maxHealth ?? 1),
+    );
   }
 
   delete(displayMessage: boolean = true): void {
@@ -135,10 +140,14 @@ export class UnitImpl implements Unit {
   }
 
   hash(): number {
-    return this.tile() + simpleHash(this.type());
+    return this.tile() + simpleHash(this.type()) * this._id;
   }
 
   toString(): string {
     return `Unit:${this._type},owner:${this.owner().name()}`;
+  }
+
+  dstPort(): Unit {
+    return this._dstPort;
   }
 }

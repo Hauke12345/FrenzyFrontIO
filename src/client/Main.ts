@@ -17,6 +17,7 @@ import { PublicLobby } from "./PublicLobby";
 import { UserSettings } from "../core/game/UserSettings";
 import "./DarkModeButton";
 import { DarkModeButton } from "./DarkModeButton";
+import "./GoogleAdElement";
 import { HelpModal } from "./HelpModal";
 import { GameType } from "../core/game/Game";
 
@@ -65,10 +66,6 @@ class Client {
     setFavicon();
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
-    document.addEventListener(
-      "single-player",
-      this.handleSinglePlayer.bind(this),
-    );
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -112,9 +109,9 @@ class Client {
       });
 
     if (this.userSettings.darkMode()) {
-      document.body.classList.add("dark");
+      document.documentElement.classList.add("dark");
     } else {
-      document.body.classList.remove("dark");
+      document.documentElement.classList.remove("dark");
     }
     page("/join/:lobbyId", (ctx) => {
       if (ctx.init && sessionStorage.getItem("inLobby")) {
@@ -143,9 +140,12 @@ class Client {
     this.gameStop = joinLobby(
       {
         gameType: gameType,
-        flag: (): string => this.flagInput.getCurrentFlag(),
+        flag: (): string =>
+          this.flagInput.getCurrentFlag() == "xx"
+            ? ""
+            : this.flagInput.getCurrentFlag(),
         playerName: (): string => this.usernameInput.getCurrentUsername(),
-        gameID: lobby.id,
+        gameID: lobby.gameID,
         persistentID: getPersistentIDFromCookie(),
         playerID: generateID(),
         clientID: generateID(),
@@ -161,7 +161,7 @@ class Client {
         this.joinModal.close();
         this.publicLobby.stop();
         if (gameType != GameType.Singleplayer) {
-          window.history.pushState({}, "", `/join/${lobby.id}`);
+          window.history.pushState({}, "", `/join/${lobby.gameID}`);
           sessionStorage.setItem("inLobby", "true");
         }
       },
@@ -176,10 +176,6 @@ class Client {
     this.gameStop();
     this.gameStop = null;
     this.publicLobby.leaveLobby();
-  }
-
-  private async handleSinglePlayer(event: CustomEvent) {
-    alert("coming soon");
   }
 }
 

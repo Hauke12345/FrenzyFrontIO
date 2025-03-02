@@ -1,12 +1,15 @@
 import { LitElement, html, css } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { Difficulty, GameMapType, GameType } from "../core/game/Game";
-import { Lobby } from "../core/Schemas";
+import { GameConfig, GameInfo } from "../core/Schemas";
 import { consolex } from "../core/Consolex";
 import "./components/Difficulties";
 import { DifficultyDescription } from "./components/Difficulties";
 import "./components/Maps";
+import { generateID } from "../core/Util";
+import { getConfig, getServerConfig } from "../core/configuration/Config";
 import randomMap from "../../resources/images/RandomMap.png";
+
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends LitElement {
@@ -323,6 +326,11 @@ export class HostLobbyModal extends LitElement {
         class="modal-overlay"
         style="display: ${this.isModalOpen ? "flex" : "none"}"
       >
+        <div
+          style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%;"
+          class="${this.isModalOpen ? "" : "hidden"}"
+          @click=${this.close}
+        ></div>
         <div class="modal-content">
           <span class="close" @click=${this.close}>&times;</span>
 
@@ -430,7 +438,7 @@ export class HostLobbyModal extends LitElement {
                     step="1"
                     @input=${this.handleBotsChange}
                     @change=${this.handleBotsChange}
-                    .value="${this.bots}"
+                    .value="${String(this.bots)}"
                   />
                   <div class="option-card-title">
                     Bots: ${this.bots == 0 ? "Disabled" : this.bots}
@@ -526,7 +534,7 @@ export class HostLobbyModal extends LitElement {
   public open() {
     createLobby()
       .then((lobby) => {
-        this.lobbyId = lobby.id;
+        this.lobbyId = lobby.gameID;
         // join lobby
       })
       .then(() => {
@@ -535,7 +543,7 @@ export class HostLobbyModal extends LitElement {
             detail: {
               gameType: GameType.Private,
               lobby: {
-                id: this.lobbyId,
+                gameID: this.lobbyId,
               },
               map: this.selectedMap,
               difficulty: this.selectedDifficulty,
@@ -604,21 +612,24 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async putGameConfig() {
-    const response = await fetch(`/private_lobby/${this.lobbyId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gameMap: this.selectedMap,
+          difficulty: this.selectedDifficulty,
+          disableNPCs: this.disableNPCs,
+          bots: this.bots,
+          infiniteGold: this.infiniteGold,
+          infiniteTroops: this.infiniteTroops,
+          instantBuild: this.instantBuild,
+        } as GameConfig),
       },
-      body: JSON.stringify({
-        gameMap: this.selectedMap,
-        difficulty: this.selectedDifficulty,
-        disableNPCs: this.disableNPCs,
-        bots: this.bots,
-        infiniteGold: this.infiniteGold,
-        infiniteTroops: this.infiniteTroops,
-        instantBuild: this.instantBuild,
-      }),
-    });
+    );
   }
 
   private getRandomMap(): GameMapType {
@@ -637,12 +648,15 @@ export class HostLobbyModal extends LitElement {
       `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
-    const response = await fetch(`/start_private_lobby/${this.lobbyId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${window.location.origin}/${getServerConfig().workerPath(this.lobbyId)}/start_game/${this.lobbyId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    });
+    );
   }
 
   private async copyToClipboard() {
@@ -656,34 +670,42 @@ export class HostLobbyModal extends LitElement {
         this.copySuccess = false;
       }, 2000);
     } catch (err) {
-      consolex.error("Failed to copy text: ", err);
+      consolex.error(`Failed to copy text: ${err}`);
     }
   }
 
   private async pollPlayers() {
-    fetch(`/lobby/${this.lobbyId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
+    fetch(
+      `/${getServerConfig().workerPath(this.lobbyId)}/game/${this.lobbyId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
       },
-    })
+    )
       .then((response) => response.json())
-      .then((data) => {
+      .then((data: GameInfo) => {
         console.log(`got response: ${data}`);
-        this.players = data.players.map((p) => p.username);
+        this.players = data.clients.map((p) => p.username);
       });
   }
 }
 
-async function createLobby(): Promise<Lobby> {
+async function createLobby(): Promise<GameInfo> {
+  const serverConfig = getServerConfig();
   try {
-    const response = await fetch("/private_lobby", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const id = generateID();
+    const response = await fetch(
+      `/${serverConfig.workerPath(id)}/create_game/${id}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // body: JSON.stringify(data), // Include this if you need to send data
       },
-      // body: JSON.stringify(data), // Include this if you need to send data
-    });
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -692,13 +714,7 @@ async function createLobby(): Promise<Lobby> {
     const data = await response.json();
     consolex.log("Success:", data);
 
-    // Assuming the server returns an object with an 'id' property
-    const lobby: Lobby = {
-      id: data.id,
-      // Add other properties as needed
-    };
-
-    return lobby;
+    return data as GameInfo;
   } catch (error) {
     consolex.error("Error creating lobby:", error);
     throw error; // Re-throw the error so the caller can handle it

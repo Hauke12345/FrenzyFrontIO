@@ -4,7 +4,12 @@ import { EventBus } from "../../../core/EventBus";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import { Layer } from "./Layer";
 import { MouseUpEvent } from "../../InputHandler";
-import { AllPlayers, Player, PlayerActions } from "../../../core/game/Game";
+import {
+  AllPlayers,
+  Player,
+  PlayerActions,
+  UnitType,
+} from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { renderNumber, renderTroops } from "../../Utils";
 import targetIcon from "../../../../resources/images/TargetIconWhite.svg";
@@ -18,6 +23,7 @@ import {
   SendDonateIntentEvent,
   SendEmojiIntentEvent,
   SendTargetPlayerIntentEvent,
+  SendEmbargoIntentEvent,
 } from "../../Transport";
 import { EmojiTable } from "./EmojiTable";
 
@@ -76,6 +82,26 @@ export class PlayerPanel extends LitElement implements Layer {
     this.hide();
   }
 
+  private handleEmbargoClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "start"));
+    this.hide();
+  }
+
+  private handleStopEmbargoClick(
+    e: Event,
+    myPlayer: PlayerView,
+    other: PlayerView,
+  ) {
+    e.stopPropagation();
+    this.eventBus.emit(new SendEmbargoIntentEvent(myPlayer, other, "stop"));
+    this.hide();
+  }
+
   private handleEmojiClick(e: Event, myPlayer: PlayerView, other: PlayerView) {
     e.stopPropagation();
     this.emojiTable.showTable((emoji: string) => {
@@ -107,6 +133,24 @@ export class PlayerPanel extends LitElement implements Layer {
     this.requestUpdate();
   }
 
+  getTotalNukesSent(): number {
+    const stats = this.actions.interaction?.stats;
+    if (!stats) {
+      return 0;
+    }
+    let sum = 0;
+    const nukes = stats.sentNukes[this.g.myPlayer().id()];
+    if (!nukes) {
+      return 0;
+    }
+    for (const nukeType in nukes) {
+      if (nukeType != UnitType.MIRVWarhead) {
+        sum += nukes[nukeType];
+      }
+    }
+    return sum;
+  }
+
   render() {
     if (!this.isVisible) {
       return html``;
@@ -131,6 +175,7 @@ export class PlayerPanel extends LitElement implements Layer {
         : this.actions.interaction?.canSendEmoji;
     const canBreakAlliance = this.actions.interaction?.canBreakAlliance;
     const canTarget = this.actions.interaction?.canTarget;
+    const canEmbargo = this.actions.interaction?.canEmbargo;
 
     return html`
       <div
@@ -143,7 +188,7 @@ export class PlayerPanel extends LitElement implements Layer {
           <!-- Close button -->
           <button
             @click=${this.handleClose}
-            class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center 
+            class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center
                    bg-red-500 hover:bg-red-600 text-white rounded-full 
                    text-sm font-bold transition-colors"
           >
@@ -155,7 +200,7 @@ export class PlayerPanel extends LitElement implements Layer {
             <div class="flex items-center gap-1 lg:gap-2">
               <div
                 class="px-4 h-8 lg:h-10 flex items-center justify-center 
-                       bg-opacity-50 bg-gray-700 text-opacity-90 text-white 
+                       bg-opacity-50 bg-gray-700 text-opacity-90 text-white
                        rounded text-sm lg:text-xl w-full"
               >
                 ${other?.name()}
@@ -190,12 +235,32 @@ export class PlayerPanel extends LitElement implements Layer {
               </div>
             </div>
 
+            <!-- Embargo -->
+            <div class="flex flex-col gap-1">
+              <div class="text-white text-opacity-80 text-sm px-2">
+                Embargo against you
+              </div>
+              <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                ${other.hasEmbargoAgainst(myPlayer) ? "Yes" : "No"}
+              </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="flex flex-col gap-1">
+              <div class="text-white text-opacity-80 text-sm px-2">
+                Nukes sent by them to you
+              </div>
+              <div class="bg-opacity-50 bg-gray-700 rounded p-2 text-white">
+                ${this.getTotalNukesSent()}
+              </div>
+            </div>
+
             <!-- Action buttons -->
             <div class="flex justify-center gap-2">
               ${canTarget
                 ? html`<button
                     @click=${(e) => this.handleTargetClick(e, other)}
-                    class="w-10 h-10 flex items-center justify-center 
+                    class="w-10 h-10 flex items-center justify-center
                            bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
                            text-white rounded-lg transition-colors"
                   >
@@ -206,8 +271,8 @@ export class PlayerPanel extends LitElement implements Layer {
                 ? html`<button
                     @click=${(e) =>
                       this.handleBreakAllianceClick(e, myPlayer, other)}
-                    class="w-10 h-10 flex items-center justify-center 
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
+                    class="w-10 h-10 flex items-center justify-center
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
                     <img
@@ -221,8 +286,8 @@ export class PlayerPanel extends LitElement implements Layer {
                 ? html`<button
                     @click=${(e) =>
                       this.handleAllianceClick(e, myPlayer, other)}
-                    class="w-10 h-10 flex items-center justify-center 
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
+                    class="w-10 h-10 flex items-center justify-center
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
                     <img src=${allianceIcon} alt="Alliance" class="w-6 h-6" />
@@ -231,8 +296,8 @@ export class PlayerPanel extends LitElement implements Layer {
               ${canDonate
                 ? html`<button
                     @click=${(e) => this.handleDonateClick(e, myPlayer, other)}
-                    class="w-10 h-10 flex items-center justify-center 
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
+                    class="w-10 h-10 flex items-center justify-center
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
                     <img src=${donateIcon} alt="Donate" class="w-6 h-6" />
@@ -241,14 +306,35 @@ export class PlayerPanel extends LitElement implements Layer {
               ${canSendEmoji
                 ? html`<button
                     @click=${(e) => this.handleEmojiClick(e, myPlayer, other)}
-                    class="w-10 h-10 flex items-center justify-center 
-                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70 
+                    class="w-10 h-10 flex items-center justify-center
+                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                            text-white rounded-lg transition-colors"
                   >
                     <img src=${emojiIcon} alt="Emoji" class="w-6 h-6" />
                   </button>`
                 : ""}
             </div>
+            ${canEmbargo && other != myPlayer
+              ? html`<button
+                  @click=${(e) => this.handleEmbargoClick(e, myPlayer, other)}
+                  class="w-100 h-10 flex items-center justify-center
+                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                          text-white rounded-lg transition-colors"
+                >
+                  Start embargo
+                </button>`
+              : ""}
+            ${!canEmbargo && other != myPlayer
+              ? html`<button
+                  @click=${(e) =>
+                    this.handleStopEmbargoClick(e, myPlayer, other)}
+                  class="w-100 h-10 flex items-center justify-center
+                          bg-opacity-50 bg-gray-700 hover:bg-opacity-70
+                          text-white rounded-lg transition-colors"
+                >
+                  Stop embargo
+                </button>`
+              : ""}
           </div>
         </div>
       </div>

@@ -187,6 +187,14 @@ export class PlayerView {
     return this.data.allies.some((n) => other.smallID() == n);
   }
 
+  isRequestingAllianceWith(other: PlayerView) {
+    return this.data.outgoingAllianceRequests.some((id) => other.id() == id);
+  }
+
+  hasEmbargoAgainst(other: PlayerView): boolean {
+    return this.data.embargoes.has(other.id());
+  }
+
   profile(): Promise<PlayerProfile> {
     return this.game.worker.playerProfile(this.smallID());
   }

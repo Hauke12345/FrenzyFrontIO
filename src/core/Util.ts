@@ -208,13 +208,12 @@ export function getMode(list: Set<number>): number {
 export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
-    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]]/gu, "");
+    .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}\[\]_]/gu, "");
 }
 
 export function processName(name: string): string {
   // First sanitize the raw input - strip everything except text and emojis
   const sanitizedName = sanitize(name);
-
   // Process emojis with twemoji
   const withEmojis = twemoji.parse(sanitizedName, {
     base: "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",
@@ -306,4 +305,20 @@ export function generateID(): GameID {
     8,
   );
   return nanoid();
+}
+
+export function toInt(num: number): bigint {
+  return BigInt(Math.floor(num));
+}
+
+export function maxInt(a: bigint, b: bigint): bigint {
+  return a > b ? a : b;
+}
+
+export function minInt(a: bigint, b: bigint): bigint {
+  return a < b ? a : b;
+}
+export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
+  const atLeastMin = maxInt(num, min);
+  return minInt(atLeastMin, max);
 }

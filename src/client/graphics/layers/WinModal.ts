@@ -34,12 +34,13 @@ export class WinModal extends LitElement implements Layer {
   private _title: string;
   private won: boolean;
 
-  static styles = css`
-    :host {
-      display: block;
-    }
+  // Override to prevent shadow DOM creation
+  createRenderRoot() {
+    return this;
+  }
 
-    .modal {
+  static styles = css`
+    .win-modal {
       display: none;
       position: fixed;
       top: 50%;
@@ -58,7 +59,7 @@ export class WinModal extends LitElement implements Layer {
         visibility 0.3s ease-in-out;
     }
 
-    .modal.visible {
+    .win-modal.visible {
       display: block;
       animation: fadeIn 0.3s ease-out;
     }
@@ -74,14 +75,14 @@ export class WinModal extends LitElement implements Layer {
       }
     }
 
-    h2 {
+    .win-modal h2 {
       margin: 0 0 15px 0;
       font-size: 24px;
       text-align: center;
       color: white;
     }
 
-    p {
+    .win-modal p {
       margin: 0 0 20px 0;
       text-align: center;
       background-color: rgba(0, 0, 0, 0.3);
@@ -95,7 +96,7 @@ export class WinModal extends LitElement implements Layer {
       gap: 10px;
     }
 
-    button {
+    .win-modal button {
       flex: 1;
       padding: 12px;
       font-size: 16px;
@@ -109,38 +110,46 @@ export class WinModal extends LitElement implements Layer {
         transform 0.1s ease;
     }
 
-    button:hover {
+    .win-modal button:hover {
       background: rgba(0, 150, 255, 0.8);
       transform: translateY(-1px);
     }
 
-    button:active {
+    .win-modal button:active {
       transform: translateY(1px);
     }
 
     @media (max-width: 768px) {
-      .modal {
+      .win-modal {
         width: 90%;
         max-width: 300px;
         padding: 20px;
       }
 
-      h2 {
+      .win-modal h2 {
         font-size: 20px;
       }
 
-      button {
+      .win-modal button {
         padding: 10px;
         font-size: 14px;
       }
     }
   `;
 
+  constructor() {
+    super();
+    // Add styles to document
+    const styleEl = document.createElement("style");
+    styleEl.textContent = WinModal.styles.toString();
+    document.head.appendChild(styleEl);
+  }
+
   render() {
     return html`
-      <div class="modal ${this.isVisible ? "visible" : ""}">
-        <h2>${this._title}</h2>
-        <div>${this.won ? this.supportHTML() : this.adsHTML()}</div>
+      <div class="win-modal ${this.isVisible ? "visible" : ""}">
+        <h2>${this._title || ""}</h2>
+        ${this.won ? this.supportHTML() : this.adsHTML()}
         <div class="button-container">
           <button @click=${this._handleExit}>Exit Game</button>
           <button @click=${this.hide}>Keep Playing</button>
@@ -149,24 +158,40 @@ export class WinModal extends LitElement implements Layer {
     `;
   }
 
-  adsHTML(): ReturnType<typeof html> {
+  updated(changedProperties) {
+    super.updated(changedProperties);
+    // Initialize ads if modal is visible and showing ads
+    if (changedProperties.has("isVisible") && this.isVisible && !this.won) {
+      try {
+        setTimeout(() => {
+          (adsbygoogle = window.adsbygoogle || []).push({});
+        }, 0);
+      } catch (error) {
+        console.error("Error initializing ad:", error);
+      }
+    }
+  }
+
+  adsHTML() {
     return html`<ins
       class="adsbygoogle"
       style="display:block"
       data-ad-client="ca-pub-7035513310742290"
-      data-ad-slot="3772893937"
+      data-ad-slot="winmodalad"
       data-ad-format="auto"
       data-full-width-responsive="true"
     ></ins>`;
   }
 
-  supportHTML(): ReturnType<typeof html> {
+  supportHTML() {
     return html`
       <div style="text-align: center; margin: 15px 0;">
         <p>
           Like the game? Help make this my full-time project!
           <a
-            href="https://discord.com/channels/1284581928254701718/shop/1330243291366559744"
+            href="https://discord.gg/k22YrnAzGp"
+            target="_blank"
+            rel="noopener noreferrer"
             style="color: #0096ff; text-decoration: underline; display: block; margin-top: 5px;"
           >
             Support the game!
@@ -201,14 +226,10 @@ export class WinModal extends LitElement implements Layer {
       this.hasShownDeathModal = true;
       this._title = "You died";
       this.won = false;
-      try {
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (error) {
-        console.error("Error initializing ad:", error);
-      }
       this.show();
     }
-    this.game.updatesSinceLastTick()[GameUpdateType.WinUpdate].forEach((wu) => {
+
+    this.game.updatesSinceLastTick()[GameUpdateType.Win].forEach((wu) => {
       const winner = this.game.playerBySmallID(wu.winnerID) as PlayerView;
       this.eventBus.emit(new SendWinnerEvent(winner.clientID()));
       if (winner == this.game.myPlayer()) {
