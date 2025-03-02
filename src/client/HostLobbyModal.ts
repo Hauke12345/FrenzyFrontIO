@@ -628,12 +628,13 @@ export class HostLobbyModal extends LitElement {
   }
 
   private async startGame() {
-    this.selectedMap = this.useRandomMap
-      ? this.getRandomMap()
-      : this.selectedMap;
+    if (this.useRandomMap) {
+      this.selectedMap = this.getRandomMap();
+    }
+
     await this.putGameConfig();
     consolex.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting private game with map: ${GameMapType[this.selectedMap]} ${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
     this.close();
     const response = await fetch(`/start_private_lobby/${this.lobbyId}`, {

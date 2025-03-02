@@ -463,10 +463,12 @@ export class SinglePlayerModal extends LitElement {
 
   private startGame() {
     // If random map is selected, choose a random map now
-    const mapToUse = this.useRandomMap ? this.getRandomMap() : this.selectedMap;
+    if (this.useRandomMap) {
+      this.selectedMap = this.getRandomMap();
+    }
 
     consolex.log(
-      `Starting single player game with map: ${GameMapType[mapToUse]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      `Starting single player game with map: ${GameMapType[this.selectedMap]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
     );
 
     this.dispatchEvent(
@@ -476,7 +478,7 @@ export class SinglePlayerModal extends LitElement {
           lobby: {
             id: generateID(),
           },
-          map: mapToUse,
+          map: this.selectedMap,
           difficulty: this.selectedDifficulty,
           disableNPCs: this.disableNPCs,
           bots: this.bots,
