@@ -49,32 +49,33 @@ async function getGatekeeper(): Promise<Gatekeeper> {
         !fs.existsSync(tsMiddlewarePath)
       ) {
         console.log(
-          "RealSecurityMiddleware file not found, using NoOpSecurityMiddleware",
+          "RealSecurityMiddleware file not found, using NoOpGatekeeper",
         );
         return new NoOpGatekeeper();
       }
 
       // Use dynamic import for ES modules
-      const module = await import("./gatekeeper/RealGatekeeper.js").catch(
-        () => import("./gatekeeper/RealGatekeeper.js"),
-      );
+      // Using a type assertion to avoid TypeScript errors for optional modules
+      const module = await import(
+        "./gatekeeper/RealGatekeeper.js" as any
+      ).catch(() => import("./gatekeeper/RealGatekeeper.js" as any));
 
       if (!module || !module.RealSecurityMiddleware) {
         console.log(
-          "RealSecurityMiddleware class not found in module, using NoOpSecurityMiddleware",
+          "RealSecurityMiddleware class not found in module, using NoOpGatekeeper",
         );
         return new NoOpGatekeeper();
       }
 
-      console.log("Successfully loaded real security middleware");
-      return new module.RealSecurityMiddleware();
+      console.log("Successfully loaded real gatekeeper");
+      return new module.RealGatekeeper();
     } catch (error) {
-      console.log("Failed to load real security middleware:", error);
+      console.log("Failed to load real gatekeeper:", error);
       return new NoOpGatekeeper();
     }
   } catch (e) {
     // Fall back to no-op if real implementation isn't available
-    console.log("using no-op security middleware", e);
+    console.log("using no-op gatekeeper", e);
     return new NoOpGatekeeper();
   }
 }
@@ -121,5 +122,5 @@ getGatekeeper()
     Object.assign(gatekeeper, middleware);
   })
   .catch((error) => {
-    console.error("Failed to initialize security middleware:", error);
+    console.error("Failed to initialize gatekeeper:", error);
   });
