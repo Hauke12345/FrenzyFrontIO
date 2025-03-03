@@ -3,7 +3,11 @@ import { Theme } from "../../../core/configuration/Config";
 import { Unit, UnitType, Player } from "../../../core/game/Game";
 import { Layer } from "./Layer";
 import { EventBus } from "../../../core/EventBus";
-import { AlternateViewEvent } from "../../InputHandler";
+import {
+  AlternateViewEvent,
+  MouseUpEvent,
+  UnitSelectionEvent,
+} from "../../InputHandler";
 import { ClientID } from "../../../core/Schemas";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import {
@@ -12,6 +16,7 @@ import {
   TileRef,
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { TransformHandler } from "../TransformHandler";
 
 enum Relationship {
   Self,
@@ -33,12 +38,22 @@ export class UnitLayer implements Layer {
 
   private oldShellTile = new Map<UnitView, TileRef>();
 
+  private transformHandler: TransformHandler;
+
+  // Selected unit property as suggested in the review comment
+  private selectedUnit: UnitView | null = null;
+
+  // Configuration for unit selection
+  private readonly WARSHIP_SELECTION_RADIUS = 3; // Radius in game cells for warship selection hit zone
+
   constructor(
     private game: GameView,
     private eventBus: EventBus,
     private clientID: ClientID,
+    transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
+    this.transformHandler = transformHandler;
   }
 
   shouldTransform(): boolean {
@@ -56,7 +71,87 @@ export class UnitLayer implements Layer {
 
   init() {
     this.eventBus.on(AlternateViewEvent, (e) => this.onAlternativeViewEvent(e));
+    this.eventBus.on(MouseUpEvent, (e) => this.onMouseUp(e));
+    this.eventBus.on(UnitSelectionEvent, (e) => this.onUnitSelectionChange(e));
     this.redraw();
+  }
+
+  /**
+   * Find player-owned warships near the given cell within a configurable radius
+   * @param cell The cell to check
+   * @returns Array of player's warships in range, sorted by distance (closest first)
+   */
+  private findWarshipsNearCell(cell: { x: number; y: number }): UnitView[] {
+    const clickRef = this.game.ref(cell.x, cell.y);
+
+    // Make sure we have the current player
+    if (this.myPlayer == null) {
+      this.myPlayer = this.game.playerByClientID(this.clientID);
+    }
+
+    // Only select warships owned by the player
+    return this.game
+      .units(UnitType.Warship)
+      .filter(
+        (unit) =>
+          unit.isActive() &&
+          unit.owner() === this.myPlayer && // Only allow selecting own warships
+          this.game.manhattanDist(unit.tile(), clickRef) <=
+            this.WARSHIP_SELECTION_RADIUS,
+      )
+      .sort((a, b) => {
+        // Sort by distance (closest first)
+        const distA = this.game.manhattanDist(a.tile(), clickRef);
+        const distB = this.game.manhattanDist(b.tile(), clickRef);
+        return distA - distB;
+      });
+  }
+
+  private onMouseUp(event: MouseUpEvent) {
+    // Convert screen coordinates to world coordinates
+    const cell = this.transformHandler.screenToWorldCoordinates(
+      event.x,
+      event.y,
+    );
+
+    // Find warships near this cell, sorted by distance
+    const nearbyWarships = this.findWarshipsNearCell(cell);
+
+    if (nearbyWarships.length > 0) {
+      // Toggle selection of the closest warship
+      const clickedUnit = nearbyWarships[0];
+      if (this.selectedUnit === clickedUnit) {
+        // Deselect if already selected
+        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, false));
+      } else {
+        // Select the new unit
+        this.eventBus.emit(new UnitSelectionEvent(clickedUnit, true));
+      }
+    } else if (this.selectedUnit) {
+      // If clicked elsewhere and there's a selection, deselect it
+      this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
+    }
+  }
+
+  /**
+   * Handle unit selection changes
+   */
+  private onUnitSelectionChange(event: UnitSelectionEvent) {
+    if (event.isSelected) {
+      this.selectedUnit = event.unit;
+    } else if (this.selectedUnit === event.unit) {
+      this.selectedUnit = null;
+    }
+  }
+
+  /**
+   * Handle unit deactivation or destruction
+   * If the selected unit is removed from the game, deselect it
+   */
+  private handleUnitDeactivation(unit: UnitView) {
+    if (this.selectedUnit === unit && !unit.isActive()) {
+      this.eventBus.emit(new UnitSelectionEvent(unit, false));
+    }
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
@@ -101,6 +196,11 @@ export class UnitLayer implements Layer {
   }
 
   onUnitEvent(unit: UnitView) {
+    // Check if unit was deactivated
+    if (!unit.isActive()) {
+      this.handleUnitDeactivation(unit);
+    }
+
     switch (unit.type()) {
       case UnitType.TransportShip:
         this.handleBoatEvent(unit);
