@@ -10,11 +10,9 @@ import {
   UnitType,
 } from "../game/Game";
 import { PathFinder } from "../pathfinding/PathFinding";
-import { PathFindResultType } from "../pathfinding/AStar";
 import { PseudoRandom } from "../PseudoRandom";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { consolex } from "../Consolex";
-import { MiniAStar } from "../pathfinding/MiniAStar";
 import { manhattanDistFN, TileRef } from "../game/GameMap";
 
 export class PortExecution implements Execution {
@@ -22,8 +20,6 @@ export class PortExecution implements Execution {
   private mg: Game;
   private port: Unit;
   private random: PseudoRandom;
-  private portPaths = new Map<Unit, TileRef[]>();
-  private computingPaths = new Map<Unit, MiniAStar>();
 
   constructor(
     private _owner: PlayerID,
@@ -64,75 +60,29 @@ export class PortExecution implements Execution {
       }
       this.port = player.buildUnit(UnitType.Port, 0, spawns[0]);
     }
+
     if (!this.port.isActive()) {
       this.active = false;
       return;
     }
 
-    const tradingPartnersPorts = this.player()
-      .tradingPartners()
+    if (!this.random.chance(this.mg.config().tradeShipSpawnRate())) {
+      return;
+    }
+
+    const ports = this.mg
+      .players()
+      .filter((p) => p != this.port.owner() && p.canTrade(this.port.owner()))
       .flatMap((p) => p.units(UnitType.Port));
-    const tradingPartnersPortsSet = new Set(tradingPartnersPorts);
+    if (ports.length == 0) {
+      return;
+    }
 
-    const tradingPartnersConnections = new Set(
-      Array.from(this.portPaths.keys()).map((p) => p.owner()),
+    const port = this.random.randElement(ports);
+    const pf = PathFinder.Mini(this.mg, 2500, false);
+    this.mg.addExecution(
+      new TradeShipExecution(this.player().id(), this.port, port, pf),
     );
-
-    for (const port of tradingPartnersPorts) {
-      if (tradingPartnersConnections.has(port.owner())) {
-        continue;
-      }
-      tradingPartnersConnections.add(port.owner());
-      if (this.computingPaths.has(port)) {
-        const aStar = this.computingPaths.get(port);
-        switch (aStar.compute()) {
-          case PathFindResultType.Completed:
-            this.portPaths.set(port, aStar.reconstructPath());
-            this.computingPaths.delete(port);
-            break;
-          case PathFindResultType.Pending:
-            break;
-          case PathFindResultType.PathNotFound:
-            consolex.warn(`path not found to port`);
-            break;
-        }
-        continue;
-      }
-
-      const pf = new MiniAStar(
-        this.mg.map(),
-        this.mg.miniMap(),
-        this.port.tile(),
-        port.tile(),
-        (tr: TileRef) => this.mg.miniMap().isOcean(tr),
-        10_000,
-        25,
-      );
-      this.computingPaths.set(port, pf);
-    }
-
-    for (const port of this.portPaths.keys()) {
-      if (!port.isActive() || !tradingPartnersPortsSet.has(port)) {
-        this.portPaths.delete(port);
-        this.computingPaths.delete(port);
-      }
-    }
-
-    const portConnections = Array.from(this.portPaths.keys());
-
-    if (
-      portConnections.length > 0 &&
-      this.random.chance(this.mg.config().tradeShipSpawnRate())
-    ) {
-      const port = this.random.randElement(portConnections);
-      const path = this.portPaths.get(port);
-      if (path != null) {
-        const pf = PathFinder.Mini(this.mg, 10000, false);
-        this.mg.addExecution(
-          new TradeShipExecution(this.player().id(), this.port, port, pf, path),
-        );
-      }
-    }
   }
 
   owner(): Player {

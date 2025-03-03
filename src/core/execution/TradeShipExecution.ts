@@ -29,8 +29,6 @@ export class TradeShipExecution implements Execution {
     private srcPort: Unit,
     private _dstPort: Unit,
     private pathFinder: PathFinder,
-    // don't modify
-    private path: TileRef[],
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -86,49 +84,51 @@ export class TradeShipExecution implements Execution {
         this.tradeShip.delete(false);
         this.active = false;
         return;
+      } else {
+        this._dstPort = ports[0];
       }
-      const dstPort = ports[0];
-      const result = this.pathFinder.nextTile(
-        this.tradeShip.tile(),
-        dstPort.tile(),
-      );
-      switch (result.type) {
-        case PathFindResultType.Completed:
-          const gold = this.mg
-            .config()
-            .tradeShipGold(
-              this.mg.manhattanDist(this.srcPort.tile(), dstPort.tile()),
-            );
-          this.tradeShip.owner().addGold(gold);
-          this.mg.displayMessage(
-            `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
-            MessageType.SUCCESS,
-            this.tradeShip.owner().id(),
-          );
-          this.tradeShip.delete(false);
-          break;
-        case PathFindResultType.Pending:
-          // Fire unit event to rerender.
-          this.tradeShip.move(this.tradeShip.tile());
-          break;
-        case PathFindResultType.NextTile:
-          this.tradeShip.move(result.tile);
-          break;
-        case PathFindResultType.PathNotFound:
-          consolex.warn("captured trade ship cannot find route");
-          this.active = false;
-          break;
-      }
-      return;
     }
 
-    if (this.index >= this.path.length) {
-      this.active = false;
-      const gold = this.mg
-        .config()
-        .tradeShipGold(
-          this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
-        );
+    const result = this.pathFinder.nextTile(
+      this.tradeShip.tile(),
+      this._dstPort.tile(),
+    );
+
+    switch (result.type) {
+      case PathFindResultType.Completed:
+        this.complete();
+        break;
+      case PathFindResultType.Pending:
+        // Fire unit event to rerender.
+        this.tradeShip.move(this.tradeShip.tile());
+        break;
+      case PathFindResultType.NextTile:
+        this.tradeShip.move(result.tile);
+        break;
+      case PathFindResultType.PathNotFound:
+        consolex.warn("captured trade ship cannot find route");
+        this.active = false;
+        break;
+    }
+  }
+
+  private complete() {
+    this.active = false;
+    this.tradeShip.delete(false);
+    const gold = this.mg
+      .config()
+      .tradeShipGold(
+        this.mg.manhattanDist(this.srcPort.tile(), this._dstPort.tile()),
+      );
+
+    if (this.wasCaptured) {
+      this.tradeShip.owner().addGold(gold);
+      this.mg.displayMessage(
+        `Received ${renderNumber(gold)} gold from ship captured from ${this.origOwner.displayName()}`,
+        MessageType.SUCCESS,
+        this.tradeShip.owner().id(),
+      );
+    } else {
       this.srcPort.owner().addGold(gold);
       this._dstPort.owner().addGold(gold);
       this.mg.displayMessage(
@@ -141,11 +141,8 @@ export class TradeShipExecution implements Execution {
         MessageType.SUCCESS,
         this.srcPort.owner().id(),
       );
-      this.tradeShip.delete(false);
-      return;
     }
-    this.tradeShip.move(this.path[this.index]);
-    this.index++;
+    return;
   }
 
   owner(): Player {
