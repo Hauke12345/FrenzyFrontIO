@@ -11,14 +11,22 @@ aws ecr get-login-password --region eu-west-1 | docker login --username AWS --pa
 echo "Pulling latest image..."
 docker pull $ECR_REPO
 
-echo "Stopping current container..."
-CONTAINER_ID=$(docker ps | grep openfront | awk '{print $1}')
-if [ -z "$CONTAINER_ID" ]; then
-  echo "No running container found."
-else
-  docker stop $CONTAINER_ID
-  docker rm $CONTAINER_ID
-  echo "Container $CONTAINER_ID stopped and removed."
+echo "Checking for existing container..."
+# Check for running container
+RUNNING_CONTAINER=$(docker ps | grep openfront | awk '{print $1}')
+if [ -n "$RUNNING_CONTAINER" ]; then
+  echo "Stopping running container $RUNNING_CONTAINER..."
+  docker stop $RUNNING_CONTAINER
+  docker rm $RUNNING_CONTAINER
+  echo "Container $RUNNING_CONTAINER stopped and removed."
+fi
+
+# Also check for stopped containers with the same name
+STOPPED_CONTAINER=$(docker ps -a | grep openfront | awk '{print $1}')
+if [ -n "$STOPPED_CONTAINER" ]; then
+  echo "Removing stopped container $STOPPED_CONTAINER..."
+  docker rm $STOPPED_CONTAINER
+  echo "Container $STOPPED_CONTAINER removed."
 fi
 
 echo "Starting new container..."
