@@ -57,7 +57,6 @@ async function loadTerrainMap(mapName: string): Promise<void> {
     .fill(null)
     .map(() => Array(img.height).fill(null));
 
-  // Iterate through each pixel
   for (let x = 0; x < img.width; x++) {
     for (let y = 0; y < img.height; y++) {
       const color = img.getPixelRGBA(x, y);
@@ -208,6 +207,83 @@ function neighbors(x: number, y: number, map: Terrain[][]): Terrain[] {
   return ns;
 }
 
+// Improved processOcean function that identifies the largest body of water
+function processOcean(map: Terrain[][]) {
+  const visited = new Set<string>();
+  const waterBodies: { coords: Coord[]; size: number }[] = [];
+
+  // Find all distinct water bodies
+  for (let x = 0; x < map.length; x++) {
+    for (let y = 0; y < map[0].length; y++) {
+      if (map[x][y].type === TerrainType.Water) {
+        const key = `${x},${y}`;
+        if (visited.has(key)) continue;
+
+        // Find all connected water tiles
+        const waterBody: Coord[] = [];
+        const queue: Coord[] = [{ x, y }];
+
+        while (queue.length > 0) {
+          const coord = queue.shift()!;
+          const currentKey = `${coord.x},${coord.y}`;
+
+          if (visited.has(currentKey)) continue;
+          visited.add(currentKey);
+
+          if (map[coord.x][coord.y].type === TerrainType.Water) {
+            waterBody.push(coord);
+
+            // Check all four directions
+            for (const [dx, dy] of [
+              [-1, 0],
+              [1, 0],
+              [0, -1],
+              [0, 1],
+            ]) {
+              const newX = coord.x + dx;
+              const newY = coord.y + dy;
+
+              if (
+                newX >= 0 &&
+                newX < map.length &&
+                newY >= 0 &&
+                newY < map[0].length
+              ) {
+                queue.push({ x: newX, y: newY });
+              }
+            }
+          }
+        }
+
+        // Store this water body if it has any tiles
+        if (waterBody.length > 0) {
+          waterBodies.push({
+            coords: waterBody,
+            size: waterBody.length,
+          });
+        }
+      }
+    }
+  }
+
+  // Sort water bodies by size (largest first)
+  waterBodies.sort((a, b) => b.size - a.size);
+
+  // Mark the largest water body as ocean
+  if (waterBodies.length > 0) {
+    const largestWaterBody = waterBodies[0];
+
+    // Mark all tiles in the largest water body as ocean
+    for (const coord of largestWaterBody.coords) {
+      map[coord.x][coord.y].ocean = true;
+    }
+
+    console.log(`Identified ocean with ${largestWaterBody.size} water tiles`);
+  } else {
+    console.log("No water bodies found in the map");
+  }
+}
+
 function packTerrain(mapName: string, map: Terrain[][]): Uint8Array {
   const width = map.length;
   const height = map[0].length;
@@ -249,58 +325,14 @@ function packTerrain(mapName: string, map: Terrain[][]): Uint8Array {
   return packedData;
 }
 
-function processOcean(map: Terrain[][]) {
-  const queue: Coord[] = [];
-  if (map[0][0].type == TerrainType.Water) {
-    queue.push({ x: 0, y: 0 });
-  } else if (map[map.length - 1][map[0].length - 1].type == TerrainType.Water) {
-    queue.push({ x: map.length - 1, y: map[0].length - 1 });
-  } else {
-    queue.push({ x: 0, y: map[0].length - 1 });
-  }
-  const visited = new Set<string>();
-
-  while (queue.length > 0) {
-    const coord = queue.shift()!;
-    const key = `${coord.x},${coord.y}`;
-
-    if (visited.has(key)) continue;
-    visited.add(key);
-
-    const terrain = map[coord.x][coord.y];
-    if (terrain.type === TerrainType.Water) {
-      terrain.ocean = true;
-
-      // Check neighbors
-      for (const [dx, dy] of [
-        [-1, 0],
-        [1, 0],
-        [0, -1],
-        [0, 1],
-      ]) {
-        const newX = coord.x + dx;
-        const newY = coord.y + dy;
-
-        if (
-          newX >= 0 &&
-          newX < map.length &&
-          newY >= 0 &&
-          newY < map[0].length
-        ) {
-          queue.push({ x: newX, y: newY });
-        }
-      }
-    }
-  }
-}
-
-function getIsland(
+function getArea(
   map: Terrain[][],
   x: number,
   y: number,
   visited: Set<string>,
+  targetType: TerrainType,
 ) {
-  let island = [];
+  let area = [];
   let next = [[x, y]];
   while (next.length) {
     const [x, y] = next.pop();
@@ -310,24 +342,22 @@ function getIsland(
       x >= map.length ||
       y < 0 ||
       y >= map[0].length ||
-      x < 0 ||
-      x >= map.length ||
       visited.has(key)
     )
       continue;
 
-    if (map[x][y].type == TerrainType.Land) {
+    if (map[x][y].type === targetType) {
       next.push([x + 1, y]);
       next.push([x - 1, y]);
       next.push([x, y + 1]);
       next.push([x, y - 1]);
     }
 
-    island.push([x, y]);
+    area.push([x, y]);
     visited.add(key);
   }
 
-  return island;
+  return area;
 }
 
 function removeSmallIslands(map: Terrain[][]) {
@@ -335,14 +365,11 @@ function removeSmallIslands(map: Terrain[][]) {
 
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type == TerrainType.Land) {
+      if (map[x][y].type === TerrainType.Land) {
         const key = `${x},${y}`;
-
-        // PERF: If getIsland already visited that coordinates then it's
-        // useless to go over it again.
         if (visited.has(key)) continue;
 
-        const island = getIsland(map, x, y, visited);
+        const island = getArea(map, x, y, visited, TerrainType.Land);
         if (island.length < min_island_size) {
           island.forEach((pos) => {
             const x = pos[0];
@@ -357,22 +384,29 @@ function removeSmallIslands(map: Terrain[][]) {
 }
 
 function removeSmallLakes(mapName: string, map: Terrain[][]) {
-  console.log(`${mapName}: removing lakes ${map.length}, ${map[0].length}`);
+  const visited = new Set<string>();
+  const min_lake_size = 30; // Using same size threshold as islands
+
+  console.log(
+    `${mapName}: removing small lakes ${map.length}, ${map[0].length}`,
+  );
 
   for (let x = 0; x < map.length; x++) {
     for (let y = 0; y < map[0].length; y++) {
-      if (map[x][y].type != TerrainType.Water) {
-        continue;
-      }
-      let allLand = true;
-      for (const neighbor of neighbors(x, y, map)) {
-        if (neighbor.type != TerrainType.Land) {
-          allLand = false;
+      if (map[x][y].type === TerrainType.Water && !map[x][y].ocean) {
+        const key = `${x},${y}`;
+        if (visited.has(key)) continue;
+
+        const lake = getArea(map, x, y, visited, TerrainType.Water);
+        if (lake.length < min_lake_size) {
+          lake.forEach((pos) => {
+            const x = pos[0];
+            const y = pos[1];
+            map[x][y].type = TerrainType.Land;
+            map[x][y].magnitude = 0;
+            map[x][y].ocean = false;
+          });
         }
-      }
-      if (allLand) {
-        map[x][y].type = TerrainType.Land;
-        map[x][y].magnitude = 0;
       }
     }
   }
