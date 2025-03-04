@@ -1,22 +1,22 @@
 import { Colord } from "colord";
-import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
 import { Theme } from "../../../core/configuration/Config";
-import { UnitType } from "../../../core/game/Game";
+import { Unit, UnitType, Player } from "../../../core/game/Game";
+import { Layer } from "./Layer";
+import { EventBus } from "../../../core/EventBus";
+import {
+  AlternateViewEvent,
+  MouseUpEvent,
+  UnitSelectionEvent,
+} from "../../InputHandler";
+import { ClientID } from "../../../core/Schemas";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import {
   euclDistFN,
   manhattanDistFN,
   TileRef,
 } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
-import {
-  AlternateViewEvent,
-  MouseUpEvent,
-  UnitSelectionEvent,
-} from "../../InputHandler";
 import { TransformHandler } from "../TransformHandler";
-import { Layer } from "./Layer";
 
 enum Relationship {
   Self,
