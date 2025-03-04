@@ -308,6 +308,12 @@ export function generateID(): GameID {
 }
 
 export function toInt(num: number): bigint {
+  if (num === Infinity) {
+    return BigInt(Number.MAX_SAFE_INTEGER);
+  }
+  if (num === -Infinity) {
+    return BigInt(Number.MIN_SAFE_INTEGER);
+  }
   return BigInt(Math.floor(num));
 }
 
