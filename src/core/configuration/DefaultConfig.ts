@@ -264,7 +264,7 @@ export class DefaultConfig implements Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    return 600 * 10;
+    return 240 * 10; // 4 minutes
   }
   percentageTilesOwnedToWin(): number {
     return 80;
