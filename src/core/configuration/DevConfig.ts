@@ -5,9 +5,14 @@ import { GameEnv, ServerConfig } from "./Config";
 import { DefaultConfig, DefaultServerConfig } from "./DefaultConfig";
 
 export class DevServerConfig extends DefaultServerConfig {
+  adminToken(): string {
+    return "WARNING_DEV_ADMIN_KEY_DO_NOT_USE_IN_PRODUCTION";
+  }
+
   env(): GameEnv {
     return GameEnv.Dev;
   }
+
   gameCreationRate(highTraffic: boolean): number {
     return 5 * 1000;
   }

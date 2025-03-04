@@ -180,7 +180,6 @@ async function fetchLobbies(): Promise<void> {
 async function schedulePublicGame() {
   const gameID = generateID();
   publicLobbyIDs.add(gameID);
-
   // Create the default public game config (from your GameManager)
   const defaultGameConfig = {
     gameMap: getNextMap(),
@@ -192,9 +191,7 @@ async function schedulePublicGame() {
     disableNPCs: false,
     bots: 400,
   };
-
   const workerPath = config.workerPath(gameID);
-
   // Send request to the worker to start the game
   try {
     const response = await fetch(
@@ -203,7 +200,8 @@ async function schedulePublicGame() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Request": "true", // Special header for internal requests
+          "X-Internal-Request": "true",
+          [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
           gameID: gameID,
@@ -211,11 +209,9 @@ async function schedulePublicGame() {
         }),
       },
     );
-
     if (!response.ok) {
       throw new Error(`Failed to schedule public game: ${response.statusText}`);
     }
-
     const data = await response.json();
   } catch (error) {
     console.error(
@@ -226,11 +222,9 @@ async function schedulePublicGame() {
   }
 }
 
-// Map rotation management (moved from GameManager)
 let mapsPlaylist: GameMapType[] = [];
 const random = new PseudoRandom(123);
 
-// Get the next map in rotation
 function getNextMap(): GameMapType {
   if (mapsPlaylist.length > 0) {
     return mapsPlaylist.shift()!;

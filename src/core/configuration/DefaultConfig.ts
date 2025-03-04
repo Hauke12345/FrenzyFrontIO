@@ -22,6 +22,12 @@ import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  adminHeader(): string {
+    return "x-admin-key";
+  }
+  adminToken(): string {
+    return process.env.ADMIN_TOKEN;
+  }
   numWorkers(): number {
     return 2;
   }
@@ -183,7 +189,7 @@ export class DefaultConfig implements Config {
         return {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
-              ? 0
+              ? 25
               : 25_000_000,
           territoryBound: false,
         };

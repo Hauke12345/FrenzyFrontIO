@@ -72,6 +72,8 @@ export interface ServerConfig {
   workerPort(gameID: GameID): number;
   workerPortByIndex(workerID: number): number;
   env(): GameEnv;
+  adminToken(): string;
+  adminHeader(): string;
 }
 
 export interface Config {

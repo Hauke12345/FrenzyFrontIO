@@ -79,9 +79,9 @@ export function startWorker() {
       // TODO: if game is public make sure request came from localhohst!!!
       const clientIP = req.ip || req.socket.remoteAddress || "unknown";
       const gc = req.body?.gameConfig as GameConfig;
-      if (gc?.gameType == GameType.Public && !isLocalhost(req)) {
+      if (gc?.gameType == GameType.Public && !isAdmin(req)) {
         console.warn(
-          `cannot create public game ${id}, ip ${clientIP} not localhost`,
+          `cannot create public game ${id}, ip ${clientIP} not admin`,
         );
         return res.status(400);
       }
@@ -320,27 +320,6 @@ export function startWorker() {
   });
 }
 
-const isLocalhost = (req: Request): boolean => {
-  // Get client IP address from various possible sources
-  const clientIP =
-    req.ip ||
-    req.socket.remoteAddress ||
-    (req.headers["x-forwarded-for"] as string)?.split(",").shift() ||
-    "unknown";
-
-  // Check if the request is from a loopback address
-  const isLoopbackIP =
-    // IPv4 localhost
-    clientIP === "127.0.0.1" ||
-    // IPv6 localhost
-    clientIP === "::1" ||
-    // Full loopback range
-    clientIP.startsWith("127.");
-
-  // Check hostname
-  const isLocalHostname =
-    req.hostname === "localhost" || req.headers.host?.startsWith("localhost:");
-
-  // Consider request local if either IP is loopback or hostname is localhost
-  return isLoopbackIP || isLocalHostname;
+const isAdmin = (req: Request): boolean => {
+  return req.headers[config.adminHeader()] === config.adminToken();
 };
