@@ -24,7 +24,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.json());
 // Serve static files from the 'out' directory
-app.use(express.static(path.join(__dirname, "../../out")));
+app.use(express.static(path.join(__dirname, "../../static")));
 app.use(express.json());
 
 app.set("trust proxy", 3);
@@ -292,5 +292,5 @@ function sleep(ms: number): Promise<void> {
 
 // SPA fallback route
 app.get("*", function (req, res) {
-  res.sendFile(path.join(__dirname, "../../out/index.html"));
+  res.sendFile(path.join(__dirname, "../../static/index.html"));
 });
