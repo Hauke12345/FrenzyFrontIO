@@ -63,6 +63,7 @@ fi
 
 echo "Starting new container for ${ENV} environment..."
 docker run -d -p 80:80 \
+  --restart=always \
   --log-driver=awslogs \
   --log-opt awslogs-region=eu-west-1 \
   --log-opt awslogs-group=${LOG_GROUP} \
