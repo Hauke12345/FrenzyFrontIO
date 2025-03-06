@@ -377,6 +377,17 @@ export class EventsDisplay extends LitElement implements Layer {
                           attack.attackerID,
                         ) as PlayerView
                       )?.name()}
+                      <button
+                        class="inline-block px-2 text-white rounded text-sm cursor-pointer transition-colors duration-300 bg-blue-500 hover:bg-blue-600 btn-gray"
+                        @click=${() => {
+                          const attacker = this.game.playerBySmallID(
+                            attack.attackerID,
+                          ) as PlayerView;
+                          this.eventBus.emit(new GoToPlayerEvent(attacker));
+                        }}
+                      >
+                        Focus
+                      </button>
                     </div>
                   `,
                 )}
