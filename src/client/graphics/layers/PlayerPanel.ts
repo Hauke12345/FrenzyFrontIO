@@ -321,7 +321,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                           text-white rounded-lg transition-colors"
                 >
-                  Start embargo
+                  Stop trading
                 </button>`
               : ""}
             ${!canEmbargo && other != myPlayer
@@ -332,7 +332,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           bg-opacity-50 bg-gray-700 hover:bg-opacity-70
                           text-white rounded-lg transition-colors"
                 >
-                  Stop embargo
+                  Start trading
                 </button>`
               : ""}
           </div>
