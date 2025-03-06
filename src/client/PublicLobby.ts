@@ -38,6 +38,7 @@ export class PublicLobby extends LitElement {
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
       const lobbies = await this.fetchLobbies();
+      console.log(`got lobbies: ${JSON.stringify(lobbies)}`);
       this.lobbies = lobbies;
     } catch (error) {
       consolex.error("Error fetching lobbies:", error);
@@ -46,7 +47,7 @@ export class PublicLobby extends LitElement {
 
   async fetchLobbies(): Promise<GameInfo[]> {
     try {
-      const response = await fetch(`/public_lobbies`);
+      const response = await fetch(`/api/public_lobbies`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
