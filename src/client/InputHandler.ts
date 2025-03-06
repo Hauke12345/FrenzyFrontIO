@@ -200,6 +200,8 @@ export class InputHandler {
           "Digit1",
           "Digit2",
           "KeyC",
+          "ControlLeft",
+          "ControlRight",
         ].includes(e.code)
       ) {
         this.activeKeys.add(e.code);
@@ -250,6 +252,8 @@ export class InputHandler {
           "Digit1",
           "Digit2",
           "KeyC",
+          "ControlLeft",
+          "ControlRight",
         ].includes(e.code)
       ) {
         this.activeKeys.delete(e.code);
@@ -310,7 +314,10 @@ export class InputHandler {
 
   private onScroll(event: WheelEvent) {
     if (!event.shiftKey) {
-      const ratio = event.ctrlKey ? 10 : 1; // Compensate pinch-zoom low sensitivity
+      const realCtrl =
+        this.activeKeys.has("ControlLeft") ||
+        this.activeKeys.has("ControlRight");
+      const ratio = event.ctrlKey && !realCtrl ? 10 : 1; // Compensate pinch-zoom low sensitivity
       this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
     }
   }
