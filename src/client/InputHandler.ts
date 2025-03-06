@@ -110,12 +110,17 @@ export class InputHandler {
   initialize() {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e));
     window.addEventListener("pointerup", (e) => this.onPointerUp(e));
-    this.canvas.addEventListener("wheel", (e) => this.onScroll(e), {
-      passive: false,
-    });
-    this.canvas.addEventListener("wheel", (e) => this.onShiftScroll(e), {
-      passive: false,
-    });
+    this.canvas.addEventListener(
+      "wheel",
+      (e) => {
+        this.onScroll(e);
+        this.onShiftScroll(e);
+        e.preventDefault();
+      },
+      {
+        passive: false,
+      },
+    );
     window.addEventListener("pointermove", this.onPointerMove.bind(this));
     this.canvas.addEventListener("contextmenu", (e: MouseEvent) => {
       this.onContextMenu(e);
@@ -305,7 +310,8 @@ export class InputHandler {
 
   private onScroll(event: WheelEvent) {
     if (!event.shiftKey) {
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
+      const ratio = event.ctrlKey ? 10 : 1; // Compensate pinch-zoom low sensitivity
+      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY * ratio));
     }
   }
 
