@@ -73,6 +73,12 @@ docker run -d -p 80:80 \
 
 if [ $? -eq 0 ]; then
   echo "Update complete! New ${ENV} container is running."
+    # Final cleanup after successful deployment
+  echo "Performing final cleanup of unused Docker resources..."
+  echo "Removing unused images (not tagged and not referenced)..."
+  docker image prune -f
+  docker container prune -f
+  echo "Cleanup complete."
 else
   echo "Failed to start container"
 fi
