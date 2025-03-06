@@ -223,6 +223,7 @@ export default (env, argv) => {
             {
               context: [
                 "/api/env",
+                "/api/game",
                 "/api/public_lobbies",
                 "/api/join_game",
                 "/api/start_game",
