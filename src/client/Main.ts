@@ -210,7 +210,7 @@ export function getPersistentIDFromCookie(): string {
 
   // Try to get existing cookie
   const cookies = document.cookie.split(";");
-  for (let cookie of cookies) {
+  for (const cookie of cookies) {
     const [cookieName, cookieValue] = cookie.split("=").map((c) => c.trim());
     if (cookieName === COOKIE_NAME) {
       return cookieValue;

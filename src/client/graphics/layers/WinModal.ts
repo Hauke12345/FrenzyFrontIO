@@ -18,7 +18,7 @@ declare global {
   }
 }
 // Add this at the top of your file
-declare var adsbygoogle: any[];
+declare let adsbygoogle: any[];
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Layer {

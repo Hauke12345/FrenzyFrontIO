@@ -434,7 +434,7 @@ export class DefaultConfig implements Config {
   }
 
   maxPopulation(player: Player | PlayerView): number {
-    let maxPop =
+    const maxPop =
       player.type() == PlayerType.Human && this.infiniteTroops()
         ? 1_000_000_000
         : 2 * (Math.pow(player.numTilesOwned(), 0.6) * 1000 + 50000) +
@@ -461,7 +461,7 @@ export class DefaultConfig implements Config {
   }
 
   populationIncreaseRate(player: Player): number {
-    let max = this.maxPopulation(player);
+    const max = this.maxPopulation(player);
 
     let toAdd = 10 + Math.pow(player.population(), 0.73) / 4;
 
