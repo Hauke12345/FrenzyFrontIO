@@ -55,7 +55,7 @@ app.use(
 
 let publicLobbiesJsonStr = "";
 
-let publicLobbyIDs: Set<string> = new Set();
+const publicLobbyIDs: Set<string> = new Set();
 
 // Start the master process
 export async function startMaster() {
@@ -257,7 +257,7 @@ async function schedulePublicGame() {
 }
 
 // Map rotation management (moved from GameManager)
-let mapsPlaylist: GameMapType[] = [];
+const mapsPlaylist: GameMapType[] = [];
 const random = new PseudoRandom(123);
 
 // Get the next map in rotation

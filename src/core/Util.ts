@@ -24,7 +24,7 @@ export function manhattanDistWrapped(
   dx = Math.min(dx, width - dx);
 
   // Calculate y distance (no wrapping for y-axis)
-  let dy = Math.abs(c1.y - c2.y);
+  const dy = Math.abs(c1.y - c2.y);
 
   // Return the sum of x and y distances
   return dx + dy;
@@ -64,7 +64,7 @@ export function sourceDstOceanShore(
   tile: TileRef,
 ): [TileRef | null, TileRef | null] {
   const dst = gm.owner(tile);
-  let srcTile = closestShoreFromPlayer(gm, src, tile);
+  const srcTile = closestShoreFromPlayer(gm, src, tile);
   let dstTile: TileRef | null = null;
   if (dst.isPlayer()) {
     dstTile = closestShoreFromPlayer(gm, dst as Player, tile);

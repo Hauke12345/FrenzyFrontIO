@@ -256,7 +256,7 @@ export class AttackExecution implements Execution {
       let numOwnedByMe = this.mg
         .neighbors(neighbor)
         .filter((t) => this.mg.owner(t) == this._owner).length;
-      let dist = 0;
+      const dist = 0;
       if (numOwnedByMe > 2) {
         numOwnedByMe = 10;
       }

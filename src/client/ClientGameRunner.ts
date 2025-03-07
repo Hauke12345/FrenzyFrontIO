@@ -126,7 +126,7 @@ export async function createClientGame(
   consolex.log("going to init path finder");
   consolex.log("inited path finder");
   const canvas = createCanvas();
-  let gameRenderer = createRenderer(
+  const gameRenderer = createRenderer(
     canvas,
     gameView,
     eventBus,

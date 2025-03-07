@@ -77,8 +77,20 @@ bun run start:server-dev
 ## 🛠️ Development Tools
 
 - **Format code**:
+
   ```bash
   bun run format
+  ```
+
+- **Lint code**:
+
+  ```bash
+  npm run lint
+  ```
+
+- **Lint and fix code**:
+  ```bash
+  npm run lint:fix
   ```
 
 ## 🏗️ Project Structure
