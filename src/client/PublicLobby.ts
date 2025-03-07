@@ -7,6 +7,8 @@ import { GameInfo } from "../core/Schemas";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {
+  private lobbyOutOfDate = true;
+
   @state() private lobbies: GameInfo[] = [];
   @state() public isLobbyHighlighted: boolean = false;
   @state() private isButtonDebounced: boolean = false;
@@ -37,9 +39,17 @@ export class PublicLobby extends LitElement {
 
   private async fetchAndUpdateLobbies(): Promise<void> {
     try {
-      const lobbies = await this.fetchLobbies();
-      console.log(`got lobbies: ${JSON.stringify(lobbies)}`);
-      this.lobbies = lobbies;
+      // Due to cache we only update every 2s,
+      // but reduce time by 1s so countdown looks nice.
+      if (this.lobbyOutOfDate) {
+        this.lobbies = await this.fetchLobbies();
+      } else {
+        this.lobbies.forEach((l) => {
+          l.msUntilStart -= 1000;
+        });
+        this.requestUpdate();
+      }
+      this.lobbyOutOfDate = !this.lobbyOutOfDate;
     } catch (error) {
       consolex.error("Error fetching lobbies:", error);
     }

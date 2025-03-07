@@ -165,7 +165,9 @@ async function fetchLobbies(): Promise<void> {
 
   for (const gameID of publicLobbyIDs) {
     const port = config.workerPort(gameID);
-    const promise = fetch(`http://localhost:${port}/api/game/${gameID}`)
+    const promise = fetch(`http://localhost:${port}/api/game/${gameID}`, {
+      headers: { [config.adminHeader()]: config.adminToken() },
+    })
       .then((resp) => resp.json())
       .then((json) => {
         return json as GameInfo;
@@ -232,7 +234,8 @@ async function schedulePublicGame() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Request": "true", // Special header for internal requests
+          "X-Internal-Request": "true",
+          [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
           gameID: gameID,
