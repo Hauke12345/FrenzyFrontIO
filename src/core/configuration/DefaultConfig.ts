@@ -145,8 +145,11 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
-                250_000,
+              : Math.min(
+                  1_000_000,
+                  (p.unitsIncludingConstruction(UnitType.Warship).length + 1) *
+                    250_000,
+                ),
           territoryBound: false,
           maxHealth: 1000,
         };
