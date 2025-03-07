@@ -270,7 +270,6 @@ function getNextMap(): GameMapType {
     Europe: 4,
     Mena: 2,
     NorthAmerica: 2,
-    Oceania: 1,
     BlackSea: 2,
     Africa: 2,
     Asia: 2,
