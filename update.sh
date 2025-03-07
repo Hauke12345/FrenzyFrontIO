@@ -69,6 +69,7 @@ docker run -d -p 80:80 \
   --log-opt awslogs-group=${LOG_GROUP} \
   --log-opt awslogs-create-group=true \
   --env GAME_ENV=${ENV} \
+  --env-file /home/ec2-user/.env \
   --name ${CONTAINER_NAME} \
   $ECR_REPO
 

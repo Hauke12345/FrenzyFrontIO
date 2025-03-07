@@ -84,6 +84,10 @@ chmod +x $UPDATE_SCRIPT
 
 # Copy the update script to the EC2 instance
 scp -i $EC2_KEY $UPDATE_SCRIPT $EC2_HOST:$REMOTE_UPDATE_SCRIPT
+scp -i $EC2_KEY .env $EC2_HOST:/home/ec2-user/.env
+# After copying the .env file, secure it
+ssh -i $EC2_KEY $EC2_HOST "chmod 600 /home/ec2-user/.env"
+
 if [ $? -ne 0 ]; then
     echo "❌ Failed to copy update script to EC2 instance. Stopping deployment."
     exit 1

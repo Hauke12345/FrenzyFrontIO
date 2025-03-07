@@ -81,10 +81,10 @@ export function startWorker() {
       const gc = req.body?.gameConfig as GameConfig;
       if (
         gc?.gameType == GameType.Public &&
-        req.headers[config.adminHeader()] != config.adminToken()
+        req.headers[config.adminHeader()] !== config.adminToken()
       ) {
         console.warn(
-          `cannot create public game ${id}, ip ${clientIP} not localhost`,
+          `cannot create public game ${id}, ip ${clientIP} incorrect admin token`,
         );
         return res.status(400);
       }

@@ -234,11 +234,9 @@ async function schedulePublicGame() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Internal-Request": "true",
           [config.adminHeader()]: config.adminToken(),
         },
         body: JSON.stringify({
-          gameID: gameID,
           gameConfig: defaultGameConfig,
         }),
       },
