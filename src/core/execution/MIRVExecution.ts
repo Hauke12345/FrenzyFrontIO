@@ -182,7 +182,7 @@ export class MirvExecution implements Execution {
       }
       return tile;
     }
-    console.log("could find place giving up");
+    console.log("couldn't find place, giving up");
     return null;
   }
 
