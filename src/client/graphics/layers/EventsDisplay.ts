@@ -419,6 +419,7 @@ export class EventsDisplay extends LitElement implements Layer {
                         ) as PlayerView
                       )?.name()}
                     </button>
+                    ${attack.retreating ? "(retreating...)" : ""}
                   `,
                 )}
               </td>
