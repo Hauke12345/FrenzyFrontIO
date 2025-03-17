@@ -80,6 +80,11 @@ echo "Starting new container for ${REGION} environment..."
 docker run -d -p 80:80 \
   --restart=always \
   $VOLUME_MOUNTS \
+  --log-driver json-file \
+  --log-opt tag="{{.Name}}" \
+  --log-opt labels="log_level" \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
   --env GAME_ENV=${ENV} \
   --env-file /root/.env \
   --name ${CONTAINER_NAME} \
