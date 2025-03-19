@@ -23,6 +23,12 @@ import { pastelTheme } from "./PastelTheme";
 import { pastelThemeDark } from "./PastelThemeDark";
 
 export abstract class DefaultServerConfig implements ServerConfig {
+  region(): string {
+    if (this.env() == GameEnv.Dev) {
+      return "dev";
+    }
+    return process.env.REGION;
+  }
   gitCommit(): string {
     return process.env.GIT_COMMIT;
   }
