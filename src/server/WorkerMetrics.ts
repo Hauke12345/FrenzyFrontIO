@@ -9,19 +9,19 @@ promClient.collectDefaultMetrics({ register });
 
 // Add worker-specific metrics
 const activeGamesGauge = new promClient.Gauge({
-  name: "active_games_count",
+  name: "openfont.active_games_count",
   help: "Number of active games on this worker",
   registers: [register],
 });
 
 const connectedClientsGauge = new promClient.Gauge({
-  name: "connected_clients_count",
+  name: "openfont.connected_clients_count",
   help: "Number of connected clients on this worker",
   registers: [register],
 });
 
 const memoryUsageGauge = new promClient.Gauge({
-  name: "memory_usage_bytes",
+  name: "openfont.memory_usage_bytes",
   help: "Current memory usage of the worker process in bytes",
   registers: [register],
 });
