@@ -371,6 +371,7 @@ export class HostLobbyModal extends LitElement {
   }
   private handleDisableNukesChange(e: Event) {
     this.disableNukes = Boolean((e.target as HTMLInputElement).checked);
+    this.putGameConfig();
   }
 
   private async handleDisableNPCsChange(e: Event) {
