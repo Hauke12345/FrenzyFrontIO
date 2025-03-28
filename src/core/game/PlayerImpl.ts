@@ -730,7 +730,12 @@ export class PlayerImpl implements Player {
   }
 
   portSpawn(tile: TileRef): TileRef | false {
-    const spawns = Array.from(this.mg.bfs(tile, manhattanDistFN(tile, 20)))
+    const spawns = Array.from(
+      this.mg.bfs(
+        tile,
+        manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
+      ),
+    )
       .filter((t) => this.mg.owner(t) == this && this.mg.isOceanShore(t))
       .sort(
         (a, b) =>
