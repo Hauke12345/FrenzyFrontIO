@@ -5,7 +5,14 @@ import { PseudoRandom } from "../PseudoRandom";
 import { simpleHash } from "../Util";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PlayerView } from "../game/GameView";
-import { blue, botColor, humanColors, red, territoryColors } from "./Colors";
+import {
+  blue,
+  botColor,
+  botColors,
+  humanColors,
+  red,
+  territoryColors,
+} from "./Colors";
 
 export const pastelTheme = new (class implements Theme {
   private rand = new PseudoRandom(123);
@@ -41,6 +48,9 @@ export const pastelTheme = new (class implements Theme {
     }
     if (player.info().playerType == PlayerType.Human) {
       return humanColors[simpleHash(player.id()) % humanColors.length];
+    }
+    if (player.info().playerType == PlayerType.Bot) {
+      return botColors[simpleHash(player.id()) % botColors.length];
     }
     return territoryColors[simpleHash(player.id()) % territoryColors.length];
   }

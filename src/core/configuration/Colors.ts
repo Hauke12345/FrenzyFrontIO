@@ -209,3 +209,55 @@ export const humanColors: Colord[] = [
   colord({ r: 56, g: 189, b: 248 }), // Electric Blue
   colord({ r: 234, g: 179, b: 8 }), // Daffodil
 ];
+
+export const botColors: Colord[] = [
+  colord({ r: 190, g: 120, b: 120 }), // Muted Red
+  colord({ r: 120, g: 160, b: 190 }), // Muted Sky Blue
+  colord({ r: 190, g: 160, b: 100 }), // Muted Golden Yellow
+  colord({ r: 160, g: 120, b: 190 }), // Muted Purple
+  colord({ r: 100, g: 170, b: 130 }), // Muted Emerald Green
+  colord({ r: 190, g: 130, b: 160 }), // Muted Pink
+  colord({ r: 120, g: 150, b: 100 }), // Muted Olive Green
+  colord({ r: 190, g: 140, b: 120 }), // Muted Peach
+  colord({ r: 100, g: 120, b: 160 }), // Muted Navy Blue
+  colord({ r: 170, g: 170, b: 120 }), // Muted Lime Yellow
+  colord({ r: 160, g: 120, b: 130 }), // Muted Maroon
+  colord({ r: 120, g: 170, b: 170 }), // Muted Turquoise
+  colord({ r: 170, g: 140, b: 100 }), // Muted Light Orange
+  colord({ r: 140, g: 120, b: 160 }), // Muted Lavender
+  colord({ r: 150, g: 170, b: 130 }), // Muted Light Green
+  colord({ r: 170, g: 120, b: 140 }), // Muted Hot Pink
+  colord({ r: 120, g: 140, b: 120 }), // Muted Sea Green
+  colord({ r: 180, g: 160, b: 160 }), // Muted Light Pink
+  colord({ r: 130, g: 130, b: 160 }), // Muted Periwinkle
+  colord({ r: 160, g: 150, b: 120 }), // Muted Sand
+  colord({ r: 120, g: 160, b: 150 }), // Muted Aquamarine
+  colord({ r: 170, g: 150, b: 170 }), // Muted Orchid
+  colord({ r: 150, g: 160, b: 120 }), // Muted Yellow Green
+  colord({ r: 120, g: 130, b: 140 }), // Muted Steel Blue
+  colord({ r: 180, g: 140, b: 140 }), // Muted Salmon
+  colord({ r: 140, g: 160, b: 170 }), // Muted Light Blue
+  colord({ r: 170, g: 150, b: 130 }), // Muted Tan
+  colord({ r: 160, g: 130, b: 160 }), // Muted Plum
+  colord({ r: 130, g: 170, b: 130 }), // Muted Light Sea Green
+  colord({ r: 170, g: 130, b: 130 }), // Muted Coral
+  colord({ r: 130, g: 150, b: 170 }), // Muted Cornflower Blue
+  colord({ r: 170, g: 170, b: 140 }), // Muted Khaki
+  colord({ r: 150, g: 130, b: 150 }), // Muted Purple Gray
+  colord({ r: 140, g: 160, b: 140 }), // Muted Dark Sea Green
+  colord({ r: 170, g: 130, b: 120 }), // Muted Dark Salmon
+  colord({ r: 130, g: 150, b: 160 }), // Muted Cadet Blue
+  colord({ r: 160, g: 160, b: 150 }), // Muted Tan Gray
+  colord({ r: 150, g: 140, b: 160 }), // Muted Medium Purple
+  colord({ r: 150, g: 170, b: 150 }), // Muted Pale Green
+  colord({ r: 160, g: 140, b: 130 }), // Muted Rosy Brown
+  colord({ r: 140, g: 150, b: 160 }), // Muted Light Slate Gray
+  colord({ r: 160, g: 150, b: 140 }), // Muted Dark Khaki
+  colord({ r: 140, g: 130, b: 140 }), // Muted Thistle
+  colord({ r: 150, g: 160, b: 160 }), // Muted Pale Blue Green
+  colord({ r: 160, g: 140, b: 150 }), // Muted Puce
+  colord({ r: 130, g: 160, b: 150 }), // Muted Medium Aquamarine
+  colord({ r: 160, g: 150, b: 160 }), // Muted Mauve
+  colord({ r: 150, g: 160, b: 140 }), // Muted Dark Olive Green
+  colord({ r: 150, g: 140, b: 150 }), // Muted Dusty Rose
+];
