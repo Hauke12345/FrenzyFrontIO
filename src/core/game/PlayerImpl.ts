@@ -194,6 +194,10 @@ export class PlayerImpl implements Player {
     return this.playerInfo.playerType;
   }
 
+  clan(): string | null {
+    return this.playerInfo.clan;
+  }
+
   units(...types: UnitType[]): UnitImpl[] {
     if (types.length == 0) {
       return this._units;
