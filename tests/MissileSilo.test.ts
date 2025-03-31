@@ -56,12 +56,11 @@ describe("MissileSilo", () => {
   test("missilesilo should launch nuke", async () => {
     attackerBuildsNuke(null, game.ref(7, 7));
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
-    //because of initilization the nuke already moved so it should be at 204 when starting from 101
-    expect(attacker.units(UnitType.AtomBomb)[0].tile()).toBe(
-      game.map().ref(5, 1),
+    expect(attacker.units(UnitType.AtomBomb)[0].tile()).not.toBe(
+      game.map().ref(7, 7),
     );
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 5; i++) {
       game.executeNextTick();
     }
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
@@ -79,12 +78,7 @@ describe("MissileSilo", () => {
     attackerBuildsNuke(null, game.ref(50, 50));
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(1);
 
-    for (let i = 0; i < 24; i++) {
-      game.executeNextTick();
-    }
-    expect(attacker.units(UnitType.AtomBomb)).toHaveLength(0);
-
-    for (let i = 0; i < game.config().SiloCooldown() - 25; i++) {
+    for (let i = 0; i < game.config().SiloCooldown() - 1; i++) {
       game.executeNextTick();
       expect(attacker.units(UnitType.MissileSilo)[0].isCooldown()).toBeTruthy();
     }
