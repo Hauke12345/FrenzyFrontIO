@@ -384,7 +384,8 @@ export interface Player {
 
   // Donation
   canDonate(recipient: Player): boolean;
-  donate(recipient: Player, troops: number): void;
+  donateTroops(recipient: Player, troops: number): void;
+  donateGold(recipient: Player, gold: number): void;
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;

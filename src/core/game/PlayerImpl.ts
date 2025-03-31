@@ -39,7 +39,7 @@ import {
 import { CellString, GameImpl } from "./GameImpl";
 import { UnitImpl } from "./UnitImpl";
 import { MessageType } from "./Game";
-import { renderTroops } from "../../client/Utils";
+import { renderTroops, renderNumber } from "../../client/Utils";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import { AttackImpl } from "./AttackImpl";
@@ -523,7 +523,7 @@ export class PlayerImpl implements Player {
     return true;
   }
 
-  donate(recipient: Player, troops: number): void {
+  donateTroops(recipient: Player, troops: number): void {
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     recipient.addTroops(this.removeTroops(troops));
     this.mg.displayMessage(
@@ -533,6 +533,20 @@ export class PlayerImpl implements Player {
     );
     this.mg.displayMessage(
       `Recieved ${renderTroops(troops)} troops from ${this.name()}`,
+      MessageType.SUCCESS,
+      recipient.id(),
+    );
+  }
+  donateGold(recipient: Player, gold: number): void {
+    this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
+    recipient.addGold(this.removeGold(gold));
+    this.mg.displayMessage(
+      `Sent ${renderNumber(gold)} gold to ${recipient.name()}`,
+      MessageType.INFO,
+      this.id(),
+    );
+    this.mg.displayMessage(
+      `Recieved ${renderNumber(gold)} gold from ${this.name()}`,
       MessageType.SUCCESS,
       recipient.id(),
     );
@@ -588,13 +602,13 @@ export class PlayerImpl implements Player {
     this._gold += toInt(toAdd);
   }
 
-  removeGold(toRemove: Gold): void {
-    if (toRemove > this._gold) {
-      throw Error(
-        `Player ${this} does not enough gold (${toRemove} vs ${this._gold}))`,
-      );
+  removeGold(toRemove: Gold): number {
+    if (toRemove <= 1) {
+      return 0;
     }
-    this._gold -= toInt(toRemove);
+    const actualRemoved = minInt(this._gold, toInt(toRemove));
+    this._gold -= actualRemoved;
+    return Number(actualRemoved);
   }
 
   population(): number {

@@ -29,7 +29,8 @@ import { AllianceRequestReplyExecution } from "./alliance/AllianceRequestReplyEx
 import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { TargetPlayerExecution } from "./TargetPlayerExecution";
 import { EmojiExecution } from "./EmojiExecution";
-import { DonateExecution } from "./DonateExecution";
+import { DonateTroopsExecution } from "./DonateTroopExecution";
+import { DonateGoldExecution } from "./DonateGoldExecution";
 import { SetTargetTroopRatioExecution } from "./SetTargetTroopRatioExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
 import { fixProfaneUsername, isProfaneUsername } from "../validations/username";
@@ -111,8 +112,14 @@ export class Executor {
         return new TargetPlayerExecution(playerID, intent.target);
       case "emoji":
         return new EmojiExecution(playerID, intent.recipient, intent.emoji);
-      case "donate":
-        return new DonateExecution(playerID, intent.recipient, intent.troops);
+      case "donate_troops":
+        return new DonateTroopsExecution(
+          playerID,
+          intent.recipient,
+          intent.troops,
+        );
+      case "donate_gold":
+        return new DonateGoldExecution(playerID, intent.recipient, intent.gold);
       case "troop_ratio":
         return new SetTargetTroopRatioExecution(playerID, intent.ratio);
       case "embargo":
