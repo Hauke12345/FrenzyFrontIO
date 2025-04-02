@@ -19,6 +19,7 @@ const maps = [
   "Australia",
   "Pangaea",
   "Iceland",
+  "KnownWorld",
 ];
 
 const removeSmall = true;
