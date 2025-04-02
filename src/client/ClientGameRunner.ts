@@ -158,8 +158,9 @@ export class ClientGameRunner {
   private hasJoined = false;
 
   private lastMousePosition: { x: number; y: number } | null = null;
-  private mouseHoverTimer: number | null = null;
-  private readonly HOVER_DELAY = 200;
+
+  private lastMessageTime: number = 0;
+  private connectionCheckInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -169,7 +170,9 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
-  ) {}
+  ) {
+    this.lastMessageTime = Date.now();
+  }
 
   private saveGame(update: WinUpdate) {
     const players: PlayerRecord[] = [
@@ -207,6 +210,13 @@ export class ClientGameRunner {
   public start() {
     consolex.log("starting client game");
     this.isActive = true;
+    this.lastMessageTime = Date.now();
+    setTimeout(() => {
+      this.connectionCheckInterval = setInterval(
+        () => this.onConnectionCheck(),
+        1000,
+      );
+    }, 20000);
     this.eventBus.on(MouseUpEvent, (e) => this.inputEvent(e));
     this.eventBus.on(MouseMoveEvent, (e) => this.onMouseMove(e));
 
@@ -245,6 +255,7 @@ export class ClientGameRunner {
       this.transport.joinGame(this.turnsSeen);
     };
     const onmessage = (message: ServerMessage) => {
+      this.lastMessageTime = Date.now();
       if (message.type == "start") {
         this.hasJoined = true;
         consolex.log("starting game!");
@@ -296,6 +307,10 @@ export class ClientGameRunner {
     this.worker.cleanup();
     this.isActive = false;
     this.transport.leaveGame(saveFullGame);
+    if (this.connectionCheckInterval) {
+      clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = null;
+    }
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -389,6 +404,20 @@ export class ClientGameRunner {
       } else {
         this.gameView.setFocusedPlayer(null);
       }
+    }
+  }
+
+  private onConnectionCheck() {
+    if (this.transport.isLocal) {
+      return;
+    }
+    const timeSinceLastMessage = Date.now() - this.lastMessageTime;
+    if (timeSinceLastMessage > 5000) {
+      console.log(
+        `No message from server for ${timeSinceLastMessage} ms, reconnecting`,
+      );
+      this.lastMessageTime = Date.now();
+      this.transport.reconnect();
     }
   }
 }
