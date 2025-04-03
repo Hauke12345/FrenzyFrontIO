@@ -25,7 +25,7 @@ import { loadTerrainMap } from "../core/game/TerrainMapLoader";
 import { UserSettings } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { InputHandler, MouseMoveEvent, MouseUpEvent } from "./InputHandler";
-import { LocalPersistantStats } from "./LocalPersistantStats";
+import { endGame, startGame, startTime } from "./LocalPersistantStats";
 import { getPersistentIDFromCookie } from "./Main";
 import {
   SendAttackIntentEvent,
@@ -36,6 +36,7 @@ import {
 import { createCanvas } from "./Utils";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 
+export // Is this function needed?
 function distSortUnitWorld(tile: TileRef, game: GameView) {
   return (a: Unit | UnitView, b: Unit | UnitView) => {
     return (
@@ -69,10 +70,7 @@ export function joinLobby(
   );
 
   const userSettings: UserSettings = new UserSettings();
-  LocalPersistantStats.startGame(
-    lobbyConfig.gameID,
-    lobbyConfig.gameStartInfo?.config,
-  );
+  startGame(lobbyConfig.gameID, lobbyConfig.gameStartInfo?.config);
 
   const transport = new Transport(lobbyConfig, eventBus);
 
@@ -198,13 +196,13 @@ export class ClientGameRunner {
       players,
       // Not saving turns locally
       [],
-      LocalPersistantStats.startTime(),
+      startTime(),
       Date.now(),
       winner,
       update.winnerType,
       update.allPlayersStats,
     );
-    LocalPersistantStats.endGame(record);
+    endGame(record);
   }
 
   public start() {
