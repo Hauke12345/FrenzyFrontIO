@@ -32,6 +32,9 @@ import {
 } from "./GameUpdates";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
 import { UnitGrid } from "./UnitGrid";
+import { UserSettings } from "./UserSettings";
+
+const userSettings: UserSettings = new UserSettings();
 
 export class UnitView {
   public _wasUpdated = true;
@@ -546,6 +549,7 @@ export class GameView implements GameMap {
   }
 
   focusedPlayer(): PlayerView | null {
+    if (userSettings.focusLocked()) return this.myPlayer();
     return this._focusedPlayer;
   }
   setFocusedPlayer(player: PlayerView | null): void {
