@@ -280,7 +280,7 @@ export class DefaultConfig implements Config {
           cost: (p: Player) =>
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
-              : 20_000_000,
+              : 25_000_000,
           territoryBound: false,
         };
       case UnitType.MIRVWarhead:
@@ -334,7 +334,7 @@ export class DefaultConfig implements Config {
             p.type() == PlayerType.Human && this.infiniteGold()
               ? 0
               : Math.min(
-                  1_000_000,
+                  2_000_000,
                   Math.pow(
                     2,
                     p.unitsIncludingConstruction(UnitType.City).length,
