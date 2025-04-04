@@ -99,7 +99,7 @@ export class PlayerImpl implements Player {
     private _smallID: number,
     private readonly playerInfo: PlayerInfo,
     startTroops: number,
-    private _team: Team | null,
+    private readonly _team: Team | null,
   ) {
     this._flag = playerInfo.flag;
     this._name = sanitizeUsername(playerInfo.name);

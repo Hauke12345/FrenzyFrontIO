@@ -25,10 +25,8 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    const existing = this.mg
-      .players()
-      .find((p) => p.id() == this.playerInfo.id);
-    if (existing) {
+    if (this.mg.hasPlayer(this.playerInfo.id)) {
+      const existing = this.mg.player(this.playerInfo.id);
       existing.tiles().forEach((t) => existing.relinquish(t));
       getSpawnTiles(this.mg, this.tile).forEach((t) => {
         existing.conquer(t);
