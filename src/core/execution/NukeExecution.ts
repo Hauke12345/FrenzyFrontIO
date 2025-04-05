@@ -60,26 +60,17 @@ export class NukeExecution implements Execution {
     });
   }
 
-  private getAttackedTiles(): Map<Player, number> {
-    const toDestroy = this.tilesToDestroy();
-
-    const attacked = new Map<number, number>();
+  private breakAlliances(toDestroy: Set<TileRef>) {
+    const attacked = new Map<Player, number>();
     for (const tile of toDestroy) {
-      const ownerID = this.mg.ownerID(tile);
-      if (ownerID != 0) {
-        const prev = attacked.get(ownerID) ?? 0;
-        attacked.set(ownerID, prev + 1);
+      const owner = this.mg.owner(tile);
+      if (owner.isPlayer()) {
+        const prev = attacked.get(owner) ?? 0;
+        attacked.set(owner, prev + 1);
       }
     }
-    return new Map(
-      Array.from(attacked.entries()).map(([smallID, value]) => {
-        return [this.mg.playerBySmallID(smallID), value] as [Player, number];
-      }),
-    );
-  }
 
-  private breakAlliances() {
-    for (const [other, tilesDestroyed] of this.getAttackedTiles()) {
+    for (const [other, tilesDestroyed] of attacked) {
       if (tilesDestroyed > 100 && this.nuke.type() != UnitType.MIRVWarhead) {
         // Mirv warheads shouldn't break alliances
         const alliance = this.player.allianceWith(other);
@@ -147,8 +138,6 @@ export class NukeExecution implements Execution {
       return;
     }
 
-    this.breakAlliances();
-
     if (this.waitTicks > 0) {
       this.waitTicks--;
       return;
@@ -200,28 +189,32 @@ export class NukeExecution implements Execution {
   private detonate() {
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     const toDestroy = this.tilesToDestroy();
+    this.breakAlliances(toDestroy);
 
     for (const tile of toDestroy) {
       const owner = this.mg.owner(tile);
       if (owner.isPlayer()) {
-        const mp = this.mg.player(owner.id());
-        mp.relinquish(tile);
-        mp.removeTroops(
-          this.mg.config().nukeDeathFactor(mp.troops(), mp.numTilesOwned()),
+        owner.relinquish(tile);
+        owner.removeTroops(
+          this.mg
+            .config()
+            .nukeDeathFactor(owner.troops(), owner.numTilesOwned()),
         );
-        mp.removeWorkers(
-          this.mg.config().nukeDeathFactor(mp.workers(), mp.numTilesOwned()),
+        owner.removeWorkers(
+          this.mg
+            .config()
+            .nukeDeathFactor(owner.workers(), owner.numTilesOwned()),
         );
-        mp.outgoingAttacks().forEach((attack) => {
+        owner.outgoingAttacks().forEach((attack) => {
           const deaths = this.mg
             .config()
-            .nukeDeathFactor(attack.troops(), mp.numTilesOwned());
+            .nukeDeathFactor(attack.troops(), owner.numTilesOwned());
           attack.setTroops(attack.troops() - deaths);
         });
-        mp.units(UnitType.TransportShip).forEach((attack) => {
+        owner.units(UnitType.TransportShip).forEach((attack) => {
           const deaths = this.mg
             .config()
-            .nukeDeathFactor(attack.troops(), mp.numTilesOwned());
+            .nukeDeathFactor(attack.troops(), owner.numTilesOwned());
           attack.setTroops(attack.troops() - deaths);
         });
       }
