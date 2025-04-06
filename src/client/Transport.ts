@@ -337,6 +337,7 @@ export class Transport {
           lastTurn: numTurns,
           persistentID: this.lobbyConfig.persistentID,
           username: this.lobbyConfig.playerName,
+          flag: this.lobbyConfig.flag,
         }),
       ),
     );
