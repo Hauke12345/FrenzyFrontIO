@@ -551,7 +551,7 @@ export class GameView implements GameMap {
 
   focusedPlayer(): PlayerView | null {
     // TODO: renable when performance issues are fixed.
-    return null;
+    return this.myPlayer();
     if (userSettings.focusLocked()) return this.myPlayer();
     return this._focusedPlayer;
   }
