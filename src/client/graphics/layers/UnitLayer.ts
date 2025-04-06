@@ -500,14 +500,14 @@ export class UnitLayer implements Layer {
     // Clear previous area
     for (const t of this.game.bfs(
       unit.lastTile(),
-      manhattanDistFN(unit.lastTile(), 3),
+      manhattanDistFN(unit.lastTile(), 2),
     )) {
       this.clearCell(this.game.x(t), this.game.y(t));
     }
 
     if (unit.isActive()) {
       // Paint trail
-      for (const t of trail.slice(-4)) {
+      for (const t of trail.slice(-1)) {
         this.paintCell(
           this.game.x(t),
           this.game.y(t),
@@ -531,7 +531,6 @@ export class UnitLayer implements Layer {
         );
       }
 
-      // Paint territory
       for (const t of this.game.bfs(
         unit.tile(),
         manhattanDistFN(unit.tile(), 1),
