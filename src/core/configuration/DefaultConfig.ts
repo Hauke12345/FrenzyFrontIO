@@ -474,7 +474,7 @@ export class DefaultConfig implements Config {
 
     if (defender.isPlayer()) {
       const ratio = within(
-        Math.pow(defender.troops() / attackTroops, 0.2),
+        Math.pow(defender.troops() / attackTroops, 0.4),
         0.1,
         10,
       );
