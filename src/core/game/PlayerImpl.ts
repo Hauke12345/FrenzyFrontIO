@@ -68,7 +68,7 @@ export class PlayerImpl implements Player {
   // 0 to 100
   private _targetTroopRatio: bigint;
 
-  isTraitor_ = false;
+  markedTraitorTick = -1;
 
   private embargoes: Set<PlayerID> = new Set();
 
@@ -373,7 +373,14 @@ export class PlayerImpl implements Player {
   }
 
   isTraitor(): boolean {
-    return this.isTraitor_;
+    return (
+      this.markedTraitorTick >= 0 &&
+      this.mg.ticks() - this.markedTraitorTick <
+        this.mg.config().traitorDuration()
+    );
+  }
+  markTraitor(): void {
+    this.markedTraitorTick = this.mg.ticks();
   }
 
   createAllianceRequest(recipient: Player): AllianceRequest {

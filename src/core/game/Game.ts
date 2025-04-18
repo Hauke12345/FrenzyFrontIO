@@ -315,6 +315,7 @@ export interface Player {
   // State & Properties
   isAlive(): boolean;
   isTraitor(): boolean;
+  markTraitor(): void;
   largestClusterBoundingBox: { min: Cell; max: Cell } | null;
   lastTileChange(): Tick;
 
