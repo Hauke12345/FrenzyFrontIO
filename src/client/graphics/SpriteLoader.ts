@@ -86,7 +86,6 @@ export const getColoredSprite = (
   const key = unit.type() + colorKey;
 
   if (coloredSpriteCache.has(key)) {
-    console.log(key);
     return coloredSpriteCache.get(key)!;
   }
 
