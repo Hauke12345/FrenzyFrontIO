@@ -69,6 +69,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas",
   KnownWorld = "Known World",
   FaroeIslands = "FaroeIslands",
+  DeglaciatedAntarctica = "Deglaciated Antarctica",
 }
 
 export const mapCategories: Record<string, GameMapType[]> = {
@@ -93,7 +94,12 @@ export const mapCategories: Record<string, GameMapType[]> = {
     GameMapType.Australia,
     GameMapType.FaroeIslands,
   ],
-  fantasy: [GameMapType.Pangaea, GameMapType.Mars, GameMapType.KnownWorld],
+  fantasy: [
+    GameMapType.Pangaea,
+    GameMapType.Mars,
+    GameMapType.KnownWorld,
+    GameMapType.DeglaciatedAntarctica,
+  ],
 };
 
 export enum GameType {
