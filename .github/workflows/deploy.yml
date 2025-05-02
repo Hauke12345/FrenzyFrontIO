@@ -110,21 +110,6 @@ jobs:
 
           Deployed from $GITHUB_REF to $FQDN
           EOF
-
-      - name: Notify PR 🚀
-        if: ${{ success() && github.event_name == 'push' }}
-        run: |
-          set -euxo pipefail
-
-          echo "Checking for open PR from $GITHUB_HEAD_REF..."
-          pr_url=$(gh pr list --head "$GITHUB_HEAD_REF" --state open --json url -q '.[0].url')
-          if [ -z "$pr_url" ]; then
-            echo "No open PR found for branch $GITHUB_HEAD_REF"
-            exit 0;
-          fi
-
-          gh pr comment "$pr_url" --body "🚀 Deployed ${GITHUB_SHA} to [$FQDN](https://$FQDN)."
-
       - name: Update deployment status ❌
         if: failure()
         run: |
