@@ -121,8 +121,8 @@ REMOTE_USER="openfront"
 REMOTE_UPDATE_PATH="/home/$REMOTE_USER"        
 REMOTE_UPDATE_SCRIPT="$REMOTE_UPDATE_PATH/update-openfront.sh"  # Where to place the script on server
 
-IMAGE_NAME="${DOCKER_USERNAME}/${DOCKER_REPO}"
-DOCKER_IMAGE="${IMAGE_NAME}:${VERSION_TAG}"
+VERSION_TAG=$(date +"%Y%m%d-%H%M%S")
+DOCKER_IMAGE="${DOCKER_USERNAME}/${DOCKER_REPO}:${VERSION_TAG}"
 
 # Check if update script exists
 if [ ! -f "$UPDATE_SCRIPT" ]; then
@@ -145,7 +145,7 @@ echo "Git commit: $GIT_COMMIT"
 docker buildx build \
   --platform linux/amd64 \
   --build-arg GIT_COMMIT=$GIT_COMMIT \
-  -t $DOCKER_USERNAME/$DOCKER_REPO:$VERSION_TAG \
+  -t $DOCKER_IMAGE \
   --push \
   .
 

@@ -42,7 +42,6 @@ fi
 echo "Starting new container for ${HOST} environment..."
 docker run -d \
   --restart=always \
-  $VOLUME_MOUNTS \
   --env-file /home/openfront/.env \
   --name ${CONTAINER_NAME} \
   $DOCKER_IMAGE
@@ -52,8 +51,8 @@ if [ $? -eq 0 ]; then
   
   # Final cleanup after successful deployment
   echo "Performing final cleanup of unused Docker resources..."
-  echo "Removing unused images (not tagged and not referenced)..."
-  docker image prune -f
+  echo "Removing unused images (not referenced)..."
+  docker image prune -a -f
   docker container prune -f
   echo "Cleanup complete."
 else
