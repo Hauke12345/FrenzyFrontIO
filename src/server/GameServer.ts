@@ -126,11 +126,17 @@ export class GameServer {
       (c) => c.clientID == client.clientID,
     );
     if (existing != null) {
+      if (client.persistentID != existing.persistentID) {
+        console.warn(
+          `client ${client.clientID} cannot rejoin game, persistent id mismatch: exist pid: ${existing.persistentID}, new pid: ${client.persistentID}`,
+        );
+        return;
+      }
       existing.ws.removeAllListeners("message");
+      this.activeClients = this.activeClients.filter(
+        (c) => c.clientID != client.clientID,
+      );
     }
-    this.activeClients = this.activeClients.filter(
-      (c) => c.clientID != client.clientID,
-    );
     this.activeClients.push(client);
     client.lastPing = Date.now();
 
@@ -164,14 +170,20 @@ export class GameServer {
           clientMsg.persistentID = null;
 
           if (clientMsg.type == "intent") {
-            if (clientMsg.gameID == this.id) {
-              this.addIntent(clientMsg.intent);
-            } else {
+            if (clientMsg.gameID != this.id) {
               this.log.warn("client sent to wrong game", {
                 clientID: clientMsg.clientID,
                 persistentID: clientMsg.persistentID,
               });
+              return;
             }
+            if (clientMsg.intent.clientID != clientMsg.clientID) {
+              this.log.warn(
+                `client id mismatch, client message: ${clientMsg.clientID}, intent client id ${clientMsg.intent.clientID}`,
+              );
+              return;
+            }
+            this.addIntent(clientMsg.intent);
           }
           if (clientMsg.type == "ping") {
             this.lastPingUpdate = Date.now();
