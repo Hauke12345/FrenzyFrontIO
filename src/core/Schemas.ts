@@ -116,12 +116,13 @@ const GameConfigSchema = z.object({
   gameType: z.nativeEnum(GameType),
   gameMode: z.nativeEnum(GameMode),
   disableNPCs: z.boolean(),
-  disableNukes: z.boolean(),
   bots: z.number().int().min(0).max(400),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
   maxPlayers: z.number().optional(),
+  numPlayerTeams: z.number().optional(),
+  disabledUnits: z.array(z.nativeEnum(UnitType)).optional(),
   playerTeams: z.union([z.number().optional(), z.literal(Duos)]),
 });
 

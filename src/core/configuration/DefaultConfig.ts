@@ -231,9 +231,10 @@ export class DefaultConfig implements Config {
     return !this._gameConfig.disableNPCs;
   }
 
-  disableNukes(): boolean {
-    return this._gameConfig.disableNukes;
+  isUnitDisabled(unitType: UnitType): boolean {
+    return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
   }
+
   bots(): number {
     return this._gameConfig.bots;
   }

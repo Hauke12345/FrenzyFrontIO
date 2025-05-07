@@ -77,9 +77,6 @@ export class GameServer {
     if (gameConfig.disableNPCs != null) {
       this.gameConfig.disableNPCs = gameConfig.disableNPCs;
     }
-    if (gameConfig.disableNukes != null) {
-      this.gameConfig.disableNukes = gameConfig.disableNukes;
-    }
     if (gameConfig.bots != null) {
       this.gameConfig.bots = gameConfig.bots;
     }
@@ -95,6 +92,11 @@ export class GameServer {
     if (gameConfig.gameMode != null) {
       this.gameConfig.gameMode = gameConfig.gameMode;
     }
+
+    if (gameConfig.disabledUnits != null) {
+      this.gameConfig.disabledUnits = gameConfig.disabledUnits;
+    }
+
     if (gameConfig.playerTeams != null) {
       this.gameConfig.playerTeams = gameConfig.playerTeams;
     }
