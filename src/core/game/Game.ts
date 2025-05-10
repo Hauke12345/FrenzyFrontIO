@@ -509,6 +509,15 @@ export interface Game extends GameMap {
     playerID: PlayerID | null,
   ): void;
 
+  displayChat(
+    message: string,
+    category: string,
+    variables: Record<string, string>,
+    playerID: PlayerID | null,
+    isFrom: boolean,
+    recipient: string,
+  ): void;
+
   // Nations
   nations(): Nation[];
 
