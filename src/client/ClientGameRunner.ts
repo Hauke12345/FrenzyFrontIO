@@ -506,6 +506,8 @@ function showErrorModal(
   }
 
   const modal = document.createElement("div");
+  modal.id = "error-modal";
+
   const content = `${heading}\n game id: ${gameID}, client id: ${clientID}\nPlease paste the following in your bug report in Discord:\n${errorText}`;
 
   // Create elements
@@ -514,8 +516,7 @@ function showErrorModal(
 
   const button = document.createElement("button");
   button.textContent = "Copy to clipboard";
-  button.style.cssText =
-    "padding: 8px 16px; margin-top: 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;";
+  button.className = "copy-btn";
   button.addEventListener("click", () => {
     navigator.clipboard
       .writeText(content)
@@ -525,18 +526,14 @@ function showErrorModal(
 
   const closeButton = document.createElement("button");
   closeButton.textContent = "X";
-  closeButton.style.cssText =
-    "color: white;top: 0px;right: 0px;cursor: pointer;background: red;margin-right: 0px;position: fixed;width: 40px;";
+  closeButton.className = "close-btn";
   closeButton.addEventListener("click", () => {
     modal.style.display = "none";
   });
 
   // Add to modal
-  modal.style.cssText =
-    "position:fixed; padding:20px; background:white; border:1px solid black; top:50%; left:50%; transform:translate(-50%,-50%); z-index:9999;";
   modal.appendChild(pre);
   modal.appendChild(button);
-  modal.id = "error-modal";
   if (closable) {
     modal.appendChild(closeButton);
   }
