@@ -152,13 +152,19 @@ export enum UnitType {
   Construction = "Construction",
 }
 
+export interface OwnerComp {
+  owner: Player;
+}
+
 export interface UnitParamsMap {
   [UnitType.TransportShip]: {
     troops?: number;
     destination?: TileRef;
   };
 
-  [UnitType.Warship]: {};
+  [UnitType.Warship]: {
+    patrolTile: TileRef;
+  };
 
   [UnitType.Shell]: {};
 
@@ -175,7 +181,7 @@ export interface UnitParamsMap {
   };
 
   [UnitType.TradeShip]: {
-    dstPort: Unit;
+    targetUnit: Unit;
     lastSetSafeFromPirates?: number;
   };
 
@@ -334,8 +340,12 @@ export class PlayerInfo {
   }
 }
 
+export function isUnit(unit: Unit | UnitParams<UnitType>): unit is Unit {
+  return "isUnit" in unit && typeof unit.isUnit === "function" && unit.isUnit();
+}
+
 export interface Unit {
-  hash(): number;
+  isUnit(): this is Unit;
 
   // Common properties.
   id(): number;
@@ -349,6 +359,7 @@ export interface Unit {
   isActive(): boolean;
   setOwner(owner: Player): void;
   touch(): void;
+  hash(): number;
   toUpdate(): UnitUpdate;
 
   // Targeting
@@ -386,6 +397,10 @@ export interface Unit {
   // Construction
   constructionType(): UnitType | null;
   setConstructionType(type: UnitType): void;
+
+  // Warships
+  setPatrolTile(tile: TileRef): void;
+  patrolTile(): TileRef | undefined;
 
   // Ports
   cachePut(from: TileRef, to: TileRef): void;
