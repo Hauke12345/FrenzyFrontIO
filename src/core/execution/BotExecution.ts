@@ -34,6 +34,11 @@ export class BotExecution implements Execution {
   }
 
   tick(ticks: number) {
+    // In Frenzy mode, bots don't send attacks - units handle expansion
+    if (this.mg.fork() === "frenzy") {
+      return;
+    }
+
     if (ticks % this.attackRate !== this.attackTick) return;
 
     if (!this.bot.isAlive()) {

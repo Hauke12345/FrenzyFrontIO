@@ -139,6 +139,11 @@ export class FakeHumanExecution implements Execution {
   }
 
   tick(ticks: number) {
+    // In Frenzy mode, NPCs don't send attacks - units handle expansion
+    if (this.mg.fork() === "frenzy") {
+      return;
+    }
+
     // Ship tracking
     if (
       this.player !== null &&

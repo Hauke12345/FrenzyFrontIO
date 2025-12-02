@@ -55,6 +55,10 @@ export class Executor {
     // create execution
     switch (intent.type) {
       case "attack": {
+        // In Frenzy mode, attacks are handled by units, not player intents
+        if (this.mg.fork() === "frenzy") {
+          return new NoOpExecution();
+        }
         return new AttackExecution(
           intent.troops,
           player,
