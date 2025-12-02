@@ -25,7 +25,7 @@ import "./components/Difficulties";
 import "./components/Maps";
 import { fetchCosmetics } from "./Cosmetics";
 import { FlagInput } from "./FlagInput";
-import { JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 

@@ -4,7 +4,8 @@ import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
 import { generateID } from "../core/Util";
 import "./components/Difficulties";
 import "./components/PatternButton";
-import { getPlayToken, JoinLobbyEvent } from "./Main";
+import { getPlayToken } from "./Main";
+import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 import { translateText } from "./Utils";
 
 @customElement("matchmaking-modal")

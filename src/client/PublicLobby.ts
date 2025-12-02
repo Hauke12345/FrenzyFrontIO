@@ -4,8 +4,8 @@ import { renderDuration, translateText } from "../client/Utils";
 import { GameMapType, GameMode, HumansVsNations } from "../core/game/Game";
 import { GameID, GameInfo } from "../core/Schemas";
 import { generateID } from "../core/Util";
-import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 
 @customElement("public-lobby")
 export class PublicLobby extends LitElement {

@@ -285,5 +285,8 @@ export interface FrenzyUpdate {
     playerId: string;
     x: number;
     y: number;
+    spawnTimer?: number;
+    spawnInterval?: number;
+    unitCount?: number;
   }>;
 }

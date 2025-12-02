@@ -1,3 +1,4 @@
+import { FrenzyConfig } from "../game/frenzy/FrenzyTypes";
 import {
   PlayerActions,
   PlayerBorderTiles,
@@ -23,7 +24,8 @@ export type WorkerMessageType =
   | "attack_average_position"
   | "attack_average_position_result"
   | "transport_ship_spawn"
-  | "transport_ship_spawn_result";
+  | "transport_ship_spawn_result"
+  | "update_frenzy_config";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -45,6 +47,11 @@ export interface InitMessage extends BaseWorkerMessage {
 export interface TurnMessage extends BaseWorkerMessage {
   type: "turn";
   turn: Turn;
+}
+
+export interface UpdateFrenzyConfigMessage extends BaseWorkerMessage {
+  type: "update_frenzy_config";
+  config: Partial<FrenzyConfig>;
 }
 
 // Messages from worker to main thread
@@ -117,6 +124,7 @@ export type MainThreadMessage =
   | HeartbeatMessage
   | InitMessage
   | TurnMessage
+  | UpdateFrenzyConfigMessage
   | PlayerActionsMessage
   | PlayerProfileMessage
   | PlayerBorderTilesMessage

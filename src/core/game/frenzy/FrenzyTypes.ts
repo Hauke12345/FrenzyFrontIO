@@ -36,6 +36,10 @@ export interface FrenzyConfig {
   influenceRadius: number; // Territory control radius (default: 18px)
   combatRange: number; // Damage dealing range (default: 25px)
   separationRadius: number; // Personal space from friendlies (default: 10px)
+  captureRadius: number; // Tiles around the unit that can be converted (default: 3)
+  radialAlignmentWeight: number; // Strength of radial bias toward centroid (default: 0.75)
+  borderAdvanceDistance: number; // How far past the border to push targets (default: 12px)
+  stopDistance: number; // Distance to stop before reaching target (default: 2px)
 }
 
 export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
@@ -43,11 +47,15 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   maxUnitsPerPlayer: 60,
   startingUnits: 5,
   unitHealth: 100,
-  unitSpeed: 25,
+  unitSpeed: 15,
   unitDPS: 15,
   influenceRadius: 18,
   combatRange: 25,
   separationRadius: 10,
+  captureRadius: 5,
+  radialAlignmentWeight: 0.75,
+  borderAdvanceDistance: 12,
+  stopDistance: 2,
 };
 
 export enum Stance {

@@ -1,9 +1,11 @@
 import version from "../../resources/version.txt";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { EventBus } from "../core/EventBus";
-import { GameRecord, GameStartInfo, ID } from "../core/Schemas";
+import { GameStartInfo, ID } from "../core/Schemas";
 import { getServerConfigFromClient } from "../core/configuration/ConfigLoader";
+import { GameFork, GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
+import { FrenzyConfig } from "../core/game/frenzy/FrenzyTypes";
 import "./AccountModal";
 import { joinLobby } from "./ClientGameRunner";
 import { fetchCosmetics } from "./Cosmetics";
@@ -41,8 +43,15 @@ import {
 } from "./Utils";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
+import {
+  FRENZY_CONFIG_EVENT,
+  FRENZY_RESTART_EVENT,
+} from "./devtools/FrenzyDevChannels";
+import { UpdateFrenzyConfigEvent } from "./devtools/FrenzyDevEvents";
+import "./devtools/FrenzyDevPanel";
 import { getUserMe, isLoggedIn } from "./jwt";
 import "./styles.css";
+import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 
 declare global {
   interface Window {
@@ -75,22 +84,15 @@ declare global {
   interface DocumentEventMap {
     "join-lobby": CustomEvent<JoinLobbyEvent>;
     "kick-player": CustomEvent;
+    "frenzy-config-update": CustomEvent<Partial<FrenzyConfig>>;
+    "frenzy-dev-restart": CustomEvent;
   }
-}
-
-export interface JoinLobbyEvent {
-  clientID: string;
-  // Multiplayer games only have gameID, gameConfig is not known until game starts.
-  gameID: string;
-  // GameConfig only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
-  // GameRecord exists when replaying an archived game.
-  gameRecord?: GameRecord;
 }
 
 class Client {
   private gameStop: (() => void) | null = null;
   private eventBus: EventBus = new EventBus();
+  private lastJoinEvent: JoinLobbyEvent | null = null;
 
   private usernameInput: UsernameInput | null = null;
   private flagInput: FlagInput | null = null;
@@ -165,6 +167,16 @@ class Client {
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
+    document.addEventListener(FRENZY_CONFIG_EVENT, ((event: Event) => {
+      const configUpdate = (event as CustomEvent<Partial<FrenzyConfig>>).detail;
+      if (!configUpdate) {
+        return;
+      }
+      this.eventBus.emit(new UpdateFrenzyConfigEvent(configUpdate));
+    }) as EventListener);
+    document.addEventListener(FRENZY_RESTART_EVENT, () => {
+      this.handleDevRestart();
+    });
 
     const spModal = document.querySelector(
       "single-player-modal",
@@ -460,6 +472,9 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     console.log(`joining lobby ${lobby.gameID}`);
+    if (lobby.gameStartInfo) {
+      this.lastJoinEvent = this.snapshotJoinEvent(lobby);
+    }
     if (this.gameStop !== null) {
       console.log("joining lobby, stopping existing game");
       this.gameStop();
@@ -575,6 +590,53 @@ class Client {
     }
   }
 
+  private handleDevRestart() {
+    const last = this.lastJoinEvent;
+    if (!last?.gameStartInfo) {
+      console.warn("No Frenzy singleplayer game available to restart");
+      return;
+    }
+    const config = last.gameStartInfo.config;
+    if (
+      config.gameType !== GameType.Singleplayer ||
+      config.gameFork !== GameFork.Frenzy
+    ) {
+      console.warn("Frenzy restart only works for singleplayer Frenzy games");
+      return;
+    }
+
+    const newClientID = generateCryptoRandomUUID();
+    const newGameID = generateCryptoRandomUUID();
+    const newGameStartInfo = cloneGameStartInfo(last.gameStartInfo);
+    newGameStartInfo.gameID = newGameID;
+    newGameStartInfo.players = newGameStartInfo.players.map((player, idx) =>
+      idx === 0 ? { ...player, clientID: newClientID } : { ...player },
+    );
+
+    document.dispatchEvent(
+      new CustomEvent<JoinLobbyEvent>("join-lobby", {
+        detail: {
+          clientID: newClientID,
+          gameID: newGameID,
+          gameStartInfo: newGameStartInfo,
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private snapshotJoinEvent(lobby: JoinLobbyEvent): JoinLobbyEvent {
+    return {
+      clientID: lobby.clientID,
+      gameID: lobby.gameID,
+      gameStartInfo: lobby.gameStartInfo
+        ? cloneGameStartInfo(lobby.gameStartInfo)
+        : undefined,
+      gameRecord: lobby.gameRecord,
+    };
+  }
+
   private initializeFuseTag() {
     const tryInitFuseTag = (): boolean => {
       if (window.fusetag && typeof window.fusetag.pageInit === "function") {
@@ -602,6 +664,13 @@ class Client {
 document.addEventListener("DOMContentLoaded", () => {
   new Client().initialize();
 });
+
+function cloneGameStartInfo(gameStartInfo: GameStartInfo): GameStartInfo {
+  if (typeof structuredClone === "function") {
+    return structuredClone(gameStartInfo);
+  }
+  return JSON.parse(JSON.stringify(gameStartInfo));
+}
 
 // WARNING: DO NOT EXPOSE THIS ID
 export function getPlayToken(): string {

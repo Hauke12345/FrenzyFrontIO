@@ -651,7 +651,10 @@ export class GameView implements GameMap {
     }
     const playerId = this.smallIDToID.get(id);
     if (playerId === undefined) {
-      throw new Error(`small id ${id} not found`);
+      console.warn(
+        `[GameView] small id ${id} not found – returning TerraNullius placeholder`,
+      );
+      return new TerraNulliusImpl();
     }
     return this.player(playerId);
   }

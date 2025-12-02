@@ -1,3 +1,4 @@
+import { FrenzyConfig } from "../game/frenzy/FrenzyTypes";
 import {
   Cell,
   PlayerActions,
@@ -9,7 +10,7 @@ import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
-import { WorkerMessage } from "./WorkerMessages";
+import { UpdateFrenzyConfigMessage, WorkerMessage } from "./WorkerMessages";
 
 export class WorkerClient {
   private worker: Worker;
@@ -104,6 +105,13 @@ export class WorkerClient {
     this.worker.postMessage({
       type: "heartbeat",
     });
+  }
+
+  updateFrenzyConfig(config: Partial<FrenzyConfig>) {
+    this.worker.postMessage({
+      type: "update_frenzy_config",
+      config,
+    } satisfies UpdateFrenzyConfigMessage);
   }
 
   playerProfile(playerID: number): Promise<PlayerProfile> {

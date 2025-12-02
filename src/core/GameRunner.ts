@@ -2,6 +2,7 @@ import { placeName } from "../client/graphics/NameBoxCalculator";
 import { getConfig } from "./configuration/ConfigLoader";
 import { Executor } from "./execution/ExecutionManager";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { FrenzyConfig } from "./game/frenzy/FrenzyTypes";
 import {
   AllPlayers,
   Attack,
@@ -272,5 +273,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.bestTransportShipSpawn(targetTile);
+  }
+
+  public updateFrenzyConfig(config: Partial<FrenzyConfig>) {
+    this.game.frenzyManager()?.updateConfig(config);
   }
 }

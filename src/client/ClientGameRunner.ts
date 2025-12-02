@@ -12,7 +12,7 @@ import {
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
 import { getConfig } from "../core/configuration/ConfigLoader";
-import { PlayerActions, UnitType } from "../core/game/Game";
+import { GameFork, PlayerActions, UnitType } from "../core/game/Game";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
@@ -47,6 +47,7 @@ import {
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
+import { UpdateFrenzyConfigEvent } from "./devtools/FrenzyDevEvents";
 import { createRenderer, GameRenderer } from "./graphics/GameRenderer";
 import { GoToPlayerEvent } from "./graphics/layers/Leaderboard";
 import SoundManager from "./sound/SoundManager";
@@ -274,6 +275,15 @@ export class ClientGameRunner {
       DoGroundAttackEvent,
       this.doGroundAttackUnderCursor.bind(this),
     );
+    this.eventBus.on(UpdateFrenzyConfigEvent, (event) => {
+      if (!this.isActive) {
+        return;
+      }
+      if (this.lobby.gameStartInfo?.config.gameFork !== GameFork.Frenzy) {
+        return;
+      }
+      this.worker.updateFrenzyConfig(event.config);
+    });
 
     this.renderer.initialize();
     this.input.initialize();

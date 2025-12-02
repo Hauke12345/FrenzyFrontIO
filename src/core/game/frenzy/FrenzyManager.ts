@@ -25,6 +25,20 @@ export class FrenzyManager {
     this.spatialGrid = new SpatialHashGrid(50); // 50px cell size
   }
 
+  updateConfig(overrides: Partial<FrenzyConfig>) {
+    this.config = { ...this.config, ...overrides };
+    for (const building of this.coreBuildings.values()) {
+      building.spawnInterval = this.config.spawnInterval;
+      building.spawnTimer = Math.min(
+        building.spawnTimer,
+        building.spawnInterval,
+      );
+    }
+    if (overrides.maxUnitsPerPlayer !== undefined) {
+      this.enforceUnitCaps();
+    }
+  }
+
   /**
    * Initialize core buildings at player spawn positions
    */
@@ -142,7 +156,7 @@ export class FrenzyManager {
 
   private updateUnits(deltaTime: number) {
     for (const unit of this.units) {
-      // Units move toward their player's border to push it outward
+      // Units move toward enemy/neutral territory beyond their player's border
       const player = this.game.player(unit.playerId);
       const tiles = Array.from(player.tiles());
 
@@ -151,8 +165,8 @@ export class FrenzyManager {
         continue;
       }
 
+      // Find border tiles (our tiles with enemy neighbors)
       const borderTiles = tiles.filter((tile) => {
-        // Find tiles on the border (have at least one non-owned neighbor)
         const neighbors = this.game.neighbors(tile);
         return neighbors.some((n) => this.game.owner(n).id() !== player.id());
       });
@@ -160,21 +174,96 @@ export class FrenzyManager {
       let targetPos: { x: number; y: number };
 
       if (borderTiles.length > 0) {
-        // Move toward nearest border tile
-        const closestBorder = borderTiles.reduce((closest, tile) => {
-          const tileX = this.game.x(tile);
-          const tileY = this.game.y(tile);
-          const distCurrent = Math.hypot(tileX - unit.x, tileY - unit.y);
-          const distClosest = Math.hypot(
-            this.game.x(closest) - unit.x,
-            this.game.y(closest) - unit.y,
-          );
-          return distCurrent < distClosest ? tile : closest;
-        });
-        targetPos = {
-          x: this.game.x(closestBorder),
-          y: this.game.y(closestBorder),
-        };
+        // Compute centroid of player's territory to bias radial expansion
+        let cx = 0;
+        let cy = 0;
+        for (const t of tiles) {
+          cx += this.game.x(t);
+          cy += this.game.y(t);
+        }
+        cx /= tiles.length;
+        cy /= tiles.length;
+
+        // Find the best enemy/neutral neighbor tile that aligns with the unit's radial direction
+        let bestTile: number | null = null;
+        let bestScore = Infinity;
+
+        const ux = unit.x - cx;
+        const uy = unit.y - cy;
+        const uLen = Math.hypot(ux, uy) || 1;
+
+        for (const borderTile of borderTiles) {
+          const neighbors = this.game.neighbors(borderTile);
+          for (const neighbor of neighbors) {
+            // Skip if we own this neighbor
+            if (this.game.owner(neighbor).id() === player.id()) {
+              continue;
+            }
+            // Skip water
+            if (this.game.isWater(neighbor)) {
+              continue;
+            }
+
+            const nx = this.game.x(neighbor);
+            const ny = this.game.y(neighbor);
+
+            // alignment with radial direction (higher is better)
+            const vx = nx - cx;
+            const vy = ny - cy;
+            const vLen = Math.hypot(vx, vy) || 1;
+            const alignment = (vx * ux + vy * uy) / (vLen * uLen); // -1..1
+
+            const dist = Math.hypot(nx - unit.x, ny - unit.y);
+
+            const alignmentBoost = Math.max(
+              0.1,
+              1 + this.config.radialAlignmentWeight * alignment,
+            );
+
+            const score = dist / alignmentBoost;
+
+            if (score < bestScore) {
+              bestScore = score;
+              bestTile = neighbor;
+            }
+          }
+        }
+
+        if (bestTile !== null) {
+          const base = {
+            x: this.game.x(bestTile),
+            y: this.game.y(bestTile),
+          };
+          if (this.config.borderAdvanceDistance > 0) {
+            const dirX = base.x - cx;
+            const dirY = base.y - cy;
+            const dirLen = Math.hypot(dirX, dirY) || 1;
+            targetPos = {
+              x: Math.max(
+                0,
+                Math.min(
+                  this.game.width(),
+                  base.x + (dirX / dirLen) * this.config.borderAdvanceDistance,
+                ),
+              ),
+              y: Math.max(
+                0,
+                Math.min(
+                  this.game.height(),
+                  base.y + (dirY / dirLen) * this.config.borderAdvanceDistance,
+                ),
+              ),
+            };
+          } else {
+            targetPos = base;
+          }
+        } else {
+          // No valid enemy tiles found, move toward map center
+          targetPos = {
+            x: this.game.width() / 2,
+            y: this.game.height() / 2,
+          };
+        }
       } else {
         // Fallback: move toward map center if no borders found
         targetPos = {
@@ -187,7 +276,8 @@ export class FrenzyManager {
       const dy = targetPos.y - unit.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist > 10) {
+      const stopDistance = Math.max(0, this.config.stopDistance);
+      if (dist > stopDistance) {
         // Normalize direction
         unit.vx = (dx / dist) * this.config.unitSpeed;
         unit.vy = (dy / dist) * this.config.unitSpeed;
@@ -202,6 +292,10 @@ export class FrenzyManager {
         // Keep within map bounds
         unit.x = Math.max(0, Math.min(this.game.width(), unit.x));
         unit.y = Math.max(0, Math.min(this.game.height(), unit.y));
+      } else {
+        // At target, pick a new target on next tick
+        unit.vx = 0;
+        unit.vy = 0;
       }
     }
   }
@@ -233,7 +327,7 @@ export class FrenzyManager {
 
     if (count > 0) {
       // Blend separation with movement direction
-      const separationStrength = 0.3;
+      const separationStrength = 0.6; // stronger separation to avoid corridors
       unit.vx += (sepX / count) * this.config.unitSpeed * separationStrength;
       unit.vy += (sepY / count) * this.config.unitSpeed * separationStrength;
     }
@@ -269,50 +363,74 @@ export class FrenzyManager {
   }
 
   /**
-   * Units capture territory they're standing on
+   * Units capture territory they're standing on and nearby tiles
    */
   private captureTerritory() {
     let captureCount = 0;
+    let unitCount = 0;
+    let outsideTerritory = 0;
+    let borderingCount = 0;
+
+    const captureRadius = Math.max(1, Math.floor(this.config.captureRadius));
+
     for (const unit of this.units) {
-      // Find the tile this unit is on
-      const tileX = Math.floor(unit.x);
-      const tileY = Math.floor(unit.y);
+      unitCount++;
+      const player = this.game.player(unit.playerId);
 
-      // Check if tile is valid
-      if (!this.game.isValidCoord(tileX, tileY)) {
-        continue;
-      }
+      // Check tiles in a radius around the unit
+      const centerX = Math.floor(unit.x);
+      const centerY = Math.floor(unit.y);
 
-      const tile = this.game.ref(tileX, tileY);
+      for (let dx = -captureRadius; dx <= captureRadius; dx++) {
+        for (let dy = -captureRadius; dy <= captureRadius; dy++) {
+          const tileX = centerX + dx;
+          const tileY = centerY + dy;
 
-      if (this.game.isWater(tile)) {
-        continue;
-      }
+          // Check if tile is valid
+          if (!this.game.isValidCoord(tileX, tileY)) {
+            continue;
+          }
 
-      const currentOwner = this.game.owner(tile);
-      if (currentOwner.id() === unit.playerId) {
-        continue; // Already own this tile
-      }
+          const tile = this.game.ref(tileX, tileY);
 
-      // Check if this tile borders our territory
-      const neighbors = this.game.neighbors(tile);
-      const bordersOurTerritory = neighbors.some(
-        (n) => this.game.owner(n).id() === unit.playerId,
-      );
+          if (this.game.isWater(tile)) {
+            continue;
+          }
 
-      if (bordersOurTerritory) {
-        // Capture the tile
-        const player = this.game.player(unit.playerId);
-        player.conquer(tile);
-        captureCount++;
+          const currentOwner = this.game.owner(tile);
+
+          if (currentOwner.id() === unit.playerId) {
+            continue; // Already own this tile
+          }
+
+          if (dx === 0 && dy === 0) {
+            outsideTerritory++;
+          }
+
+          // Check if ANY of our tiles border this tile
+          const neighbors = this.game.neighbors(tile);
+          const bordersOurTerritory = neighbors.some(
+            (n) => this.game.owner(n).id() === unit.playerId,
+          );
+
+          if (bordersOurTerritory) {
+            if (dx === 0 && dy === 0) {
+              borderingCount++;
+            }
+            // Capture the tile
+            player.conquer(tile);
+            captureCount++;
+          }
+        }
       }
     }
 
-    if (captureCount > 0) {
-      console.log(`[FrenzyManager] Captured ${captureCount} tiles this tick`);
+    if (this.game.ticks() % 50 === 0 && unitCount > 0) {
+      console.log(
+        `[FrenzyManager] Units: ${unitCount}, Outside territory: ${outsideTerritory}, Bordering: ${borderingCount}, Captured: ${captureCount}`,
+      );
     }
   }
-
   private removeDeadUnits() {
     const deadUnits = this.units.filter((u) => u.health <= 0);
 
@@ -324,6 +442,24 @@ export class FrenzyManager {
     }
 
     this.units = this.units.filter((u) => u.health > 0);
+  }
+
+  private enforceUnitCaps() {
+    const counts = new Map<PlayerID, number>();
+    const kept: FrenzyUnit[] = [];
+    for (const unit of this.units) {
+      const nextCount = (counts.get(unit.playerId) ?? 0) + 1;
+      if (nextCount <= this.config.maxUnitsPerPlayer) {
+        counts.set(unit.playerId, nextCount);
+        kept.push(unit);
+      } else {
+        const building = this.coreBuildings.get(unit.playerId);
+        if (building) {
+          building.unitCount = Math.max(building.unitCount - 1, 0);
+        }
+      }
+    }
+    this.units = kept;
   }
 
   private rebuildSpatialGrid() {
@@ -370,6 +506,9 @@ export class FrenzyManager {
         playerId: b.playerId,
         x: b.x,
         y: b.y,
+        spawnTimer: b.spawnTimer,
+        spawnInterval: b.spawnInterval,
+        unitCount: b.unitCount,
       })),
     };
   }

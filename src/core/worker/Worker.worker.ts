@@ -170,6 +170,17 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         console.error("Failed to spawn transport ship:", error);
       }
       break;
+    case "update_frenzy_config":
+      if (!gameRunner) {
+        console.warn("Received frenzy config update before init");
+        break;
+      }
+      try {
+        (await gameRunner).updateFrenzyConfig(message.config);
+      } catch (error) {
+        console.error("Failed to apply frenzy config update:", error);
+      }
+      break;
     default:
       console.warn("Unknown message :", message);
   }

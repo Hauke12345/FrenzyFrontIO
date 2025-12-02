@@ -28,7 +28,7 @@ import "./components/baseComponents/Modal";
 import "./components/Difficulties";
 import "./components/LobbyTeamView";
 import "./components/Maps";
-import { JoinLobbyEvent } from "./Main";
+import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
 @customElement("host-lobby-modal")
