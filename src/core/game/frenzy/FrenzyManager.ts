@@ -1,4 +1,5 @@
 import { Game, PlayerID } from "../Game";
+import { TileRef } from "../GameMap";
 import {
   CoreBuilding,
   DEFAULT_FRENZY_CONFIG,
@@ -109,7 +110,8 @@ export class FrenzyManager {
     }
 
     this.updateSpawnTimers(deltaTime);
-    this.updateUnits(deltaTime);
+    const territoryCache = this.buildTerritorySnapshots();
+    this.updateUnits(deltaTime, territoryCache);
     this.updateCombat(deltaTime);
     this.captureTerritory();
     this.removeDeadUnits();
@@ -154,35 +156,22 @@ export class FrenzyManager {
     building.unitCount++;
   }
 
-  private updateUnits(deltaTime: number) {
+  private updateUnits(
+    deltaTime: number,
+    territories: Map<PlayerID, PlayerTerritorySnapshot>,
+  ) {
     for (const unit of this.units) {
-      // Units move toward enemy/neutral territory beyond their player's border
-      const player = this.game.player(unit.playerId);
-      const tiles = Array.from(player.tiles());
-
-      // Skip if player has no territory yet
-      if (tiles.length === 0) {
+      const territory = territories.get(unit.playerId);
+      if (!territory) {
         continue;
       }
-
-      // Find border tiles (our tiles with enemy neighbors)
-      const borderTiles = tiles.filter((tile) => {
-        const neighbors = this.game.neighbors(tile);
-        return neighbors.some((n) => this.game.owner(n).id() !== player.id());
-      });
-
+      const { borderTiles, centroid } = territory;
       let targetPos: { x: number; y: number };
 
       if (borderTiles.length > 0) {
         // Compute centroid of player's territory to bias radial expansion
-        let cx = 0;
-        let cy = 0;
-        for (const t of tiles) {
-          cx += this.game.x(t);
-          cy += this.game.y(t);
-        }
-        cx /= tiles.length;
-        cy /= tiles.length;
+        const cx = centroid.x;
+        const cy = centroid.y;
 
         // Find the best enemy/neutral neighbor tile that aligns with the unit's radial direction
         let bestTile: number | null = null;
@@ -196,7 +185,7 @@ export class FrenzyManager {
           const neighbors = this.game.neighbors(borderTile);
           for (const neighbor of neighbors) {
             // Skip if we own this neighbor
-            if (this.game.owner(neighbor).id() === player.id()) {
+            if (this.game.owner(neighbor).id() === unit.playerId) {
               continue;
             }
             // Skip water
@@ -298,6 +287,39 @@ export class FrenzyManager {
         unit.vy = 0;
       }
     }
+  }
+
+  private buildTerritorySnapshots(): Map<PlayerID, PlayerTerritorySnapshot> {
+    const cache = new Map<PlayerID, PlayerTerritorySnapshot>();
+    for (const player of this.game.players()) {
+      const tiles = Array.from(player.tiles());
+      if (tiles.length === 0) {
+        continue;
+      }
+
+      let sumX = 0;
+      let sumY = 0;
+      for (const tile of tiles) {
+        sumX += this.game.x(tile);
+        sumY += this.game.y(tile);
+      }
+
+      const borderTiles = tiles.filter((tile) => {
+        const neighbors = this.game.neighbors(tile);
+        return neighbors.some(
+          (neighbor) => this.game.owner(neighbor).id() !== player.id(),
+        );
+      });
+
+      cache.set(player.id(), {
+        borderTiles,
+        centroid: {
+          x: sumX / tiles.length,
+          y: sumY / tiles.length,
+        },
+      });
+    }
+    return cache;
   }
 
   private applySeparation(unit: FrenzyUnit) {
@@ -512,4 +534,9 @@ export class FrenzyManager {
       })),
     };
   }
+}
+
+interface PlayerTerritorySnapshot {
+  borderTiles: TileRef[];
+  centroid: { x: number; y: number };
 }

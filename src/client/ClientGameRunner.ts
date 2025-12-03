@@ -8,6 +8,7 @@ import {
   PlayerCosmeticRefs,
   PlayerRecord,
   ServerMessage,
+  Turn,
 } from "../core/Schemas";
 import { createPartialGameRecord, replacer } from "../core/Util";
 import { ServerConfig } from "../core/configuration/Config";
@@ -208,6 +209,8 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private pendingWorkerTurns = 0;
+  private workerHeartbeatTimer: number | null = null;
 
   constructor(
     private lobby: LobbyConfig,
@@ -302,6 +305,9 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
+      if (this.pendingWorkerTurns > 0) {
+        this.pendingWorkerTurns--;
+      }
       this.transport.turnComplete();
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
@@ -321,14 +327,6 @@ export class ClientGameRunner {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
     });
-    const worker = this.worker;
-    const keepWorkerAlive = () => {
-      if (this.isActive) {
-        worker.sendHeartbeat();
-        requestAnimationFrame(keepWorkerAlive);
-      }
-    };
-    requestAnimationFrame(keepWorkerAlive);
 
     const onconnect = () => {
       console.log("Connected to game server!");
@@ -377,13 +375,13 @@ export class ClientGameRunner {
             continue;
           }
           while (turn.turnNumber - 1 > this.turnsSeen) {
-            this.worker.sendTurn({
+            this.queueTurn({
               turnNumber: this.turnsSeen,
               intents: [],
             });
             this.turnsSeen++;
           }
-          this.worker.sendTurn(turn);
+          this.queueTurn(turn);
           this.turnsSeen++;
         }
       }
@@ -430,7 +428,7 @@ export class ClientGameRunner {
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
-          this.worker.sendTurn(message.turn);
+          this.queueTurn(message.turn);
           this.turnsSeen++;
         }
       }
@@ -453,6 +451,11 @@ export class ClientGameRunner {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
     }
+    if (this.workerHeartbeatTimer !== null) {
+      clearTimeout(this.workerHeartbeatTimer);
+      this.workerHeartbeatTimer = null;
+    }
+    this.pendingWorkerTurns = 0;
   }
 
   private inputEvent(event: MouseUpEvent) {
@@ -692,6 +695,35 @@ export class ClientGameRunner {
       this.transport.reconnect();
     }
   }
+
+  private queueTurn(turn: Turn) {
+    this.worker.sendTurn(turn);
+    this.pendingWorkerTurns++;
+    this.ensureWorkerHeartbeatLoop();
+  }
+
+  private ensureWorkerHeartbeatLoop() {
+    if (this.workerHeartbeatTimer !== null) {
+      return;
+    }
+    this.workerHeartbeatTimer = window.setTimeout(this.pumpWorkerHeartbeats, 0);
+  }
+
+  private pumpWorkerHeartbeats = () => {
+    if (!this.isActive) {
+      this.workerHeartbeatTimer = null;
+      return;
+    }
+    if (this.pendingWorkerTurns === 0) {
+      this.workerHeartbeatTimer = null;
+      return;
+    }
+    this.worker.sendHeartbeat();
+    this.workerHeartbeatTimer = window.setTimeout(
+      this.pumpWorkerHeartbeats,
+      16,
+    );
+  };
 }
 
 function showErrorModal(

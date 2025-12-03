@@ -147,7 +147,7 @@ export class InputHandler {
 
   private alternateView = false;
 
-  private moveInterval: NodeJS.Timeout | null = null;
+  private movementRafId: number | null = null;
   private activeKeys = new Set<string>();
   private keybinds: Record<string, string> = {};
 
@@ -235,59 +235,7 @@ export class InputHandler {
     });
     this.pointers.clear();
 
-    this.moveInterval = setInterval(() => {
-      let deltaX = 0;
-      let deltaY = 0;
-
-      // Skip if shift is held down
-      if (
-        this.activeKeys.has("ShiftLeft") ||
-        this.activeKeys.has("ShiftRight")
-      ) {
-        return;
-      }
-
-      if (
-        this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has("ArrowUp")
-      )
-        deltaY += this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has("ArrowDown")
-      )
-        deltaY -= this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has("ArrowLeft")
-      )
-        deltaX += this.PAN_SPEED;
-      if (
-        this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has("ArrowRight")
-      )
-        deltaX -= this.PAN_SPEED;
-
-      if (deltaX || deltaY) {
-        this.eventBus.emit(new DragEvent(deltaX, deltaY));
-      }
-
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
-
-      if (
-        this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has("Minus")
-      ) {
-        this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
-      }
-      if (
-        this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has("Equal")
-      ) {
-        this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
-      }
-    }, 1);
+    this.startMovementLoop();
 
     window.addEventListener("keydown", (e) => {
       if (e.code === this.keybinds.toggleView) {
@@ -582,10 +530,76 @@ export class InputHandler {
   }
 
   destroy() {
-    if (this.moveInterval !== null) {
-      clearInterval(this.moveInterval);
+    if (this.movementRafId !== null) {
+      cancelAnimationFrame(this.movementRafId);
+      this.movementRafId = null;
     }
     this.activeKeys.clear();
+  }
+
+  private startMovementLoop() {
+    const tick = () => {
+      this.processMovementInputs();
+      this.movementRafId = requestAnimationFrame(tick);
+    };
+    this.movementRafId = requestAnimationFrame(tick);
+  }
+
+  private processMovementInputs() {
+    // Skip if shift is held down (drag-select mode)
+    if (this.activeKeys.has("ShiftLeft") || this.activeKeys.has("ShiftRight")) {
+      return;
+    }
+
+    let deltaX = 0;
+    let deltaY = 0;
+
+    if (
+      this.activeKeys.has(this.keybinds.moveUp) ||
+      this.activeKeys.has("ArrowUp")
+    ) {
+      deltaY += this.PAN_SPEED;
+    }
+    if (
+      this.activeKeys.has(this.keybinds.moveDown) ||
+      this.activeKeys.has("ArrowDown")
+    ) {
+      deltaY -= this.PAN_SPEED;
+    }
+    if (
+      this.activeKeys.has(this.keybinds.moveLeft) ||
+      this.activeKeys.has("ArrowLeft")
+    ) {
+      deltaX += this.PAN_SPEED;
+    }
+    if (
+      this.activeKeys.has(this.keybinds.moveRight) ||
+      this.activeKeys.has("ArrowRight")
+    ) {
+      deltaX -= this.PAN_SPEED;
+    }
+
+    if (deltaX !== 0 || deltaY !== 0) {
+      this.eventBus.emit(new DragEvent(deltaX, deltaY));
+    }
+
+    const needsZoomOut =
+      this.activeKeys.has(this.keybinds.zoomOut) ||
+      this.activeKeys.has("Minus");
+    const needsZoomIn =
+      this.activeKeys.has(this.keybinds.zoomIn) || this.activeKeys.has("Equal");
+
+    if (needsZoomIn || needsZoomOut) {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+
+      if (needsZoomOut) {
+        this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
+      }
+      if (needsZoomIn) {
+        this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
+      }
+    }
   }
 
   isModifierKeyPressed(event: PointerEvent): boolean {
