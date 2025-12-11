@@ -172,14 +172,25 @@ export class FrenzyLayer implements Layer {
     const x = projectile.x - this.game.width() / 2;
     const y = projectile.y - this.game.height() / 2;
 
-    const radius = Math.max(0.5, diameter / 2);
-    context.fillStyle = "#facc15"; // warm yellow like SupCom strategic view
+    const radius = Math.max(1, diameter / 2);
+    
+    // Plasma projectile effect with glowing core
+    // Outer glow
+    const gradient = context.createRadialGradient(x, y, 0, x, y, radius * 2.5);
+    gradient.addColorStop(0, "rgba(0, 255, 255, 0.9)");    // Cyan core
+    gradient.addColorStop(0.3, "rgba(100, 200, 255, 0.7)"); // Light blue
+    gradient.addColorStop(0.6, "rgba(150, 100, 255, 0.4)"); // Purple edge
+    gradient.addColorStop(1, "rgba(100, 50, 200, 0)");      // Transparent
+    
+    context.fillStyle = gradient;
     context.beginPath();
-    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.arc(x, y, radius * 2.5, 0, Math.PI * 2);
     context.fill();
-
-    context.strokeStyle = "rgba(0, 0, 0, 0.35)";
-    context.lineWidth = 1;
-    context.stroke();
+    
+    // Bright core
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+    context.fill();
   }
 }

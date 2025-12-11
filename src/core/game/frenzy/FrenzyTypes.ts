@@ -89,7 +89,7 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   unitSpeed: 2.5,          // Halved from 5
   unitDPS: 15,
   influenceRadius: 9,      // Halved from 18
-  combatRange: 12.5,       // Halved from 25
+  combatRange: 25,         // Doubled back to 25
   separationRadius: 5,     // Halved from 10
   captureRadius: 10,       // Keep unchanged
   radialAlignmentWeight: 0.75,
