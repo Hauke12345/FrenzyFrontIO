@@ -28,6 +28,14 @@ export class FrenzyManager {
   private defeatedPlayers = new Set<PlayerID>();
   private attackOrders: Map<PlayerID, FrenzyAttackOrder> = new Map();
 
+  // Performance: Cache territory data and only rebuild periodically
+  private territoryCache: Map<PlayerID, PlayerTerritorySnapshot> = new Map();
+  private territoryCacheTick = 0;
+  private readonly TERRITORY_CACHE_INTERVAL = 5; // Rebuild every 5 ticks
+
+  // Performance: Track tick count for staggered updates
+  private tickCount = 0;
+
   constructor(
     private game: Game,
     config?: Partial<FrenzyConfig>,
@@ -114,6 +122,8 @@ export class FrenzyManager {
       return;
     }
 
+    this.tickCount++;
+
     // Check for newly spawned players and create their HQs
     for (const player of this.game.players()) {
       const tiles = player.tiles();
@@ -123,8 +133,14 @@ export class FrenzyManager {
     }
 
     this.updateSpawnTimers(deltaTime);
-    const territoryCache = this.buildTerritorySnapshots();
-    this.updateUnits(deltaTime, territoryCache);
+    
+    // Performance: Only rebuild territory cache periodically
+    if (this.tickCount - this.territoryCacheTick >= this.TERRITORY_CACHE_INTERVAL) {
+      this.territoryCache = this.buildTerritorySnapshots();
+      this.territoryCacheTick = this.tickCount;
+    }
+    
+    this.updateUnits(deltaTime, this.territoryCache);
     this.updateCombat(deltaTime);
     this.updateProjectiles(deltaTime);
     this.captureTerritory();
@@ -221,6 +237,9 @@ export class FrenzyManager {
     const attackPlans = this.buildAttackPlans(unitCounts, territories);
     const attackAllocations = new Map<PlayerID, number>();
 
+    // Performance: Only recalculate targets for a subset of units each tick
+    const RETARGET_DISTANCE = 15; // Recalculate when within this distance of target
+
     for (const unit of this.units) {
       if (this.defeatedPlayers.has(unit.playerId)) {
         continue;
@@ -229,117 +248,32 @@ export class FrenzyManager {
       if (unit.unitType === FrenzyUnitType.DefensePost) {
         continue;
       }
+      
       const territory = territories.get(unit.playerId);
-      if (!territory) {
-        continue;
-      }
-      const { borderTiles, centroid } = territory;
-      let targetPos: { x: number; y: number };
-
-      if (borderTiles.length > 0) {
-        // Compute centroid of player's territory to bias radial expansion
-        const cx = centroid.x;
-        const cy = centroid.y;
-
-        // Find the best enemy/neutral neighbor tile that aligns with the unit's radial direction
-        let bestTile: number | null = null;
-        let bestScore = Infinity;
-
-        const ux = unit.x - cx;
-        const uy = unit.y - cy;
-        const uLen = Math.hypot(ux, uy) || 1;
-
-        for (const borderTile of borderTiles) {
-          const neighbors = this.game.neighbors(borderTile);
-          for (const neighbor of neighbors) {
-            // Skip if we own this neighbor
-            if (this.game.owner(neighbor).id() === unit.playerId) {
-              continue;
-            }
-            // Skip water
-            if (this.game.isWater(neighbor)) {
-              continue;
-            }
-
-            const nx = this.game.x(neighbor);
-            const ny = this.game.y(neighbor);
-
-            // alignment with radial direction (higher is better)
-            const vx = nx - cx;
-            const vy = ny - cy;
-            const vLen = Math.hypot(vx, vy) || 1;
-            const alignment = (vx * ux + vy * uy) / (vLen * uLen); // -1..1
-
-            const dist = Math.hypot(nx - unit.x, ny - unit.y);
-
-            const alignmentBoost = Math.max(
-              0.1,
-              1 + this.config.radialAlignmentWeight * alignment,
-            );
-
-            const score = dist / alignmentBoost;
-
-            if (score < bestScore) {
-              bestScore = score;
-              bestTile = neighbor;
-            }
-          }
-        }
-
-        if (bestTile !== null) {
-          const base = {
-            x: this.game.x(bestTile),
-            y: this.game.y(bestTile),
-          };
-          if (this.config.borderAdvanceDistance > 0) {
-            const dirX = base.x - cx;
-            const dirY = base.y - cy;
-            const dirLen = Math.hypot(dirX, dirY) || 1;
-            targetPos = {
-              x: Math.max(
-                0,
-                Math.min(
-                  this.game.width(),
-                  base.x + (dirX / dirLen) * this.config.borderAdvanceDistance,
-                ),
-              ),
-              y: Math.max(
-                0,
-                Math.min(
-                  this.game.height(),
-                  base.y + (dirY / dirLen) * this.config.borderAdvanceDistance,
-                ),
-              ),
-            };
-          } else {
-            targetPos = base;
-          }
-        } else {
-          // No valid enemy tiles found, move toward map center
-          targetPos = {
-            x: this.game.width() / 2,
-            y: this.game.height() / 2,
-          };
-        }
-      } else {
-        // Fallback: move toward map center if no borders found
-        targetPos = {
-          x: this.game.width() / 2,
-          y: this.game.height() / 2,
-        };
-      }
-
+      
+      // Check if unit needs a new target
+      const distToTarget = Math.hypot(unit.targetX - unit.x, unit.targetY - unit.y);
+      const needsNewTarget = distToTarget < RETARGET_DISTANCE || 
+        (unit.targetX === 0 && unit.targetY === 0);
+      
+      // Check for attack orders first - they override normal targeting
       const attackPlan = attackPlans.get(unit.playerId);
       if (attackPlan) {
         const assigned = attackAllocations.get(unit.playerId) ?? 0;
         if (assigned < attackPlan.quota) {
           attackAllocations.set(unit.playerId, assigned + 1);
-          targetPos = attackPlan.target;
+          unit.targetX = attackPlan.target.x;
+          unit.targetY = attackPlan.target.y;
         }
+      } else if (needsNewTarget && territory) {
+        // Calculate new target only when needed
+        const newTarget = this.calculateUnitTarget(unit, territory);
+        unit.targetX = newTarget.x;
+        unit.targetY = newTarget.y;
       }
 
-      const dx = targetPos.x - unit.x;
-      const dy = targetPos.y - unit.y;
+      const dx = unit.targetX - unit.x;
+      const dy = unit.targetY - unit.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       const stopDistance = Math.max(0, this.config.stopDistance);
@@ -364,6 +298,112 @@ export class FrenzyManager {
         unit.vy = 0;
       }
     }
+  }
+
+  private calculateUnitTarget(
+    unit: FrenzyUnit,
+    territory: PlayerTerritorySnapshot,
+  ): { x: number; y: number } {
+    const { borderTiles, centroid } = territory;
+
+    if (borderTiles.length === 0) {
+      // Fallback: move toward map center if no borders found
+      return {
+        x: this.game.width() / 2,
+        y: this.game.height() / 2,
+      };
+    }
+
+    // Compute centroid of player's territory to bias radial expansion
+    const cx = centroid.x;
+    const cy = centroid.y;
+
+    // Find the best enemy/neutral neighbor tile that aligns with the unit's radial direction
+    let bestTile: number | null = null;
+    let bestScore = Infinity;
+
+    const ux = unit.x - cx;
+    const uy = unit.y - cy;
+    const uLen = Math.hypot(ux, uy) || 1;
+
+    // Performance: Sample border tiles for faster calculation
+    const MAX_TILES_TO_CHECK = 50;
+    const tilesToCheck = borderTiles.length > MAX_TILES_TO_CHECK
+      ? this.sampleArray(borderTiles, MAX_TILES_TO_CHECK)
+      : borderTiles;
+
+    for (const borderTile of tilesToCheck) {
+      const neighbors = this.game.neighbors(borderTile);
+      for (const neighbor of neighbors) {
+        // Skip if we own this neighbor
+        if (this.game.owner(neighbor).id() === unit.playerId) {
+          continue;
+        }
+        // Skip water
+        if (this.game.isWater(neighbor)) {
+          continue;
+        }
+
+        const nx = this.game.x(neighbor);
+        const ny = this.game.y(neighbor);
+
+        // alignment with radial direction (higher is better)
+        const vx = nx - cx;
+        const vy = ny - cy;
+        const vLen = Math.hypot(vx, vy) || 1;
+        const alignment = (vx * ux + vy * uy) / (vLen * uLen); // -1..1
+
+        const dist = Math.hypot(nx - unit.x, ny - unit.y);
+
+        const alignmentBoost = Math.max(
+          0.1,
+          1 + this.config.radialAlignmentWeight * alignment,
+        );
+
+        const score = dist / alignmentBoost;
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestTile = neighbor;
+        }
+      }
+    }
+
+    if (bestTile !== null) {
+      const base = {
+        x: this.game.x(bestTile),
+        y: this.game.y(bestTile),
+      };
+      if (this.config.borderAdvanceDistance > 0) {
+        const dirX = base.x - cx;
+        const dirY = base.y - cy;
+        const dirLen = Math.hypot(dirX, dirY) || 1;
+        return {
+          x: Math.max(
+            0,
+            Math.min(
+              this.game.width(),
+              base.x + (dirX / dirLen) * this.config.borderAdvanceDistance,
+            ),
+          ),
+          y: Math.max(
+            0,
+            Math.min(
+              this.game.height(),
+              base.y + (dirY / dirLen) * this.config.borderAdvanceDistance,
+            ),
+          ),
+        };
+      } else {
+        return base;
+      }
+    }
+
+    // No valid enemy tiles found, move toward map center
+    return {
+      x: this.game.width() / 2,
+      y: this.game.height() / 2,
+    };
   }
 
   queueAttackOrder(
@@ -501,34 +541,48 @@ export class FrenzyManager {
   private buildTerritorySnapshots(): Map<PlayerID, PlayerTerritorySnapshot> {
     const cache = new Map<PlayerID, PlayerTerritorySnapshot>();
     for (const player of this.game.players()) {
-      const tiles = Array.from(player.tiles());
-      if (tiles.length === 0) {
+      // Performance: Use borderTiles() directly instead of filtering all tiles
+      const borderTilesSet = player.borderTiles();
+      const borderTiles = Array.from(borderTilesSet);
+      
+      if (borderTiles.length === 0) {
         continue;
       }
 
+      // Performance: Sample tiles for centroid calculation instead of all tiles
+      // Use border tiles as a proxy for territory shape
       let sumX = 0;
       let sumY = 0;
-      for (const tile of tiles) {
+      for (const tile of borderTiles) {
         sumX += this.game.x(tile);
         sumY += this.game.y(tile);
       }
 
-      const borderTiles = tiles.filter((tile) => {
-        const neighbors = this.game.neighbors(tile);
-        return neighbors.some(
-          (neighbor) => this.game.owner(neighbor).id() !== player.id(),
-        );
-      });
+      // Performance: Limit border tiles to prevent O(n*m) in updateUnits
+      const MAX_BORDER_TILES = 200;
+      const sampledBorderTiles = borderTiles.length > MAX_BORDER_TILES
+        ? this.sampleArray(borderTiles, MAX_BORDER_TILES)
+        : borderTiles;
 
       cache.set(player.id(), {
-        borderTiles,
+        borderTiles: sampledBorderTiles,
         centroid: {
-          x: sumX / tiles.length,
-          y: sumY / tiles.length,
+          x: sumX / borderTiles.length,
+          y: sumY / borderTiles.length,
         },
       });
     }
     return cache;
+  }
+
+  private sampleArray<T>(arr: T[], count: number): T[] {
+    if (arr.length <= count) return arr;
+    const step = arr.length / count;
+    const result: T[] = [];
+    for (let i = 0; i < count; i++) {
+      result.push(arr[Math.floor(i * step)]);
+    }
+    return result;
   }
 
   private applySeparation(unit: FrenzyUnit) {
@@ -640,19 +694,16 @@ export class FrenzyManager {
    * Units capture territory they're standing on and nearby tiles
    */
   private captureTerritory() {
-    let captureCount = 0;
-    let unitCount = 0;
-    let outsideTerritory = 0;
-    let borderingCount = 0;
-
     const captureRadius = Math.max(1, Math.floor(this.config.captureRadius));
     const radiusSquared = captureRadius * captureRadius;
+
+    // Performance: Track tiles we've already checked this tick to avoid duplicate work
+    const checkedTiles = new Set<number>();
 
     for (const unit of this.units) {
       if (this.defeatedPlayers.has(unit.playerId)) {
         continue;
       }
-      unitCount++;
       const player = this.game.player(unit.playerId);
 
       // Check tiles in a radius around the unit
@@ -673,6 +724,13 @@ export class FrenzyManager {
           }
 
           const tile = this.game.ref(tileX, tileY);
+          
+          // Performance: Skip if already checked by this player this tick
+          const tileKey = tile * 1000 + unit.playerId.charCodeAt(0);
+          if (checkedTiles.has(tileKey)) {
+            continue;
+          }
+          checkedTiles.add(tileKey);
 
           if (this.game.isWater(tile)) {
             continue;
@@ -684,10 +742,6 @@ export class FrenzyManager {
             continue; // Already own this tile
           }
 
-          if (dx === 0 && dy === 0) {
-            outsideTerritory++;
-          }
-
           // Check if ANY of our tiles border this tile
           const neighbors = this.game.neighbors(tile);
           const bordersOurTerritory = neighbors.some(
@@ -695,24 +749,15 @@ export class FrenzyManager {
           );
 
           if (bordersOurTerritory) {
-            if (dx === 0 && dy === 0) {
-              borderingCount++;
-            }
             // Capture the tile
             player.conquer(tile);
             this.checkForHQCapture(currentOwner, tileX, tileY, unit.playerId);
-            captureCount++;
           }
         }
       }
     }
-
-    if (this.game.ticks() % 50 === 0 && unitCount > 0) {
-      console.log(
-        `[FrenzyManager] Units: ${unitCount}, Outside territory: ${outsideTerritory}, Bordering: ${borderingCount}, Captured: ${captureCount}`,
-      );
-    }
   }
+
   private removeDeadUnits() {
     const deadUnits = this.units.filter((u) => u.health <= 0);
 
