@@ -256,18 +256,23 @@ export class FrenzyManager {
       const needsNewTarget = distToTarget < RETARGET_DISTANCE || 
         (unit.targetX === 0 && unit.targetY === 0);
       
-      // Check for attack orders first - they override normal targeting
+      // Check for attack orders - units assigned to attack get HQ-biased targeting
+      const attackOrder = this.attackOrders.get(unit.playerId);
       const attackPlan = attackPlans.get(unit.playerId);
+      let isAttackingUnit = false;
+      
       if (attackPlan) {
         const assigned = attackAllocations.get(unit.playerId) ?? 0;
         if (assigned < attackPlan.quota) {
           attackAllocations.set(unit.playerId, assigned + 1);
-          unit.targetX = attackPlan.target.x;
-          unit.targetY = attackPlan.target.y;
+          isAttackingUnit = true;
         }
-      } else if (needsNewTarget && territory) {
-        // Calculate new target only when needed
-        const newTarget = this.calculateUnitTarget(unit, territory);
+      }
+      
+      if (needsNewTarget && territory) {
+        // Calculate new target with attack target bias if attacking
+        const attackTargetId = isAttackingUnit ? attackOrder?.targetPlayerId : undefined;
+        const newTarget = this.calculateUnitTarget(unit, territory, attackTargetId ?? undefined);
         unit.targetX = newTarget.x;
         unit.targetY = newTarget.y;
       }
@@ -303,6 +308,7 @@ export class FrenzyManager {
   private calculateUnitTarget(
     unit: FrenzyUnit,
     territory: PlayerTerritorySnapshot,
+    attackTargetPlayerId?: PlayerID,
   ): { x: number; y: number } {
     const { borderTiles, centroid } = territory;
 
@@ -312,6 +318,17 @@ export class FrenzyManager {
         x: this.game.width() / 2,
         y: this.game.height() / 2,
       };
+    }
+
+    const unitPlayer = this.game.player(unit.playerId);
+
+    // If attacking, get enemy HQ position for directional bias
+    let enemyHQPos: { x: number; y: number } | null = null;
+    if (attackTargetPlayerId) {
+      const enemyHQ = this.coreBuildings.get(attackTargetPlayerId);
+      if (enemyHQ) {
+        enemyHQPos = { x: enemyHQ.x, y: enemyHQ.y };
+      }
     }
 
     // Compute centroid of player's territory to bias radial expansion
@@ -335,12 +352,18 @@ export class FrenzyManager {
     for (const borderTile of tilesToCheck) {
       const neighbors = this.game.neighbors(borderTile);
       for (const neighbor of neighbors) {
+        const neighborOwner = this.game.owner(neighbor);
+        
         // Skip if we own this neighbor
-        if (this.game.owner(neighbor).id() === unit.playerId) {
+        if (neighborOwner.id() === unit.playerId) {
           continue;
         }
         // Skip water
         if (this.game.isWater(neighbor)) {
+          continue;
+        }
+        // Skip allied territory - units should not gather at allied borders
+        if (neighborOwner.isPlayer() && unitPlayer.isAlliedWith(neighborOwner)) {
           continue;
         }
 
@@ -355,10 +378,23 @@ export class FrenzyManager {
 
         const dist = Math.hypot(nx - unit.x, ny - unit.y);
 
-        const alignmentBoost = Math.max(
+        let alignmentBoost = Math.max(
           0.1,
           1 + this.config.radialAlignmentWeight * alignment,
         );
+
+        // If attacking, add bonus for tiles in direction of enemy HQ
+        if (enemyHQPos) {
+          const hqDirX = enemyHQPos.x - unit.x;
+          const hqDirY = enemyHQPos.y - unit.y;
+          const hqDirLen = Math.hypot(hqDirX, hqDirY) || 1;
+          const tileDirX = nx - unit.x;
+          const tileDirY = ny - unit.y;
+          const tileDirLen = Math.hypot(tileDirX, tileDirY) || 1;
+          const hqAlignment = (hqDirX * tileDirX + hqDirY * tileDirY) / (hqDirLen * tileDirLen);
+          // Boost score for tiles aligned with HQ direction
+          alignmentBoost *= Math.max(0.5, 1 + hqAlignment * 0.5);
+        }
 
         const score = dist / alignmentBoost;
 
@@ -627,9 +663,17 @@ export class FrenzyManager {
         continue;
       }
       unit.weaponCooldown = Math.max(0, unit.weaponCooldown - deltaTime);
+      
+      const unitPlayer = this.game.player(unit.playerId);
       const enemies = this.spatialGrid
         .getNearby(unit.x, unit.y, this.config.combatRange)
-        .filter((u) => u.playerId !== unit.playerId);
+        .filter((u) => {
+          if (u.playerId === unit.playerId) return false;
+          // Don't attack allies
+          const otherPlayer = this.game.player(u.playerId);
+          if (unitPlayer.isAlliedWith(otherPlayer)) return false;
+          return true;
+        });
 
       if (enemies.length > 0) {
         // Attack nearest enemy
@@ -740,6 +784,11 @@ export class FrenzyManager {
 
           if (currentOwner.id() === unit.playerId) {
             continue; // Already own this tile
+          }
+
+          // Don't capture allied territory
+          if (currentOwner.isPlayer() && player.isAlliedWith(currentOwner)) {
+            continue;
           }
 
           // Check if ANY of our tiles border this tile
