@@ -12,6 +12,16 @@ export enum FrenzyUnitType {
   DefensePost = "defensePost",
 }
 
+// Per-unit-type configuration
+export interface UnitTypeConfig {
+  health: number;           // HP for this unit type
+  speed: number;            // Movement speed (pixels/sec), 0 for stationary
+  dps: number;              // Damage per second
+  range: number;            // Combat range in pixels
+  fireInterval: number;     // Seconds between shots
+  projectileDamage?: number; // If set, deals instant damage instead of DPS
+}
+
 export interface FrenzyUnit {
   id: number;
   playerId: PlayerID;
@@ -38,6 +48,7 @@ export interface FrenzyProjectile {
   age: number;
   life: number;
   isBeam?: boolean; // True for defense post red beam
+  isElite?: boolean; // True for elite soldier projectiles
   startX?: number; // Beam origin X
   startY?: number; // Beam origin Y
 }
@@ -70,71 +81,114 @@ export interface FactorySpawner {
 }
 
 export interface FrenzyConfig {
+  // Unit type configurations
+  units: {
+    soldier: UnitTypeConfig;
+    eliteSoldier: UnitTypeConfig;
+    defensePost: UnitTypeConfig;
+  };
+  
+  // Spawning
   spawnInterval: number; // Seconds between spawns (default: 4.0)
   maxUnitsPerPlayer: number; // Hard cap (default: 60)
   startingUnits: number; // Units at game start (default: 5)
-  unitHealth: number; // HP per unit (default: 100)
-  unitSpeed: number; // Pixels per second (default: 25)
-  unitDPS: number; // Damage per second (default: 15)
+  
+  // Movement & Territory
   influenceRadius: number; // Territory control radius (default: 18px)
-  combatRange: number; // Damage dealing range (default: 25px)
   separationRadius: number; // Personal space from friendlies (default: 10px)
   captureRadius: number; // Tiles around the unit that can be converted (default: 3)
   radialAlignmentWeight: number; // Strength of radial bias toward centroid (default: 0.75)
   borderAdvanceDistance: number; // How far past the border to push targets (default: 12px)
   stopDistance: number; // Distance to stop before reaching target (default: 2px)
+  
+  // Projectiles
   projectileSpeed: number; // Speed of visual shells (default: 140px/s)
-  fireInterval: number; // Seconds between volleys per unit (default: 0.5s)
   projectileSize: number; // Diameter of visual shells in pixels (default: 4px)
+  
+  // Buildings
   hqCaptureRadius: number; // Tiles around HQ that must fall before defeat (default: 2 tiles)
-  defensePostHealthMultiplier: number; // Defense posts have multiplied HP (default: 2.0)
-  defensePostFireRateMultiplier: number; // Defense posts fire rate multiplier (default: 0.25 = slow like Obelisk)
-  defensePostRangeMultiplier: number; // Defense posts have extended range (default: 1.5 = 50% more)
-  defensePostDamage: number; // Defense post damage per shot (default: 100 = one-shot tier 1)
+  cityHealth: number; // HP for cities/factories (default: 400)
+  hqHealth: number; // HP for HQ (default: 1000)
+  
+  // Economy
   startingGold: number; // Gold at spawn (default: 150000)
   baseGoldPerMinute: number; // Base gold income per minute (default: 20000)
   cityGoldPerMinute: number; // Gold per city per minute (default: 2000)
   cityCost: number; // Fixed cost for cities (default: 100000)
   factoryCost: number; // Fixed cost for factories (default: 100000)
-  cityHealth: number; // HP for cities/factories (default: 400)
-  hqHealth: number; // HP for HQ (default: 1000)
-  eliteHealthMultiplier: number; // Elite soldier HP multiplier (default: 1.5)
-  eliteRangeMultiplier: number; // Elite soldier range multiplier (default: 1.5)
   factoryUpgradeCost: number; // Cost to upgrade factory to tier 2 (default: 100000)
 }
 
+// Helper to get unit config by type
+export function getUnitConfig(config: FrenzyConfig, unitType: FrenzyUnitType): UnitTypeConfig {
+  switch (unitType) {
+    case FrenzyUnitType.Soldier:
+      return config.units.soldier;
+    case FrenzyUnitType.EliteSoldier:
+      return config.units.eliteSoldier;
+    case FrenzyUnitType.DefensePost:
+      return config.units.defensePost;
+    default:
+      return config.units.soldier;
+  }
+}
+
 export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
+  // Unit configurations
+  units: {
+    soldier: {
+      health: 100,
+      speed: 2.5,
+      dps: 15,
+      range: 25,
+      fireInterval: 1,
+    },
+    eliteSoldier: {
+      health: 150,        // 1.5x soldier health
+      speed: 2.25,        // 10% slower than soldier
+      dps: 15,
+      range: 37.5,        // 1.5x soldier range
+      fireInterval: 1,
+    },
+    defensePost: {
+      health: 200,        // 2x soldier health
+      speed: 0,           // Stationary
+      dps: 0,             // Uses projectileDamage instead
+      range: 37.5,        // 1.5x soldier range
+      fireInterval: 4,    // Slow fire rate like Obelisk
+      projectileDamage: 100, // One-shot tier 1 units
+    },
+  },
+  
+  // Spawning
   spawnInterval: 4.0,
   maxUnitsPerPlayer: 60,
   startingUnits: 5,
-  unitHealth: 100,
-  unitSpeed: 2.5,          // Halved from 5
-  unitDPS: 15,
-  influenceRadius: 9,      // Halved from 18
-  combatRange: 25,         // Doubled back to 25
-  separationRadius: 5,     // Halved from 10
-  captureRadius: 10,       // Keep unchanged
+  
+  // Movement & Territory
+  influenceRadius: 9,
+  separationRadius: 5,
+  captureRadius: 10,
   radialAlignmentWeight: 0.75,
-  borderAdvanceDistance: 0.5, // Halved from 1
-  stopDistance: 1,         // Halved from 2
-  projectileSpeed: 10,     // Halved from 20
-  fireInterval: 1,
-  projectileSize: 1,       // Halved from 2
+  borderAdvanceDistance: 0.5,
+  stopDistance: 1,
+  
+  // Projectiles
+  projectileSpeed: 10,
+  projectileSize: 1,
+  
+  // Buildings
   hqCaptureRadius: 2,
-  defensePostHealthMultiplier: 2.0,
-  defensePostFireRateMultiplier: 0.25, // Slow fire rate like Obelisk
-  defensePostRangeMultiplier: 1.5, // 50% more range
-  defensePostDamage: 100, // One-shot tier 1 units
-  startingGold: 150000, // 150k gold at spawn
-  baseGoldPerMinute: 20000, // 20k gold per minute base income (doubled)
-  cityGoldPerMinute: 20000, // 2k gold per city per minute (doubled)
-  cityCost: 100000, // 100k fixed cost for cities
-  factoryCost: 100000, // 100k fixed cost for factories
-  cityHealth: 400, // Cities/factories have 400 HP
-  hqHealth: 1000, // HQ has 1000 HP
-  eliteHealthMultiplier: 1.5, // Elite soldiers have 1.5x HP
-  eliteRangeMultiplier: 1.5, // Elite soldiers have 1.5x range
-  factoryUpgradeCost: 100000, // 100k to upgrade factory
+  cityHealth: 400,
+  hqHealth: 1000,
+  
+  // Economy
+  startingGold: 150000,
+  baseGoldPerMinute: 20000,
+  cityGoldPerMinute: 20000,
+  cityCost: 100000,
+  factoryCost: 100000,
+  factoryUpgradeCost: 100000,
 };
 
 export enum Stance {

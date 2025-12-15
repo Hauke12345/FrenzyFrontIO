@@ -8,6 +8,8 @@ import {
   FrenzyProjectile,
   FrenzyUnit,
   FrenzyUnitType,
+  getUnitConfig,
+  UnitTypeConfig,
 } from "./FrenzyTypes";
 import { SpatialHashGrid } from "./SpatialHashGrid";
 
@@ -43,7 +45,20 @@ export class FrenzyManager {
     private game: Game,
     config?: Partial<FrenzyConfig>,
   ) {
-    this.config = { ...DEFAULT_FRENZY_CONFIG, ...config };
+    // Deep merge for nested unit configs
+    if (config?.units) {
+      this.config = {
+        ...DEFAULT_FRENZY_CONFIG,
+        ...config,
+        units: {
+          soldier: { ...DEFAULT_FRENZY_CONFIG.units.soldier, ...config.units.soldier },
+          eliteSoldier: { ...DEFAULT_FRENZY_CONFIG.units.eliteSoldier, ...config.units.eliteSoldier },
+          defensePost: { ...DEFAULT_FRENZY_CONFIG.units.defensePost, ...config.units.defensePost },
+        },
+      };
+    } else {
+      this.config = { ...DEFAULT_FRENZY_CONFIG, ...config };
+    }
     this.spatialGrid = new SpatialHashGrid(50); // 50px cell size
   }
 
@@ -124,7 +139,21 @@ export class FrenzyManager {
   }
 
   updateConfig(overrides: Partial<FrenzyConfig>) {
-    this.config = { ...this.config, ...overrides };
+    // Deep merge for nested unit configs
+    if (overrides.units) {
+      this.config = {
+        ...this.config,
+        ...overrides,
+        units: {
+          soldier: { ...this.config.units.soldier, ...overrides.units.soldier },
+          eliteSoldier: { ...this.config.units.eliteSoldier, ...overrides.units.eliteSoldier },
+          defensePost: { ...this.config.units.defensePost, ...overrides.units.defensePost },
+        },
+      };
+    } else {
+      this.config = { ...this.config, ...overrides };
+    }
+    
     for (const building of this.coreBuildings.values()) {
       building.spawnInterval = this.config.spawnInterval;
       building.spawnTimer = Math.min(
@@ -284,18 +313,10 @@ export class FrenzyManager {
     const offsetX = isDefensePost ? 0 : (Math.random() - 0.5) * 20;
     const offsetY = isDefensePost ? 0 : (Math.random() - 0.5) * 20;
 
-    // Calculate health and fire interval based on unit type
-    let health = this.config.unitHealth;
-    let fireInterval = this.config.fireInterval;
-
-    if (unitType === FrenzyUnitType.DefensePost) {
-      health *= this.config.defensePostHealthMultiplier;
-      // Slower fire rate for defense posts (like Obelisk from C&C)
-      fireInterval /= this.config.defensePostFireRateMultiplier;
-    } else if (unitType === FrenzyUnitType.EliteSoldier) {
-      // Elite soldiers have more HP
-      health *= this.config.eliteHealthMultiplier;
-    }
+    // Get unit-specific configuration
+    const unitConfig = getUnitConfig(this.config, unitType);
+    const health = unitConfig.health;
+    const fireInterval = unitConfig.fireInterval;
 
     const unit: FrenzyUnit = {
       id: this.nextUnitId++,
@@ -375,9 +396,13 @@ export class FrenzyManager {
 
       const stopDistance = Math.max(0, this.config.stopDistance);
       if (dist > stopDistance) {
+        // Get unit-specific speed
+        const unitConfig = getUnitConfig(this.config, unit.unitType);
+        const speed = unitConfig.speed;
+        
         // Normalize direction
-        unit.vx = (dx / dist) * this.config.unitSpeed;
-        unit.vy = (dy / dist) * this.config.unitSpeed;
+        unit.vx = (dx / dist) * speed;
+        unit.vy = (dy / dist) * speed;
 
         // Apply separation from nearby friendlies
         this.applySeparation(unit);
@@ -558,7 +583,7 @@ export class FrenzyManager {
       // Stance 1: offensive position (at/beyond all borders)
       
       // Fire range position: pull back from border by combat range distance
-      const fireRange = this.config.combatRange ?? 25;
+      const fireRange = this.config.units.soldier.range;
       const dirToBorderX = borderPos.x - hqPos.x;
       const dirToBorderY = borderPos.y - hqPos.y;
       const dirToBorderLen = Math.hypot(dirToBorderX, dirToBorderY) || 1;
@@ -830,8 +855,9 @@ export class FrenzyManager {
     if (count > 0) {
       // Blend separation with movement direction
       const separationStrength = 0.6; // stronger separation to avoid corridors
-      unit.vx += (sepX / count) * this.config.unitSpeed * separationStrength;
-      unit.vy += (sepY / count) * this.config.unitSpeed * separationStrength;
+      const unitConfig = getUnitConfig(this.config, unit.unitType);
+      unit.vx += (sepX / count) * unitConfig.speed * separationStrength;
+      unit.vy += (sepY / count) * unitConfig.speed * separationStrength;
     }
   }
 
@@ -847,15 +873,10 @@ export class FrenzyManager {
       
       const unitPlayer = this.game.player(unit.playerId);
       const isDefensePost = unit.unitType === FrenzyUnitType.DefensePost;
-      const isElite = unit.unitType === FrenzyUnitType.EliteSoldier;
       
-      // Defense posts and elite soldiers have extended range
-      let combatRange = this.config.combatRange;
-      if (isDefensePost) {
-        combatRange *= this.config.defensePostRangeMultiplier;
-      } else if (isElite) {
-        combatRange *= this.config.eliteRangeMultiplier;
-      }
+      // Get unit-specific combat range
+      const unitConfig = getUnitConfig(this.config, unit.unitType);
+      const combatRange = unitConfig.range;
         
       const enemies = this.spatialGrid
         .getNearby(unit.x, unit.y, combatRange)
@@ -879,16 +900,16 @@ export class FrenzyManager {
         }, enemies[0]);
 
         // Defense posts deal burst damage on shot, regular units deal DPS
-        if (isDefensePost) {
-          // Defense post damage is dealt when weapon fires (burst damage)
+        if (unitConfig.projectileDamage !== undefined) {
+          // Burst damage on shot (defense posts)
           if (unit.weaponCooldown <= 0) {
-            nearest.health -= this.config.defensePostDamage;
+            nearest.health -= unitConfig.projectileDamage;
             this.spawnBeamProjectile(unit, nearest);
             unit.weaponCooldown = unit.fireInterval;
           }
         } else {
           // Regular unit DPS
-          nearest.health -= this.config.unitDPS * deltaTime;
+          nearest.health -= unitConfig.dps * deltaTime;
 
           // Track that this unit is in combat (for mutual damage)
           combatPairs.set(unit.id, nearest.id);
@@ -900,7 +921,7 @@ export class FrenzyManager {
         }
       } else {
         // No Frenzy enemy units nearby - check for enemy City/Factory structures
-        this.attackNearbyStructures(unit, deltaTime, isDefensePost, combatRange);
+        this.attackNearbyStructures(unit, deltaTime, unitConfig, combatRange);
       }
     }
   }
@@ -923,6 +944,7 @@ export class FrenzyManager {
       vy,
       age: 0,
       life: travelTime,
+      isElite: attacker.unitType === FrenzyUnitType.EliteSoldier,
     });
   }
 
@@ -951,7 +973,7 @@ export class FrenzyManager {
   private attackNearbyStructures(
     unit: FrenzyUnit,
     deltaTime: number,
-    isDefensePost: boolean,
+    unitConfig: UnitTypeConfig,
     combatRange: number,
   ) {
     const unitPlayer = this.game.player(unit.playerId);
@@ -989,15 +1011,16 @@ export class FrenzyManager {
     const targetStructure = nearest.unit;
     
     // Calculate damage based on unit type
-    if (isDefensePost) {
+    if (unitConfig.projectileDamage !== undefined) {
+      // Burst damage (defense posts)
       if (unit.weaponCooldown <= 0) {
-        targetStructure.modifyHealth(-this.config.defensePostDamage, unitPlayer);
+        targetStructure.modifyHealth(-unitConfig.projectileDamage, unitPlayer);
         this.spawnBeamProjectileToStructure(unit, targetStructure);
         unit.weaponCooldown = unit.fireInterval;
       }
     } else {
       // Regular unit DPS
-      targetStructure.modifyHealth(-this.config.unitDPS * deltaTime, unitPlayer);
+      targetStructure.modifyHealth(-unitConfig.dps * deltaTime, unitPlayer);
       
       if (unit.weaponCooldown <= 0) {
         this.spawnProjectileToStructure(unit, targetStructure);
@@ -1460,6 +1483,7 @@ export class FrenzyManager {
         x: p.x,
         y: p.y,
         isBeam: p.isBeam,
+        isElite: p.isElite,
         startX: p.startX,
         startY: p.startY,
       })),

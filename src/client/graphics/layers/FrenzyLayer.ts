@@ -220,6 +220,12 @@ export class FrenzyLayer implements Layer {
 
     const radius = Math.max(1, diameter / 2);
     
+    // Check if this is an elite projectile (draws as stripes)
+    if (projectile.isElite) {
+      this.renderEliteProjectile(context, x, y, radius);
+      return;
+    }
+    
     // Plasma projectile effect with glowing core
     // Outer glow
     const gradient = context.createRadialGradient(x, y, 0, x, y, radius * 2.5);
@@ -238,6 +244,42 @@ export class FrenzyLayer implements Layer {
     context.beginPath();
     context.arc(x, y, radius * 0.5, 0, Math.PI * 2);
     context.fill();
+  }
+
+  private renderEliteProjectile(
+    context: CanvasRenderingContext2D, 
+    x: number, 
+    y: number, 
+    radius: number
+  ) {
+    // Elite projectiles are short golden stripes
+    const stripeLength = radius * 4;
+    const stripeWidth = radius * 1.5;
+    
+    // Outer glow (gold/orange)
+    context.strokeStyle = "rgba(255, 200, 50, 0.5)";
+    context.lineWidth = stripeWidth * 2;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(x - stripeLength / 2, y);
+    context.lineTo(x + stripeLength / 2, y);
+    context.stroke();
+    
+    // Inner bright stripe
+    context.strokeStyle = "rgba(255, 255, 150, 0.9)";
+    context.lineWidth = stripeWidth;
+    context.beginPath();
+    context.moveTo(x - stripeLength / 2, y);
+    context.lineTo(x + stripeLength / 2, y);
+    context.stroke();
+    
+    // Core center (white)
+    context.strokeStyle = "#ffffff";
+    context.lineWidth = stripeWidth * 0.5;
+    context.beginPath();
+    context.moveTo(x - stripeLength / 3, y);
+    context.lineTo(x + stripeLength / 3, y);
+    context.stroke();
   }
 
   private renderBeam(context: CanvasRenderingContext2D, projectile: any) {

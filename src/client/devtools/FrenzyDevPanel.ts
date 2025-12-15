@@ -3,12 +3,15 @@ import { customElement, state } from "lit/decorators.js";
 import {
   DEFAULT_FRENZY_CONFIG,
   FrenzyConfig,
+  FrenzyUnitType,
 } from "../../core/game/frenzy/FrenzyTypes";
 import { GameFork, GameType } from "../../core/game/Game";
 import { JoinLobbyEvent } from "../types/JoinLobbyEvent";
 import { FRENZY_CONFIG_EVENT, FRENZY_RESTART_EVENT } from "./FrenzyDevChannels";
 
-interface ConfigField {
+// Simple config fields (top-level properties)
+interface SimpleConfigField {
+  type: "simple";
   key: keyof FrenzyConfig;
   label: string;
   min: number;
@@ -17,8 +20,135 @@ interface ConfigField {
   description?: string;
 }
 
+// Unit config fields (nested under units.{unitType}.{property})
+interface UnitConfigField {
+  type: "unit";
+  unitType: "soldier" | "eliteSoldier" | "defensePost";
+  property: "health" | "speed" | "dps" | "range" | "fireInterval" | "projectileDamage";
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  description?: string;
+}
+
+type ConfigField = SimpleConfigField | UnitConfigField;
+
 const CONFIG_FIELDS: ConfigField[] = [
+  // Soldier config
   {
+    type: "unit",
+    unitType: "soldier",
+    property: "health",
+    label: "Soldier HP",
+    min: 10,
+    max: 500,
+    step: 5,
+  },
+  {
+    type: "unit",
+    unitType: "soldier",
+    property: "speed",
+    label: "Soldier Speed",
+    min: 0.5,
+    max: 10,
+    step: 0.25,
+  },
+  {
+    type: "unit",
+    unitType: "soldier",
+    property: "dps",
+    label: "Soldier DPS",
+    min: 1,
+    max: 100,
+    step: 1,
+  },
+  {
+    type: "unit",
+    unitType: "soldier",
+    property: "range",
+    label: "Soldier Range",
+    min: 5,
+    max: 60,
+    step: 1,
+  },
+  {
+    type: "unit",
+    unitType: "soldier",
+    property: "fireInterval",
+    label: "Soldier Fire Rate",
+    min: 0.1,
+    max: 5,
+    step: 0.1,
+  },
+  // Elite Soldier config
+  {
+    type: "unit",
+    unitType: "eliteSoldier",
+    property: "health",
+    label: "Elite HP",
+    min: 10,
+    max: 1000,
+    step: 10,
+  },
+  {
+    type: "unit",
+    unitType: "eliteSoldier",
+    property: "speed",
+    label: "Elite Speed",
+    min: 0.5,
+    max: 10,
+    step: 0.25,
+  },
+  {
+    type: "unit",
+    unitType: "eliteSoldier",
+    property: "range",
+    label: "Elite Range",
+    min: 5,
+    max: 100,
+    step: 1,
+  },
+  // Defense Post config
+  {
+    type: "unit",
+    unitType: "defensePost",
+    property: "health",
+    label: "DefPost HP",
+    min: 50,
+    max: 1000,
+    step: 10,
+  },
+  {
+    type: "unit",
+    unitType: "defensePost",
+    property: "range",
+    label: "DefPost Range",
+    min: 10,
+    max: 100,
+    step: 1,
+  },
+  {
+    type: "unit",
+    unitType: "defensePost",
+    property: "fireInterval",
+    label: "DefPost Fire Rate",
+    min: 0.5,
+    max: 10,
+    step: 0.5,
+  },
+  {
+    type: "unit",
+    unitType: "defensePost",
+    property: "projectileDamage",
+    label: "DefPost Damage",
+    min: 10,
+    max: 500,
+    step: 10,
+  },
+  // Spawning
+  {
+    type: "simple",
     key: "spawnInterval",
     label: "Spawn Interval (s)",
     min: 0.25,
@@ -27,6 +157,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "Lower values spawn units faster",
   },
   {
+    type: "simple",
     key: "maxUnitsPerPlayer",
     label: "Max Units",
     min: 5,
@@ -34,41 +165,16 @@ const CONFIG_FIELDS: ConfigField[] = [
     step: 1,
   },
   {
+    type: "simple",
     key: "startingUnits",
     label: "Starting Units",
     min: 1,
     max: 200,
     step: 1,
   },
+  // Movement & Territory
   {
-    key: "unitHealth",
-    label: "Unit HP",
-    min: 10,
-    max: 1000,
-    step: 5,
-  },
-  {
-    key: "unitSpeed",
-    label: "Unit Speed (px/s)",
-    min: 0.5,
-    max: 10,
-    step: 0.25,
-  },
-  {
-    key: "unitDPS",
-    label: "Unit DPS",
-    min: 1,
-    max: 200,
-    step: 1,
-  },
-  {
-    key: "combatRange",
-    label: "Combat Range (px)",
-    min: 5,
-    max: 60,
-    step: 1,
-  },
-  {
+    type: "simple",
     key: "separationRadius",
     label: "Separation Radius (px)",
     min: 1,
@@ -76,6 +182,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     step: 0.5,
   },
   {
+    type: "simple",
     key: "captureRadius",
     label: "Capture Radius (tiles)",
     min: 1,
@@ -84,6 +191,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "How far around a unit tiles can flip",
   },
   {
+    type: "simple",
     key: "hqCaptureRadius",
     label: "HQ Capture Radius (tiles)",
     min: 1,
@@ -92,6 +200,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "How close enemies must get to defeat a player",
   },
   {
+    type: "simple",
     key: "radialAlignmentWeight",
     label: "Radial Bias",
     min: 0,
@@ -100,6 +209,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "Higher = stronger push along centroid rays",
   },
   {
+    type: "simple",
     key: "borderAdvanceDistance",
     label: "Border Advance (px)",
     min: 0,
@@ -108,6 +218,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "How far past the frontier units aim",
   },
   {
+    type: "simple",
     key: "stopDistance",
     label: "Stop Distance (px)",
     min: 0,
@@ -115,7 +226,9 @@ const CONFIG_FIELDS: ConfigField[] = [
     step: 0.25,
     description: "How close units travel to their target",
   },
+  // Projectiles
   {
+    type: "simple",
     key: "projectileSpeed",
     label: "Projectile Speed (px/s)",
     min: 2,
@@ -124,6 +237,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "How fast shells travel on screen",
   },
   {
+    type: "simple",
     key: "projectileSize",
     label: "Shell Size (px)",
     min: 0.25,
@@ -131,15 +245,9 @@ const CONFIG_FIELDS: ConfigField[] = [
     step: 0.25,
     description: "Diameter of visual shells",
   },
+  // Economy
   {
-    key: "fireInterval",
-    label: "Fire Interval (s)",
-    min: 0.05,
-    max: 3,
-    step: 0.05,
-    description: "Lower numbers = more frequent shots",
-  },
-  {
+    type: "simple",
     key: "startingGold",
     label: "Starting Gold",
     min: 0,
@@ -148,6 +256,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "Gold given at spawn",
   },
   {
+    type: "simple",
     key: "baseGoldPerMinute",
     label: "Base Gold/min",
     min: 0,
@@ -156,6 +265,7 @@ const CONFIG_FIELDS: ConfigField[] = [
     description: "Base gold income per minute",
   },
   {
+    type: "simple",
     key: "cityGoldPerMinute",
     label: "City Gold/min",
     min: 0,
@@ -403,7 +513,8 @@ export class FrenzyDevPanel extends LitElement {
   }
 
   private renderField(field: ConfigField) {
-    const value = this.config[field.key];
+    const value = this.getFieldValue(field);
+    const fieldKey = this.getFieldKey(field);
     return html`
       <div class="field">
         <label>
@@ -439,9 +550,24 @@ export class FrenzyDevPanel extends LitElement {
     `;
   }
 
+  private getFieldKey(field: ConfigField): string {
+    if (field.type === "unit") {
+      return `units.${field.unitType}.${field.property}`;
+    }
+    return field.key;
+  }
+
+  private getFieldValue(field: ConfigField): number {
+    if (field.type === "unit") {
+      const unitConfig = this.config.units[field.unitType];
+      return (unitConfig as any)[field.property] ?? 0;
+    }
+    return this.config[field.key] as number;
+  }
+
   private handleRangeChange(field: ConfigField, event: Event) {
     const value = Number((event.target as HTMLInputElement).value);
-    this.updateConfigField(field.key, value);
+    this.updateConfigField(field, value);
   }
 
   private handleNumberChange(field: ConfigField, event: Event) {
@@ -449,14 +575,27 @@ export class FrenzyDevPanel extends LitElement {
     const rawValue = Number(input.value);
     const clamped = clamp(rawValue, field.min, field.max);
     input.value = String(clamped);
-    this.updateConfigField(field.key, clamped);
+    this.updateConfigField(field, clamped);
   }
 
-  private updateConfigField(key: keyof FrenzyConfig, value: number) {
-    this.config = {
-      ...this.config,
-      [key]: value,
-    };
+  private updateConfigField(field: ConfigField, value: number) {
+    if (field.type === "unit") {
+      this.config = {
+        ...this.config,
+        units: {
+          ...this.config.units,
+          [field.unitType]: {
+            ...this.config.units[field.unitType],
+            [field.property]: value,
+          },
+        },
+      };
+    } else {
+      this.config = {
+        ...this.config,
+        [field.key]: value,
+      };
+    }
   }
 
   private applyConfig() {
@@ -607,12 +746,38 @@ function persistDefaults(config: FrenzyConfig): StoredDefaultsSnapshot | null {
 }
 
 function sanitizeConfig(partial: Partial<FrenzyConfig>): FrenzyConfig {
-  const merged: FrenzyConfig = { ...DEFAULT_FRENZY_CONFIG };
+  const merged: FrenzyConfig = { 
+    ...DEFAULT_FRENZY_CONFIG,
+    units: {
+      soldier: { ...DEFAULT_FRENZY_CONFIG.units.soldier },
+      eliteSoldier: { ...DEFAULT_FRENZY_CONFIG.units.eliteSoldier },
+      defensePost: { ...DEFAULT_FRENZY_CONFIG.units.defensePost },
+    },
+  };
+  
+  // Handle simple number fields
   (Object.keys(partial) as Array<keyof FrenzyConfig>).forEach((key) => {
+    if (key === "units") return; // Handle units separately
     const value = partial[key];
     if (typeof value === "number" && Number.isFinite(value)) {
-      merged[key] = value;
+      (merged as any)[key] = value;
     }
   });
+  
+  // Handle nested unit configs
+  if (partial.units) {
+    (["soldier", "eliteSoldier", "defensePost"] as const).forEach((unitType) => {
+      const unitConfig = partial.units?.[unitType];
+      if (unitConfig) {
+        Object.keys(unitConfig).forEach((prop) => {
+          const value = (unitConfig as any)[prop];
+          if (typeof value === "number" && Number.isFinite(value)) {
+            (merged.units[unitType] as any)[prop] = value;
+          }
+        });
+      }
+    });
+  }
+  
   return merged;
 }
