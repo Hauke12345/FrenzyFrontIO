@@ -209,7 +209,7 @@ export class WinModal extends LitElement implements Layer {
         <div class="mb-3">
           <img
             src=${ofmWintersLogo}
-            alt="OpenFront Masters Winter"
+            alt="FrenzyFront Masters Winter"
             class="mx-auto max-w-full h-auto max-h-[200px] rounded"
           />
         </div>

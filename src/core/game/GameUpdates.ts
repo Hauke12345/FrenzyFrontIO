@@ -291,6 +291,8 @@ export interface FrenzyUpdate {
     unitCount?: number;
     tier?: number;
     maxUnits?: number;
+    health?: number;
+    maxHealth?: number;
   }>;
   factories: Array<{
     tile: number;
@@ -298,6 +300,8 @@ export interface FrenzyUpdate {
     x: number;
     y: number;
     tier: number;
+    health?: number;
+    maxHealth?: number;
   }>;
   projectiles: Array<{
     id: number;

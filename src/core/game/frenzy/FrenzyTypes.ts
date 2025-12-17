@@ -14,11 +14,11 @@ export enum FrenzyUnitType {
 
 // Per-unit-type configuration
 export interface UnitTypeConfig {
-  health: number;           // HP for this unit type
-  speed: number;            // Movement speed (pixels/sec), 0 for stationary
-  dps: number;              // Damage per second
-  range: number;            // Combat range in pixels
-  fireInterval: number;     // Seconds between shots
+  health: number; // HP for this unit type
+  speed: number; // Movement speed (pixels/sec), 0 for stationary
+  dps: number; // Damage per second
+  range: number; // Combat range in pixels
+  fireInterval: number; // Seconds between shots
   projectileDamage?: number; // If set, deals instant damage instead of DPS
 }
 
@@ -95,12 +95,12 @@ export interface FrenzyConfig {
     eliteSoldier: UnitTypeConfig;
     defensePost: UnitTypeConfig;
   };
-  
+
   // Spawning
   spawnInterval: number; // Seconds between spawns (default: 4.0)
   maxUnitsPerPlayer: number; // Hard cap (default: 60)
   startingUnits: number; // Units at game start (default: 5)
-  
+
   // Movement & Territory
   influenceRadius: number; // Territory control radius (default: 18px)
   separationRadius: number; // Personal space from friendlies (default: 10px)
@@ -108,16 +108,16 @@ export interface FrenzyConfig {
   radialAlignmentWeight: number; // Strength of radial bias toward centroid (default: 0.75)
   borderAdvanceDistance: number; // How far past the border to push targets (default: 12px)
   stopDistance: number; // Distance to stop before reaching target (default: 2px)
-  
+
   // Projectiles
   projectileSpeed: number; // Speed of visual shells (default: 140px/s)
   projectileSize: number; // Diameter of visual shells in pixels (default: 4px)
-  
+
   // Buildings
   hqCaptureRadius: number; // Tiles around HQ that must fall before defeat (default: 2 tiles)
   cityHealth: number; // HP for cities/factories (default: 400)
   hqHealth: number; // HP for HQ (default: 1000)
-  
+
   // Economy
   startingGold: number; // Gold at spawn (default: 150000)
   baseGoldPerMinute: number; // Base gold income per minute (default: 20000)
@@ -125,7 +125,7 @@ export interface FrenzyConfig {
   cityCost: number; // Fixed cost for cities (default: 100000)
   factoryCost: number; // Fixed cost for factories (default: 100000)
   factoryUpgradeCost: number; // Cost to upgrade factory to tier 2 (default: 100000)
-  
+
   // Crystals (resources)
   crystalClusterCount: number; // Number of crystal clusters to spawn (default: 50)
   crystalRange: number; // Range from city to count crystals (default: 50px)
@@ -134,7 +134,10 @@ export interface FrenzyConfig {
 }
 
 // Helper to get unit config by type
-export function getUnitConfig(config: FrenzyConfig, unitType: FrenzyUnitType): UnitTypeConfig {
+export function getUnitConfig(
+  config: FrenzyConfig,
+  unitType: FrenzyUnitType,
+): UnitTypeConfig {
   switch (unitType) {
     case FrenzyUnitType.Soldier:
       return config.units.soldier;
@@ -158,27 +161,27 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       fireInterval: 1,
     },
     eliteSoldier: {
-      health: 150,        // 1.5x soldier health
-      speed: 2.25,        // 10% slower than soldier
+      health: 150, // 1.5x soldier health
+      speed: 2.25, // 10% slower than soldier
       dps: 15,
-      range: 37.5,        // 1.5x soldier range
+      range: 37.5, // 1.5x soldier range
       fireInterval: 1,
     },
     defensePost: {
-      health: 200,        // 2x soldier health
-      speed: 0,           // Stationary
-      dps: 0,             // Uses projectileDamage instead
-      range: 37.5,        // 1.5x soldier range
-      fireInterval: 4,    // Slow fire rate like Obelisk
+      health: 200, // 2x soldier health
+      speed: 0, // Stationary
+      dps: 0, // Uses projectileDamage instead
+      range: 37.5, // 1.5x soldier range
+      fireInterval: 4, // Slow fire rate like Obelisk
       projectileDamage: 100, // One-shot tier 1 units
     },
   },
-  
+
   // Spawning
   spawnInterval: 4.0,
-  maxUnitsPerPlayer: 60,
+  maxUnitsPerPlayer: 100,
   startingUnits: 5,
-  
+
   // Movement & Territory
   influenceRadius: 9,
   separationRadius: 5,
@@ -186,16 +189,16 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   radialAlignmentWeight: 0.75,
   borderAdvanceDistance: 0.5,
   stopDistance: 1,
-  
+
   // Projectiles
   projectileSpeed: 10,
   projectileSize: 1,
-  
+
   // Buildings
   hqCaptureRadius: 2,
   cityHealth: 400,
   hqHealth: 1000,
-  
+
   // Economy
   startingGold: 150000,
   baseGoldPerMinute: 20000,
@@ -203,7 +206,7 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   cityCost: 100000,
   factoryCost: 100000,
   factoryUpgradeCost: 100000,
-  
+
   // Crystals (resources)
   crystalClusterCount: 50,
   crystalRange: 50,

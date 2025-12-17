@@ -149,6 +149,10 @@ export class StructureLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    // Skip rendering in Frenzy mode - FrenzyLayer handles all structure icons
+    if (this.isFrenzyMode()) {
+      return;
+    }
     if (
       this.transformHandler.scale <= ZOOM_THRESHOLD ||
       !this.game.config().userSettings()?.structureSprites()
@@ -206,9 +210,9 @@ export class StructureLayer implements Layer {
   private drawCityEconomyRadius(unit: UnitView) {
     // Only draw economy radius for cities in Frenzy mode
     if (!this.isFrenzyMode() || unit.type() === UnitType.Construction) return;
-    
+
     const economyRadius = this.game.config().cityEconomyRadius();
-    
+
     // Draw a subtle gold-tinted economy territory around the city
     for (const tile of this.game.bfs(
       unit.tile(),
@@ -217,7 +221,7 @@ export class StructureLayer implements Layer {
       // Only draw on tiles owned by the city's owner
       const ownerID = this.game.ownerID(tile);
       if (ownerID !== unit.owner().smallID()) continue;
-      
+
       // Paint with a subtle gold tint
       this.paintCell(
         new Cell(this.game.x(tile), this.game.y(tile)),
@@ -247,9 +251,10 @@ export class StructureLayer implements Layer {
     if (!config || !icon) return;
 
     // Clear previous rendering - use larger radius for cities in Frenzy mode
-    const clearRadius = (unitType === UnitType.City && this.isFrenzyMode()) 
-      ? this.game.config().cityEconomyRadius() + 1
-      : config.borderRadius + 1;
+    const clearRadius =
+      unitType === UnitType.City && this.isFrenzyMode()
+        ? this.game.config().cityEconomyRadius() + 1
+        : config.borderRadius + 1;
     for (const tile of this.game.bfs(
       unit.tile(),
       euclDistFN(unit.tile(), clearRadius, true),
@@ -260,7 +265,7 @@ export class StructureLayer implements Layer {
     if (!unit.isActive()) return;
 
     this.drawBorder(unit, borderColor, config);
-    
+
     // Draw city economy radius for Frenzy mode
     if (unitType === UnitType.City) {
       this.drawCityEconomyRadius(unit);

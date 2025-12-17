@@ -1,5 +1,5 @@
-import { GameFork } from "../../../core/game/Game";
-import { GameView } from "../../../core/game/GameView";
+import { GameFork, UnitType } from "../../../core/game/Game";
+import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -12,6 +12,36 @@ interface GoldTextFx {
   gold: number;
   lifeTime: number;
   duration: number;
+}
+
+/**
+ * Unified structure type for Frenzy mode rendering
+ */
+enum FrenzyStructureType {
+  HQ = "hq",
+  City = "city",
+  Factory = "factory",
+  DefensePost = "defensePost",
+  Port = "port",
+  MissileSilo = "missileSilo",
+  SAMLauncher = "samLauncher",
+  Construction = "construction",
+}
+
+/**
+ * Unified structure interface for consistent rendering
+ */
+interface FrenzyStructure {
+  type: FrenzyStructureType;
+  x: number;
+  y: number;
+  playerId: string;
+  tier: number;
+  health: number;
+  maxHealth: number;
+  unit?: UnitView; // Reference to actual game unit for non-HQ structures
+  constructionType?: FrenzyStructureType; // The type being constructed
+  constructionProgress?: number; // 0-1 progress
 }
 
 /**
@@ -57,12 +87,15 @@ export class FrenzyLayer implements Layer {
     this.lastFrameTime = now;
 
     // Process new gold payouts - convert to animated effects
-    if (frenzyState.pendingGoldPayouts && frenzyState.pendingGoldPayouts.length > 0) {
+    if (
+      frenzyState.pendingGoldPayouts &&
+      frenzyState.pendingGoldPayouts.length > 0
+    ) {
       const newPayoutIds = new Set<string>();
       for (const payout of frenzyState.pendingGoldPayouts) {
         const payoutId = `${payout.x}_${payout.y}_${payout.gold}`;
         newPayoutIds.add(payoutId);
-        
+
         // Only add if this is a new payout we haven't seen
         if (!this.lastPayoutIds.has(payoutId)) {
           this.goldTextEffects.push({
@@ -86,9 +119,12 @@ export class FrenzyLayer implements Layer {
       }
     }
 
-    // Render core buildings
-    for (const building of frenzyState.coreBuildings) {
-      this.renderCoreBuilding(context, building);
+    // Gather all structures into unified list
+    const structures = this.gatherAllStructures(frenzyState);
+
+    // Render all structures with unified system
+    for (const structure of structures) {
+      this.renderStructure(context, structure);
     }
 
     // Render units
@@ -107,7 +143,769 @@ export class FrenzyLayer implements Layer {
     this.updateAndRenderGoldEffects(context, deltaTime);
   }
 
-  private updateAndRenderGoldEffects(context: CanvasRenderingContext2D, deltaTime: number) {
+  /**
+   * Gather all structures from frenzy state and game state into unified list
+   */
+  private gatherAllStructures(frenzyState: any): FrenzyStructure[] {
+    const structures: FrenzyStructure[] = [];
+
+    // Add HQs from frenzy state
+    for (const building of frenzyState.coreBuildings) {
+      structures.push({
+        type: FrenzyStructureType.HQ,
+        x: building.x,
+        y: building.y,
+        playerId: building.playerId,
+        tier: building.tier ?? 1,
+        health: building.health ?? 1000,
+        maxHealth: building.maxHealth ?? 1000,
+      });
+    }
+
+    // Add factories from frenzy state
+    if (frenzyState.factories) {
+      for (const factory of frenzyState.factories) {
+        structures.push({
+          type: FrenzyStructureType.Factory,
+          x: factory.x,
+          y: factory.y,
+          playerId: factory.playerId,
+          tier: factory.tier ?? 1,
+          health: factory.health ?? 400,
+          maxHealth: factory.maxHealth ?? 400,
+        });
+      }
+    }
+
+    // Add structures from game units
+    for (const player of this.game.players()) {
+      for (const unit of player.units()) {
+        const tile = unit.tile();
+        if (!tile) continue;
+
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const unitInfo = this.game.unitInfo(unit.type());
+        const maxHealth = unitInfo?.maxHealth ?? 100;
+        const health = unit.health();
+
+        let structureType: FrenzyStructureType | null = null;
+        switch (unit.type()) {
+          case UnitType.City:
+            structureType = FrenzyStructureType.City;
+            break;
+          case UnitType.DefensePost:
+            structureType = FrenzyStructureType.DefensePost;
+            break;
+          case UnitType.Port:
+            structureType = FrenzyStructureType.Port;
+            break;
+          case UnitType.MissileSilo:
+            structureType = FrenzyStructureType.MissileSilo;
+            break;
+          case UnitType.SAMLauncher:
+            structureType = FrenzyStructureType.SAMLauncher;
+            break;
+        }
+
+        if (structureType) {
+          structures.push({
+            type: structureType,
+            x,
+            y,
+            playerId: player.id(),
+            tier: unit.level(),
+            health,
+            maxHealth,
+            unit,
+          });
+        }
+
+        // Handle construction units
+        if (unit.type() === UnitType.Construction) {
+          const constructionUnitType = unit.constructionType();
+          let constrType: FrenzyStructureType | null = null;
+          switch (constructionUnitType) {
+            case UnitType.City:
+              constrType = FrenzyStructureType.City;
+              break;
+            case UnitType.Factory:
+              constrType = FrenzyStructureType.Factory;
+              break;
+            case UnitType.DefensePost:
+              constrType = FrenzyStructureType.DefensePost;
+              break;
+            case UnitType.Port:
+              constrType = FrenzyStructureType.Port;
+              break;
+            case UnitType.MissileSilo:
+              constrType = FrenzyStructureType.MissileSilo;
+              break;
+            case UnitType.SAMLauncher:
+              constrType = FrenzyStructureType.SAMLauncher;
+              break;
+          }
+          if (constrType && constructionUnitType) {
+            const unitInfo = this.game.unitInfo(constructionUnitType);
+            const constDuration = unitInfo?.constructionDuration ?? 100;
+            const elapsed = this.game.ticks() - unit.createdAt();
+            const progress = Math.min(
+              1,
+              elapsed / (constDuration === 0 ? 1 : constDuration),
+            );
+            structures.push({
+              type: FrenzyStructureType.Construction,
+              x,
+              y,
+              playerId: player.id(),
+              tier: 1,
+              health: 1,
+              maxHealth: 1,
+              unit,
+              constructionType: constrType,
+              constructionProgress: progress,
+            });
+          }
+        }
+      }
+    }
+
+    return structures;
+  }
+
+  /**
+   * Render a structure with unified icon and healthbar system
+   */
+  private renderStructure(
+    context: CanvasRenderingContext2D,
+    structure: FrenzyStructure,
+  ) {
+    const player = this.game.player(structure.playerId);
+    if (!player) return;
+
+    const x = structure.x - this.game.width() / 2;
+    const y = structure.y - this.game.height() / 2;
+
+    // Render icon based on type
+    switch (structure.type) {
+      case FrenzyStructureType.HQ:
+        this.renderHQIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.City:
+        this.renderCityIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Factory:
+        this.renderFactoryIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.DefensePost:
+        this.renderDefensePostIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Port:
+        this.renderPortIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.MissileSilo:
+        this.renderMissileSiloIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.SAMLauncher:
+        this.renderSAMLauncherIcon(context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Construction:
+        this.renderConstructionIcon(
+          context,
+          x,
+          y,
+          player,
+          structure.constructionType!,
+          structure.constructionProgress ?? 0,
+        );
+        break;
+    }
+
+    // Render healthbar if damaged
+    if (structure.health < structure.maxHealth && structure.health > 0) {
+      this.renderHealthBar(
+        context,
+        x,
+        y,
+        structure.health,
+        structure.maxHealth,
+        this.getStructureSize(structure.type),
+      );
+    }
+  }
+
+  /**
+   * Get the base size for a structure type
+   */
+  private getStructureSize(type: FrenzyStructureType): number {
+    switch (type) {
+      case FrenzyStructureType.HQ:
+        return 14;
+      case FrenzyStructureType.City:
+      case FrenzyStructureType.Factory:
+      case FrenzyStructureType.Port:
+        return 10;
+      case FrenzyStructureType.DefensePost:
+      case FrenzyStructureType.MissileSilo:
+      case FrenzyStructureType.SAMLauncher:
+        return 8;
+      default:
+        return 8;
+    }
+  }
+
+  /**
+   * Render healthbar below a structure
+   */
+  private renderHealthBar(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    health: number,
+    maxHealth: number,
+    structureSize: number,
+  ) {
+    const barWidth = structureSize + 4;
+    const barHeight = 2;
+    const barY = y + structureSize / 2 + 3;
+    const healthPercent = health / maxHealth;
+
+    // Background (dark)
+    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+    context.fillRect(x - barWidth / 2, barY, barWidth, barHeight);
+
+    // Health fill (green to red gradient based on health)
+    const r = Math.floor(255 * (1 - healthPercent));
+    const g = Math.floor(255 * healthPercent);
+    context.fillStyle = `rgb(${r}, ${g}, 0)`;
+    context.fillRect(
+      x - barWidth / 2,
+      barY,
+      barWidth * healthPercent,
+      barHeight,
+    );
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.5;
+    context.strokeRect(x - barWidth / 2, barY, barWidth, barHeight);
+  }
+
+  /**
+   * HQ Icon: Circle with spikes - the most prominent building
+   */
+  private renderHQIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const circleRadius = 6;
+    const spikeCount = 8;
+    const spikeLength = 5;
+    const spikeBaseWidth = 2.5;
+
+    // Draw spikes first (behind circle)
+    context.fillStyle = player.territoryColor().toRgbString();
+    for (let i = 0; i < spikeCount; i++) {
+      const angle = (i * 2 * Math.PI) / spikeCount - Math.PI / 2;
+      const tipX = x + Math.cos(angle) * (circleRadius + spikeLength);
+      const tipY = y + Math.sin(angle) * (circleRadius + spikeLength);
+      const leftAngle = angle - Math.PI / 2;
+      const rightAngle = angle + Math.PI / 2;
+      const baseX1 =
+        x +
+        Math.cos(angle) * circleRadius +
+        Math.cos(leftAngle) * spikeBaseWidth;
+      const baseY1 =
+        y +
+        Math.sin(angle) * circleRadius +
+        Math.sin(leftAngle) * spikeBaseWidth;
+      const baseX2 =
+        x +
+        Math.cos(angle) * circleRadius +
+        Math.cos(rightAngle) * spikeBaseWidth;
+      const baseY2 =
+        y +
+        Math.sin(angle) * circleRadius +
+        Math.sin(rightAngle) * spikeBaseWidth;
+
+      context.beginPath();
+      context.moveTo(tipX, tipY);
+      context.lineTo(baseX1, baseY1);
+      context.lineTo(baseX2, baseY2);
+      context.closePath();
+      context.fill();
+
+      // Spike border
+      context.strokeStyle = "#000";
+      context.lineWidth = 1;
+      context.stroke();
+    }
+
+    // Outer glow (circle)
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.arc(x, y, circleRadius + 2, 0, Math.PI * 2);
+    context.fill();
+
+    // Main circle body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.arc(x, y, circleRadius, 0, Math.PI * 2);
+    context.fill();
+
+    // Circle border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(x, y, circleRadius, 0, Math.PI * 2);
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 6px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y);
+    }
+  }
+
+  /**
+   * City Icon: Hexagon (6-sided) - represents urban center
+   */
+  private renderCityIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    level: number,
+  ) {
+    const size = 8;
+    const sides = 6;
+    const angleOffset = Math.PI / 6; // Rotate so flat side is on bottom
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides + angleOffset;
+      const px = x + Math.cos(angle) * (size / 2 + 2);
+      const py = y + Math.sin(angle) * (size / 2 + 2);
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+
+    // Main hexagon body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides + angleOffset;
+      const px = x + Math.cos(angle) * (size / 2);
+      const py = y + Math.sin(angle) * (size / 2);
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.stroke();
+
+    // Level indicator
+    if (level >= 1) {
+      const tierText = this.getTierRoman(level);
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y);
+    }
+  }
+
+  /**
+   * Factory Icon: Square with notched corners (gear-like) - industrial
+   */
+  private renderFactoryIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 8;
+    const halfSize = size / 2;
+    const notch = size * 0.15;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x - halfSize - 2 + notch, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2 - notch, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y - halfSize - 2 + notch);
+    context.lineTo(x + halfSize + 2, y + halfSize + 2 - notch);
+    context.lineTo(x + halfSize + 2 - notch, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2 + notch, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y + halfSize + 2 - notch);
+    context.lineTo(x - halfSize - 2, y - halfSize - 2 + notch);
+    context.closePath();
+    context.fill();
+
+    // Main body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x - halfSize + notch, y - halfSize);
+    context.lineTo(x + halfSize - notch, y - halfSize);
+    context.lineTo(x + halfSize, y - halfSize + notch);
+    context.lineTo(x + halfSize, y + halfSize - notch);
+    context.lineTo(x + halfSize - notch, y + halfSize);
+    context.lineTo(x - halfSize + notch, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize - notch);
+    context.lineTo(x - halfSize, y - halfSize + notch);
+    context.closePath();
+    context.fill();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y);
+    }
+  }
+
+  /**
+   * Defense Post Icon: Shield shape - defensive structure
+   */
+  private renderDefensePostIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y - halfSize * 0.3);
+    context.lineTo(x + halfSize + 2, y + halfSize * 0.5);
+    context.quadraticCurveTo(x, y + halfSize + 4, x, y + halfSize + 2);
+    context.quadraticCurveTo(
+      x,
+      y + halfSize + 4,
+      x - halfSize - 2,
+      y + halfSize * 0.5,
+    );
+    context.lineTo(x - halfSize - 2, y - halfSize * 0.3);
+    context.closePath();
+    context.fill();
+
+    // Main shield body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y - halfSize * 0.3);
+    context.lineTo(x + halfSize, y + halfSize * 0.5);
+    context.quadraticCurveTo(x, y + halfSize + 2, x, y + halfSize);
+    context.quadraticCurveTo(
+      x,
+      y + halfSize + 2,
+      x - halfSize,
+      y + halfSize * 0.5,
+    );
+    context.lineTo(x - halfSize, y - halfSize * 0.3);
+    context.closePath();
+    context.fill();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y - 1);
+    }
+  }
+
+  /**
+   * Port Icon: Anchor shape - naval structure
+   */
+  private renderPortIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 8;
+    const halfSize = size / 2;
+
+    // Outer glow (circle)
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.arc(x, y, halfSize + 2, 0, Math.PI * 2);
+    context.fill();
+
+    // Main circle body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.arc(x, y, halfSize, 0, Math.PI * 2);
+    context.fill();
+
+    // Wave pattern on bottom half
+    context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x - halfSize * 0.7, y + 1);
+    context.quadraticCurveTo(x - halfSize * 0.35, y - 1, x, y + 1);
+    context.quadraticCurveTo(
+      x + halfSize * 0.35,
+      y + 3,
+      x + halfSize * 0.7,
+      y + 1,
+    );
+    context.stroke();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(x, y, halfSize, 0, Math.PI * 2);
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y);
+    }
+  }
+
+  /**
+   * Missile Silo Icon: Diamond with vertical line - offensive structure
+   */
+  private renderMissileSiloIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y);
+    context.lineTo(x, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y);
+    context.closePath();
+    context.fill();
+
+    // Main diamond body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y);
+    context.lineTo(x, y + halfSize);
+    context.lineTo(x - halfSize, y);
+    context.closePath();
+    context.fill();
+
+    // Missile indicator (vertical line)
+    context.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(x, y - halfSize * 0.5);
+    context.lineTo(x, y + halfSize * 0.5);
+    context.stroke();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y);
+    context.lineTo(x, y + halfSize);
+    context.lineTo(x - halfSize, y);
+    context.closePath();
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 4px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y);
+    }
+  }
+
+  /**
+   * SAM Launcher Icon: Triangle pointing up with circle - anti-air
+   */
+  private renderSAMLauncherIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y + halfSize + 2);
+    context.closePath();
+    context.fill();
+
+    // Main triangle body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize);
+    context.closePath();
+    context.fill();
+
+    // Radar circle on top
+    context.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.arc(x, y - halfSize * 0.3, halfSize * 0.35, 0, Math.PI * 2);
+    context.stroke();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize);
+    context.closePath();
+    context.stroke();
+
+    // Tier indicator
+    if (tier >= 1) {
+      const tierText = this.getTierRoman(tier);
+      context.fillStyle = "#fff";
+      context.font = "bold 4px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(tierText, x, y + 1);
+    }
+  }
+
+  /**
+   * Construction Icon: Animated building-in-progress using the target structure shape
+   */
+  private renderConstructionIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    targetType: FrenzyStructureType,
+    progress: number,
+  ) {
+    const time = Date.now() / 1000;
+    // Pulsing scale animation (gentle pulse)
+    const pulse = 0.9 + 0.1 * Math.sin(time * 4);
+
+    context.save();
+    context.translate(x, y);
+    context.scale(pulse, pulse);
+
+    // Draw the target structure with gray/transparent overlay
+    const grayColor = {
+      territoryColor: () => ({
+        alpha: (a: number) => ({
+          toRgbString: () => `rgba(150, 150, 150, ${a})`,
+        }),
+        toRgbString: () => "rgb(150, 150, 150)",
+      }),
+    } as unknown as PlayerView;
+
+    // Render the ghost shape of the target structure
+    switch (targetType) {
+      case FrenzyStructureType.City:
+        this.renderCityIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.Factory:
+        this.renderFactoryIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.DefensePost:
+        this.renderDefensePostIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.Port:
+        this.renderPortIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.MissileSilo:
+        this.renderMissileSiloIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.SAMLauncher:
+        this.renderSAMLauncherIcon(context, 0, 0, grayColor, 0);
+        break;
+    }
+
+    context.restore();
+
+    // Draw progress bar below the structure
+    const barWidth = 10;
+    const barHeight = 2;
+    const barY = y + 8;
+
+    // Background
+    context.fillStyle = "rgba(0, 0, 0, 0.5)";
+    context.fillRect(x - barWidth / 2, barY, barWidth, barHeight);
+
+    // Progress fill (yellow for construction)
+    context.fillStyle = "rgba(255, 200, 0, 0.9)";
+    context.fillRect(x - barWidth / 2, barY, barWidth * progress, barHeight);
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.5;
+    context.strokeRect(x - barWidth / 2, barY, barWidth, barHeight);
+  }
+
+  private updateAndRenderGoldEffects(
+    context: CanvasRenderingContext2D,
+    deltaTime: number,
+  ) {
     // Update and filter expired effects
     this.goldTextEffects = this.goldTextEffects.filter((effect) => {
       effect.lifeTime += deltaTime;
@@ -117,7 +915,7 @@ export class FrenzyLayer implements Layer {
 
       // Calculate animation progress
       const t = effect.lifeTime / effect.duration;
-      const riseDistance = 30;
+      const riseDistance = 15; // 50% smaller
       const x = effect.x - this.game.width() / 2;
       const y = effect.y - this.game.height() / 2 - t * riseDistance;
       const alpha = 1 - t;
@@ -125,15 +923,15 @@ export class FrenzyLayer implements Layer {
       // Gold text styling
       const goldText = `+${effect.gold}`;
 
-      // Draw with fade and rise
+      // Draw with fade and rise (50% smaller)
       context.save();
-      context.font = "bold 12px sans-serif";
+      context.font = "bold 6px sans-serif";
       context.textAlign = "center";
       context.textBaseline = "middle";
 
       // Black outline for visibility
       context.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
-      context.lineWidth = 3;
+      context.lineWidth = 1.5;
       context.strokeText(goldText, x, y);
 
       // Gold fill
@@ -155,62 +953,6 @@ export class FrenzyLayer implements Layer {
     context.strokeStyle = "#000";
     context.lineWidth = 2;
     context.stroke();
-  }
-
-  private renderCoreBuilding(context: CanvasRenderingContext2D, building: any) {
-    const player = this.game.player(building.playerId);
-    if (!player) return;
-
-    const x = building.x - this.game.width() / 2;
-    const y = building.y - this.game.height() / 2;
-
-    // Draw city icon (larger than units)
-    const size = 12; // Halved from 24
-
-    // Outer circle (glow)
-    context.fillStyle = player.territoryColor().alpha(0.5).toRgbString();
-    context.beginPath();
-    context.arc(x, y, size / 2 + 4, 0, Math.PI * 2);
-    context.fill();
-
-    // Inner circle (building)
-    context.fillStyle = player.territoryColor().toRgbString();
-    context.beginPath();
-    context.arc(x, y, size / 2, 0, Math.PI * 2);
-    context.fill();
-
-    // Border
-    context.strokeStyle = "#000";
-    context.lineWidth = 2;
-    context.stroke();
-
-    // Draw tier indicator for upgraded HQs (tier 2+)
-    const tier = building.tier ?? 1;
-    if (tier >= 2) {
-      const tierText = this.getTierRoman(tier);
-      context.fillStyle = "#fff";
-      context.font = "bold 8px sans-serif";
-      context.textAlign = "center";
-      context.textBaseline = "middle";
-      context.fillText(tierText, x, y);
-    }
-
-    // Spawn progress indicator (ring around building)
-    const spawnProgress =
-      1 - (building.spawnTimer ?? 0) / (building.spawnInterval ?? 1);
-    if (spawnProgress > 0 && spawnProgress < 1) {
-      context.strokeStyle = "#fff";
-      context.lineWidth = 3;
-      context.beginPath();
-      context.arc(
-        x,
-        y,
-        size / 2 + 6,
-        -Math.PI / 2,
-        -Math.PI / 2 + Math.PI * 2 * spawnProgress,
-      );
-      context.stroke();
-    }
   }
 
   private getTierRoman(tier: number): string {
@@ -443,20 +1185,26 @@ export class FrenzyLayer implements Layer {
     const baseSize = 3 + crystal.crystalCount * 1.5;
 
     // Draw cluster of small crystals
-    const crystalPositions = this.getCrystalClusterPositions(crystal.crystalCount, baseSize);
-    
+    const crystalPositions = this.getCrystalClusterPositions(
+      crystal.crystalCount,
+      baseSize,
+    );
+
     for (const pos of crystalPositions) {
       this.renderSingleCrystal(context, x + pos.x, y + pos.y, pos.size);
     }
   }
 
-  private getCrystalClusterPositions(count: number, baseSize: number): Array<{ x: number; y: number; size: number }> {
+  private getCrystalClusterPositions(
+    count: number,
+    baseSize: number,
+  ): Array<{ x: number; y: number; size: number }> {
     const positions: Array<{ x: number; y: number; size: number }> = [];
-    
+
     // Deterministic positions for crystal arrangement
     const angles = [0, 72, 144, 216, 288]; // Pentagon arrangement
     const radius = baseSize * 0.4;
-    
+
     for (let i = 0; i < count; i++) {
       if (i === 0) {
         // Center crystal (largest)
@@ -471,39 +1219,55 @@ export class FrenzyLayer implements Layer {
         });
       }
     }
-    
+
     return positions;
   }
 
-  private renderSingleCrystal(context: CanvasRenderingContext2D, x: number, y: number, size: number) {
-    // Draw diamond/crystal shape
-    const halfSize = size / 2;
-    
-    // Outer glow
-    const glowGradient = context.createRadialGradient(x, y, 0, x, y, size * 1.5);
-    glowGradient.addColorStop(0, "rgba(147, 112, 219, 0.4)"); // Purple glow
+  private renderSingleCrystal(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    size: number,
+  ) {
+    // Growth animation - subtle pulse (crystals are hard, no movement)
+    const time = performance.now() / 1000;
+    const halfWidth = size / 2;
+    const height = size * 1.8; // Taller crystal
+
+    // Outer glow with animated intensity
+    const glowIntensity = 0.3 + Math.sin(time * 2) * 0.1; // Glow pulses, not size
+    const glowGradient = context.createRadialGradient(
+      x,
+      y - height * 0.2,
+      0,
+      x,
+      y - height * 0.2,
+      size * 1.5,
+    );
+    glowGradient.addColorStop(0, `rgba(147, 112, 219, ${glowIntensity})`); // Purple glow
     glowGradient.addColorStop(1, "rgba(147, 112, 219, 0)");
     context.fillStyle = glowGradient;
     context.beginPath();
-    context.arc(x, y, size * 1.5, 0, Math.PI * 2);
+    context.arc(x, y - height * 0.2, size * 1.5, 0, Math.PI * 2);
     context.fill();
 
-    // Crystal body (diamond shape)
+    // Crystal body (pentagon shape - tall with flat bottom)
     context.fillStyle = "rgba(138, 43, 226, 0.9)"; // BlueViolet
     context.beginPath();
-    context.moveTo(x, y - halfSize * 1.3); // Top point
-    context.lineTo(x + halfSize, y); // Right point
-    context.lineTo(x, y + halfSize * 1.3); // Bottom point
-    context.lineTo(x - halfSize, y); // Left point
+    context.moveTo(x, y - height * 0.7); // Top point
+    context.lineTo(x + halfWidth, y - height * 0.2); // Upper right
+    context.lineTo(x + halfWidth, y + height * 0.3); // Lower right (flat bottom)
+    context.lineTo(x - halfWidth, y + height * 0.3); // Lower left (flat bottom)
+    context.lineTo(x - halfWidth, y - height * 0.2); // Upper left
     context.closePath();
     context.fill();
 
     // Crystal highlight
     context.fillStyle = "rgba(200, 162, 255, 0.8)";
     context.beginPath();
-    context.moveTo(x, y - halfSize * 1.1);
-    context.lineTo(x + halfSize * 0.3, y - halfSize * 0.3);
-    context.lineTo(x - halfSize * 0.3, y - halfSize * 0.3);
+    context.moveTo(x, y - height * 0.6);
+    context.lineTo(x + halfWidth * 0.4, y - height * 0.25);
+    context.lineTo(x - halfWidth * 0.4, y - height * 0.25);
     context.closePath();
     context.fill();
 
@@ -511,10 +1275,11 @@ export class FrenzyLayer implements Layer {
     context.strokeStyle = "rgba(75, 0, 130, 0.8)"; // Indigo
     context.lineWidth = 1;
     context.beginPath();
-    context.moveTo(x, y - halfSize * 1.3);
-    context.lineTo(x + halfSize, y);
-    context.lineTo(x, y + halfSize * 1.3);
-    context.lineTo(x - halfSize, y);
+    context.moveTo(x, y - height * 0.7);
+    context.lineTo(x + halfWidth, y - height * 0.2);
+    context.lineTo(x + halfWidth, y + height * 0.3);
+    context.lineTo(x - halfWidth, y + height * 0.3);
+    context.lineTo(x - halfWidth, y - height * 0.2);
     context.closePath();
     context.stroke();
   }

@@ -489,6 +489,8 @@ export class GameView implements GameMap {
       y: number;
       tier?: number;
       maxUnits?: number;
+      health?: number;
+      maxHealth?: number;
     }>;
     factories: Array<{
       tile: number;
@@ -496,6 +498,8 @@ export class GameView implements GameMap {
       x: number;
       y: number;
       tier: number;
+      health?: number;
+      maxHealth?: number;
     }>;
     projectiles: Array<{
       id: number;
@@ -599,7 +603,7 @@ export class GameView implements GameMap {
         ...b,
         maxUnits: b.maxUnits,
       }));
-      
+
       this._frenzyState = {
         units: frenzyData.units.map((u: any) => ({
           ...u,

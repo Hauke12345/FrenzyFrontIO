@@ -43,7 +43,12 @@ export class FrenzyManager {
 
   // City gold payout tracking
   private cityGoldTimer = 0; // Seconds until next city gold payout
-  private pendingGoldPayouts: Array<{ playerId: PlayerID; x: number; y: number; gold: number }> = [];
+  private pendingGoldPayouts: Array<{
+    playerId: PlayerID;
+    x: number;
+    y: number;
+    gold: number;
+  }> = [];
 
   // Defensive stance per player: 0 = stay near HQ, 0.5 = fire range, 1 = offensive (border)
   private playerDefensiveStance: Map<PlayerID, number> = new Map();
@@ -367,7 +372,7 @@ export class FrenzyManager {
       // Square root of random gives higher density toward center
       const distFactor = Math.sqrt(Math.random()) * 0.85; // 0.85 to keep some space from edges
       const angle = Math.random() * Math.PI * 2;
-      
+
       const x = centerX + Math.cos(angle) * distFactor * maxRadius;
       const y = centerY + Math.sin(angle) * distFactor * maxRadius;
 
@@ -379,7 +384,10 @@ export class FrenzyManager {
 
       // Random cluster size (1-5 crystals), higher chance for more crystals near center
       const centerBonus = 1 - distFactor; // 0-1, higher near center
-      const crystalCount = Math.min(5, Math.max(1, Math.floor(1 + centerBonus * 3 + Math.random() * 2)));
+      const crystalCount = Math.min(
+        5,
+        Math.max(1, Math.floor(1 + centerBonus * 3 + Math.random() * 2)),
+      );
 
       this.crystals.push({
         id: this.nextCrystalId++,
@@ -396,7 +404,7 @@ export class FrenzyManager {
    */
   private updateCityGoldPayouts(deltaTime: number) {
     this.cityGoldTimer -= deltaTime;
-    
+
     // Clear pending payouts from previous tick
     this.pendingGoldPayouts = [];
 
@@ -406,7 +414,7 @@ export class FrenzyManager {
       // Process all cities
       for (const player of this.game.players()) {
         const cities = player.units(UnitType.City);
-        
+
         for (const city of cities) {
           const cityTile = city.tile();
           if (!cityTile) continue;
@@ -424,13 +432,15 @@ export class FrenzyManager {
           }
 
           // Calculate gold: base city income per interval + crystal bonus
-          const baseGold = Math.round((this.config.cityGoldPerMinute / 60) * this.config.cityGoldInterval);
+          const baseGold = Math.round(
+            (this.config.cityGoldPerMinute / 60) * this.config.cityGoldInterval,
+          );
           const crystalBonus = crystalsInRange * this.config.crystalGoldBonus;
           const totalGold = baseGold + crystalBonus;
 
           if (totalGold > 0) {
             player.addGold(BigInt(totalGold));
-            
+
             // Queue floating text display
             this.pendingGoldPayouts.push({
               playerId: player.id(),
@@ -835,8 +845,9 @@ export class FrenzyManager {
     targetY?: number,
   ) {
     // Allow wilderness attacks if targetX/targetY are provided (even without a targetPlayerId)
-    const isWildernessAttack = !targetPlayerId && targetX !== undefined && targetY !== undefined;
-    
+    const isWildernessAttack =
+      !targetPlayerId && targetX !== undefined && targetY !== undefined;
+
     if (!targetPlayerId && !isWildernessAttack) {
       return;
     }
@@ -1876,6 +1887,8 @@ export class FrenzyManager {
         unitCount: b.unitCount,
         tier: b.tier,
         maxUnits: this.getMaxUnitsForPlayer(b.playerId),
+        health: b.health,
+        maxHealth: b.maxHealth,
       })),
       factories: Array.from(this.factories.entries()).map(([tile, f]) => ({
         tile,
@@ -1883,6 +1896,8 @@ export class FrenzyManager {
         x: f.x,
         y: f.y,
         tier: f.tier,
+        health: f.health,
+        maxHealth: f.maxHealth,
       })),
       projectiles: this.projectiles.map((p) => ({
         id: p.id,
