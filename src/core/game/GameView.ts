@@ -505,6 +505,18 @@ export class GameView implements GameMap {
     }>;
     projectileSize: number;
     maxUnitsPerPlayer: number;
+    crystals: Array<{
+      id: number;
+      x: number;
+      y: number;
+      crystalCount: number;
+    }>;
+    pendingGoldPayouts: Array<{
+      playerId: string;
+      x: number;
+      y: number;
+      gold: number;
+    }>;
     // Helper methods for UI
     canUpgradeFactory: (playerId: string) => boolean;
     getFactoryTier: (tile: number) => number;
@@ -598,6 +610,8 @@ export class GameView implements GameMap {
         projectiles: frenzyData.projectiles,
         projectileSize: frenzyData.projectileSize,
         maxUnitsPerPlayer: frenzyData.maxUnitsPerPlayer,
+        crystals: frenzyData.crystals ?? [],
+        pendingGoldPayouts: frenzyData.pendingGoldPayouts ?? [],
         // Helper method to check if player can upgrade factories (HQ tier >= 2)
         canUpgradeFactory: (playerId: string) => {
           const hq = coreBuildings.find((b: any) => b.playerId === playerId);

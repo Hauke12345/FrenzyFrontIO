@@ -4,9 +4,24 @@ import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
 /**
+ * Floating gold text effect for city income
+ */
+interface GoldTextFx {
+  x: number;
+  y: number;
+  gold: number;
+  lifeTime: number;
+  duration: number;
+}
+
+/**
  * Frenzy Layer: Renders units and core buildings for Frenzy mode
  */
 export class FrenzyLayer implements Layer {
+  private goldTextEffects: GoldTextFx[] = [];
+  private lastPayoutIds = new Set<string>();
+  private lastFrameTime: number = 0;
+
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
@@ -18,6 +33,7 @@ export class FrenzyLayer implements Layer {
 
   init() {
     console.log("[FrenzyLayer] Initialized");
+    this.lastFrameTime = performance.now();
   }
 
   tick() {
@@ -33,6 +49,41 @@ export class FrenzyLayer implements Layer {
     const frenzyState = this.game.frenzyManager();
     if (!frenzyState) {
       return; // No state yet, skip rendering
+    }
+
+    // Calculate delta time for animations
+    const now = performance.now();
+    const deltaTime = now - this.lastFrameTime;
+    this.lastFrameTime = now;
+
+    // Process new gold payouts - convert to animated effects
+    if (frenzyState.pendingGoldPayouts && frenzyState.pendingGoldPayouts.length > 0) {
+      const newPayoutIds = new Set<string>();
+      for (const payout of frenzyState.pendingGoldPayouts) {
+        const payoutId = `${payout.x}_${payout.y}_${payout.gold}`;
+        newPayoutIds.add(payoutId);
+        
+        // Only add if this is a new payout we haven't seen
+        if (!this.lastPayoutIds.has(payoutId)) {
+          this.goldTextEffects.push({
+            x: payout.x,
+            y: payout.y,
+            gold: payout.gold,
+            lifeTime: 0,
+            duration: 1500, // 1.5 seconds
+          });
+        }
+      }
+      this.lastPayoutIds = newPayoutIds;
+    } else {
+      this.lastPayoutIds.clear();
+    }
+
+    // Render crystals first (bottom layer)
+    if (frenzyState.crystals) {
+      for (const crystal of frenzyState.crystals) {
+        this.renderCrystal(context, crystal);
+      }
     }
 
     // Render core buildings
@@ -51,6 +102,47 @@ export class FrenzyLayer implements Layer {
     for (const projectile of frenzyState.projectiles) {
       this.renderProjectile(context, projectile, projectileSize);
     }
+
+    // Update and render gold text effects
+    this.updateAndRenderGoldEffects(context, deltaTime);
+  }
+
+  private updateAndRenderGoldEffects(context: CanvasRenderingContext2D, deltaTime: number) {
+    // Update and filter expired effects
+    this.goldTextEffects = this.goldTextEffects.filter((effect) => {
+      effect.lifeTime += deltaTime;
+      if (effect.lifeTime >= effect.duration) {
+        return false; // Remove expired
+      }
+
+      // Calculate animation progress
+      const t = effect.lifeTime / effect.duration;
+      const riseDistance = 30;
+      const x = effect.x - this.game.width() / 2;
+      const y = effect.y - this.game.height() / 2 - t * riseDistance;
+      const alpha = 1 - t;
+
+      // Gold text styling
+      const goldText = `+${effect.gold}`;
+
+      // Draw with fade and rise
+      context.save();
+      context.font = "bold 12px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+
+      // Black outline for visibility
+      context.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+      context.lineWidth = 3;
+      context.strokeText(goldText, x, y);
+
+      // Gold fill
+      context.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+      context.fillText(goldText, x, y);
+      context.restore();
+
+      return true; // Keep effect
+    });
   }
 
   private renderTestMarker(context: CanvasRenderingContext2D) {
@@ -338,5 +430,92 @@ export class FrenzyLayer implements Layer {
     context.beginPath();
     context.arc(endX, endY, 4, 0, Math.PI * 2);
     context.fill();
+  }
+
+  private renderCrystal(
+    context: CanvasRenderingContext2D,
+    crystal: { id: number; x: number; y: number; crystalCount: number },
+  ) {
+    const x = crystal.x - this.game.width() / 2;
+    const y = crystal.y - this.game.height() / 2;
+
+    // Base size scales with crystal count
+    const baseSize = 3 + crystal.crystalCount * 1.5;
+
+    // Draw cluster of small crystals
+    const crystalPositions = this.getCrystalClusterPositions(crystal.crystalCount, baseSize);
+    
+    for (const pos of crystalPositions) {
+      this.renderSingleCrystal(context, x + pos.x, y + pos.y, pos.size);
+    }
+  }
+
+  private getCrystalClusterPositions(count: number, baseSize: number): Array<{ x: number; y: number; size: number }> {
+    const positions: Array<{ x: number; y: number; size: number }> = [];
+    
+    // Deterministic positions for crystal arrangement
+    const angles = [0, 72, 144, 216, 288]; // Pentagon arrangement
+    const radius = baseSize * 0.4;
+    
+    for (let i = 0; i < count; i++) {
+      if (i === 0) {
+        // Center crystal (largest)
+        positions.push({ x: 0, y: 0, size: baseSize * 0.6 });
+      } else {
+        // Surrounding crystals
+        const angle = (angles[(i - 1) % 5] * Math.PI) / 180;
+        positions.push({
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          size: baseSize * 0.4,
+        });
+      }
+    }
+    
+    return positions;
+  }
+
+  private renderSingleCrystal(context: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    // Draw diamond/crystal shape
+    const halfSize = size / 2;
+    
+    // Outer glow
+    const glowGradient = context.createRadialGradient(x, y, 0, x, y, size * 1.5);
+    glowGradient.addColorStop(0, "rgba(147, 112, 219, 0.4)"); // Purple glow
+    glowGradient.addColorStop(1, "rgba(147, 112, 219, 0)");
+    context.fillStyle = glowGradient;
+    context.beginPath();
+    context.arc(x, y, size * 1.5, 0, Math.PI * 2);
+    context.fill();
+
+    // Crystal body (diamond shape)
+    context.fillStyle = "rgba(138, 43, 226, 0.9)"; // BlueViolet
+    context.beginPath();
+    context.moveTo(x, y - halfSize * 1.3); // Top point
+    context.lineTo(x + halfSize, y); // Right point
+    context.lineTo(x, y + halfSize * 1.3); // Bottom point
+    context.lineTo(x - halfSize, y); // Left point
+    context.closePath();
+    context.fill();
+
+    // Crystal highlight
+    context.fillStyle = "rgba(200, 162, 255, 0.8)";
+    context.beginPath();
+    context.moveTo(x, y - halfSize * 1.1);
+    context.lineTo(x + halfSize * 0.3, y - halfSize * 0.3);
+    context.lineTo(x - halfSize * 0.3, y - halfSize * 0.3);
+    context.closePath();
+    context.fill();
+
+    // Border
+    context.strokeStyle = "rgba(75, 0, 130, 0.8)"; // Indigo
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, y - halfSize * 1.3);
+    context.lineTo(x + halfSize, y);
+    context.lineTo(x, y + halfSize * 1.3);
+    context.lineTo(x - halfSize, y);
+    context.closePath();
+    context.stroke();
   }
 }

@@ -80,6 +80,14 @@ export interface FactorySpawner {
   tier: number; // Factory tier (1 = base, 2 = elite units)
 }
 
+export interface CrystalCluster {
+  id: number;
+  x: number; // Pixel coordinates (center)
+  y: number;
+  tile: TileRef;
+  crystalCount: number; // Number of crystals in this cluster (1-5)
+}
+
 export interface FrenzyConfig {
   // Unit type configurations
   units: {
@@ -117,6 +125,12 @@ export interface FrenzyConfig {
   cityCost: number; // Fixed cost for cities (default: 100000)
   factoryCost: number; // Fixed cost for factories (default: 100000)
   factoryUpgradeCost: number; // Cost to upgrade factory to tier 2 (default: 100000)
+  
+  // Crystals (resources)
+  crystalClusterCount: number; // Number of crystal clusters to spawn (default: 50)
+  crystalRange: number; // Range from city to count crystals (default: 50px)
+  crystalGoldBonus: number; // Extra gold per crystal per 10s interval (default: 1000)
+  cityGoldInterval: number; // Seconds between city gold payouts (default: 10)
 }
 
 // Helper to get unit config by type
@@ -189,6 +203,12 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   cityCost: 100000,
   factoryCost: 100000,
   factoryUpgradeCost: 100000,
+  
+  // Crystals (resources)
+  crystalClusterCount: 50,
+  crystalRange: 50,
+  crystalGoldBonus: 1000,
+  cityGoldInterval: 10,
 };
 
 export enum Stance {

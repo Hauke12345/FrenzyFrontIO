@@ -10,6 +10,7 @@ import {
 import { TileRef } from "../GameMap";
 import {
   CoreBuilding,
+  CrystalCluster,
   DEFAULT_FRENZY_CONFIG,
   FactorySpawner,
   FrenzyConfig,
@@ -30,6 +31,8 @@ export class FrenzyManager {
   private units: FrenzyUnit[] = [];
   private coreBuildings: Map<PlayerID, CoreBuilding> = new Map();
   private factories: Map<TileRef, FactorySpawner> = new Map();
+  private crystals: CrystalCluster[] = [];
+  private nextCrystalId = 1;
   private spatialGrid: SpatialHashGrid;
   private nextUnitId = 1;
   private nextProjectileId = 1;
@@ -37,6 +40,10 @@ export class FrenzyManager {
   private config: FrenzyConfig;
   private defeatedPlayers = new Set<PlayerID>();
   private attackOrders: Map<PlayerID, FrenzyAttackOrder> = new Map();
+
+  // City gold payout tracking
+  private cityGoldTimer = 0; // Seconds until next city gold payout
+  private pendingGoldPayouts: Array<{ playerId: PlayerID; x: number; y: number; gold: number }> = [];
 
   // Defensive stance per player: 0 = stay near HQ, 0.5 = fire range, 1 = offensive (border)
   private playerDefensiveStance: Map<PlayerID, number> = new Map();
@@ -265,6 +272,11 @@ export class FrenzyManager {
 
     this.tickCount++;
 
+    // Generate crystals once at game start (only on circle map for now)
+    if (this.tickCount === 1) {
+      this.generateCrystals();
+    }
+
     // Check for newly spawned players and create their HQs
     for (const player of this.game.players()) {
       const tiles = player.tiles();
@@ -274,6 +286,7 @@ export class FrenzyManager {
     }
 
     this.updateSpawnTimers(deltaTime);
+    this.updateCityGoldPayouts(deltaTime);
 
     // Performance: Only rebuild territory cache periodically
     if (
@@ -334,6 +347,115 @@ export class FrenzyManager {
         factory.spawnTimer = factory.spawnInterval;
       }
     }
+  }
+
+  /**
+   * Generate crystal clusters on the map
+   * Higher density toward the center of the map
+   */
+  private generateCrystals() {
+    const mapWidth = this.game.width();
+    const mapHeight = this.game.height();
+    const centerX = mapWidth / 2;
+    const centerY = mapHeight / 2;
+    const maxRadius = Math.min(mapWidth, mapHeight) / 2;
+
+    const count = this.config.crystalClusterCount;
+
+    for (let i = 0; i < count; i++) {
+      // Use gaussian-like distribution favoring center
+      // Square root of random gives higher density toward center
+      const distFactor = Math.sqrt(Math.random()) * 0.85; // 0.85 to keep some space from edges
+      const angle = Math.random() * Math.PI * 2;
+      
+      const x = centerX + Math.cos(angle) * distFactor * maxRadius;
+      const y = centerY + Math.sin(angle) * distFactor * maxRadius;
+
+      // Only place on land
+      const tile = this.game.ref(Math.floor(x), Math.floor(y));
+      if (!tile || this.game.isWater(tile)) {
+        continue;
+      }
+
+      // Random cluster size (1-5 crystals), higher chance for more crystals near center
+      const centerBonus = 1 - distFactor; // 0-1, higher near center
+      const crystalCount = Math.min(5, Math.max(1, Math.floor(1 + centerBonus * 3 + Math.random() * 2)));
+
+      this.crystals.push({
+        id: this.nextCrystalId++,
+        x,
+        y,
+        tile,
+        crystalCount,
+      });
+    }
+  }
+
+  /**
+   * Update city gold payouts - every 10 seconds, cities pay gold based on nearby crystals
+   */
+  private updateCityGoldPayouts(deltaTime: number) {
+    this.cityGoldTimer -= deltaTime;
+    
+    // Clear pending payouts from previous tick
+    this.pendingGoldPayouts = [];
+
+    if (this.cityGoldTimer <= 0) {
+      this.cityGoldTimer = this.config.cityGoldInterval;
+
+      // Process all cities
+      for (const player of this.game.players()) {
+        const cities = player.units(UnitType.City);
+        
+        for (const city of cities) {
+          const cityTile = city.tile();
+          if (!cityTile) continue;
+
+          const cityX = this.game.x(cityTile);
+          const cityY = this.game.y(cityTile);
+
+          // Count crystals in range
+          let crystalsInRange = 0;
+          for (const crystal of this.crystals) {
+            const dist = Math.hypot(crystal.x - cityX, crystal.y - cityY);
+            if (dist <= this.config.crystalRange) {
+              crystalsInRange += crystal.crystalCount;
+            }
+          }
+
+          // Calculate gold: base city income per interval + crystal bonus
+          const baseGold = Math.round((this.config.cityGoldPerMinute / 60) * this.config.cityGoldInterval);
+          const crystalBonus = crystalsInRange * this.config.crystalGoldBonus;
+          const totalGold = baseGold + crystalBonus;
+
+          if (totalGold > 0) {
+            player.addGold(BigInt(totalGold));
+            
+            // Queue floating text display
+            this.pendingGoldPayouts.push({
+              playerId: player.id(),
+              x: cityX,
+              y: cityY,
+              gold: totalGold,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Count crystals within range of a position
+   */
+  countCrystalsInRange(x: number, y: number, range: number): number {
+    let count = 0;
+    for (const crystal of this.crystals) {
+      const dist = Math.hypot(crystal.x - x, crystal.y - y);
+      if (dist <= range) {
+        count += crystal.crystalCount;
+      }
+    }
+    return count;
   }
 
   private spawnUnit(
@@ -712,13 +834,16 @@ export class FrenzyManager {
     targetX?: number,
     targetY?: number,
   ) {
-    if (!targetPlayerId) {
+    // Allow wilderness attacks if targetX/targetY are provided (even without a targetPlayerId)
+    const isWildernessAttack = !targetPlayerId && targetX !== undefined && targetY !== undefined;
+    
+    if (!targetPlayerId && !isWildernessAttack) {
       return;
     }
     if (targetPlayerId === playerId) {
       return;
     }
-    if (!this.game.hasPlayer(targetPlayerId)) {
+    if (targetPlayerId && !this.game.hasPlayer(targetPlayerId)) {
       return;
     }
     if (this.defeatedPlayers.has(playerId)) {
@@ -805,7 +930,11 @@ export class FrenzyManager {
     order: FrenzyAttackOrder,
     territories: Map<PlayerID, PlayerTerritorySnapshot>,
   ): { x: number; y: number } | null {
+    // Wilderness attack: use the click position directly as target
     if (!order.targetPlayerId) {
+      if (order.targetX !== undefined && order.targetY !== undefined) {
+        return { x: order.targetX, y: order.targetY };
+      }
       return null;
     }
 
@@ -1767,6 +1896,13 @@ export class FrenzyManager {
       })),
       projectileSize: this.config.projectileSize,
       maxUnitsPerPlayer: this.config.maxUnitsPerPlayer,
+      crystals: this.crystals.map((c) => ({
+        id: c.id,
+        x: c.x,
+        y: c.y,
+        crystalCount: c.crystalCount,
+      })),
+      pendingGoldPayouts: [...this.pendingGoldPayouts],
     };
   }
 }

@@ -307,4 +307,16 @@ export interface FrenzyUpdate {
   }>;
   projectileSize: number;
   maxUnitsPerPlayer: number;
+  crystals: Array<{
+    id: number;
+    x: number;
+    y: number;
+    crystalCount: number;
+  }>;
+  pendingGoldPayouts: Array<{
+    playerId: string;
+    x: number;
+    y: number;
+    gold: number;
+  }>;
 }
