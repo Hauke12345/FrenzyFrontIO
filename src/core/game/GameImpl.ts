@@ -359,12 +359,15 @@ export class GameImpl implements Game {
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
 
-    // Update Frenzy mode if active (only after spawn phase)
-    if (this._frenzyManager && !this.inSpawnPhase()) {
-      // Assume 10 ticks per second, so deltaTime = 0.1 seconds
-      this._frenzyManager.tick(0.1);
+    // Update Frenzy mode if active
+    if (this._frenzyManager) {
+      // Only tick Frenzy after spawn phase
+      if (!this.inSpawnPhase()) {
+        // Assume 10 ticks per second, so deltaTime = 0.1 seconds
+        this._frenzyManager.tick(0.1);
+      }
 
-      // Add Frenzy state update
+      // Always add Frenzy state update (so crystals are visible during spawn selection)
       this.addUpdate({
         type: GameUpdateType.Frenzy,
         ...this._frenzyManager.createUpdate(),

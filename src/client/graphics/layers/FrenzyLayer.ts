@@ -1227,11 +1227,12 @@ export class FrenzyLayer implements Layer {
       x: number;
       y: number;
       crystalCount: number;
-      rotation: number;
+      rotations?: number[];
     },
   ) {
     const x = crystal.x - this.game.width() / 2;
     const y = crystal.y - this.game.height() / 2;
+    const rotations = crystal.rotations ?? [];
 
     // Base size scales with crystal count
     const baseSize = 3 + crystal.crystalCount * 1.5;
@@ -1242,13 +1243,15 @@ export class FrenzyLayer implements Layer {
       baseSize,
     );
 
-    for (const pos of crystalPositions) {
+    for (let i = 0; i < crystalPositions.length; i++) {
+      const pos = crystalPositions[i];
+      const rotation = rotations[i] ?? 0;
       this.renderSingleCrystal(
         context,
         x + pos.x,
         y + pos.y,
         pos.size,
-        crystal.rotation,
+        rotation,
       );
     }
   }

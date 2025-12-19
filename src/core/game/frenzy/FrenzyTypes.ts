@@ -99,7 +99,7 @@ export interface CrystalCluster {
   y: number;
   tile: TileRef;
   crystalCount: number; // Number of crystals in this cluster (1-5)
-  rotation: number; // Rotation angle in radians (bottom anchored)
+  rotations: number[]; // Rotation angles in radians for each crystal (bottom anchored)
 }
 
 export interface FrenzyConfig {

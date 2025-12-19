@@ -434,8 +434,11 @@ export class FrenzyManager {
         Math.max(1, Math.floor(1 + centerBonus * 3 + this.random.next() * 2)),
       );
 
-      // Random rotation for visual variety (bottom anchored, tilt up to 30 degrees each way)
-      const rotation = (this.random.next() - 0.5) * (Math.PI / 3);
+      // Random rotations for each crystal in the cluster (bottom anchored, tilt up to 30 degrees each way)
+      const rotations: number[] = [];
+      for (let j = 0; j < crystalCount; j++) {
+        rotations.push((this.random.next() - 0.5) * (Math.PI / 3));
+      }
 
       this.crystals.push({
         id: this.nextCrystalId++,
@@ -443,7 +446,7 @@ export class FrenzyManager {
         y,
         tile,
         crystalCount,
-        rotation,
+        rotations,
       });
     }
   }
@@ -2170,7 +2173,7 @@ export class FrenzyManager {
         x: c.x,
         y: c.y,
         crystalCount: c.crystalCount,
-        rotation: c.rotation,
+        rotations: c.rotations,
       })),
       pendingGoldPayouts: [...this.pendingGoldPayouts],
     };
