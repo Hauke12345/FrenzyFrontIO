@@ -1,3 +1,4 @@
+import { PseudoRandom } from "../../PseudoRandom";
 import {
   Game,
   Player,
@@ -63,6 +64,9 @@ export class FrenzyManager {
   // Performance: Track tick count for staggered updates
   private tickCount = 0;
 
+  // Deterministic random number generator (seeded for multiplayer sync)
+  private random: PseudoRandom;
+
   constructor(
     private game: Game,
     config?: Partial<FrenzyConfig>,
@@ -95,6 +99,8 @@ export class FrenzyManager {
       this.config = { ...DEFAULT_FRENZY_CONFIG, ...config };
     }
     this.spatialGrid = new SpatialHashGrid(50); // 50px cell size
+    // Use game ticks as seed for deterministic randomness in multiplayer
+    this.random = new PseudoRandom(this.game.ticks());
   }
 
   /**
@@ -165,12 +171,12 @@ export class FrenzyManager {
         player.type() === PlayerType.FakeHuman)
     ) {
       let randomStance: number;
-      if (Math.random() < 0.1) {
+      if (this.random.next() < 0.1) {
         // 10% chance: under medium (0 to 0.5)
-        randomStance = Math.random() * 0.5;
+        randomStance = this.random.next() * 0.5;
       } else {
         // 90% chance: medium to aggressive (0.5 to 1.0)
-        randomStance = 0.5 + Math.random() * 0.5;
+        randomStance = 0.5 + this.random.next() * 0.5;
       }
       this.playerDefensiveStance.set(playerId, randomStance);
       return randomStance;
@@ -412,8 +418,8 @@ export class FrenzyManager {
     for (let i = 0; i < count; i++) {
       // Use gaussian-like distribution favoring center
       // Square root of random gives higher density toward center
-      const distFactor = Math.sqrt(Math.random()) * 0.85; // 0.85 to keep some space from edges
-      const angle = Math.random() * Math.PI * 2;
+      const distFactor = Math.sqrt(this.random.next()) * 0.85; // 0.85 to keep some space from edges
+      const angle = this.random.next() * Math.PI * 2;
 
       const x = centerX + Math.cos(angle) * distFactor * maxRadius;
       const y = centerY + Math.sin(angle) * distFactor * maxRadius;
@@ -428,7 +434,7 @@ export class FrenzyManager {
       const centerBonus = 1 - distFactor; // 0-1, higher near center
       const crystalCount = Math.min(
         5,
-        Math.max(1, Math.floor(1 + centerBonus * 3 + Math.random() * 2)),
+        Math.max(1, Math.floor(1 + centerBonus * 3 + this.random.next() * 2)),
       );
 
       this.crystals.push({
@@ -522,8 +528,10 @@ export class FrenzyManager {
     // Add small random offset so units don't stack (but not for defense posts or warships)
     const isDefensePost = unitType === FrenzyUnitType.DefensePost;
     const isWarship = unitType === FrenzyUnitType.Warship;
-    const offsetX = isDefensePost || isWarship ? 0 : (Math.random() - 0.5) * 20;
-    const offsetY = isDefensePost || isWarship ? 0 : (Math.random() - 0.5) * 20;
+    const offsetX =
+      isDefensePost || isWarship ? 0 : (this.random.next() - 0.5) * 20;
+    const offsetY =
+      isDefensePost || isWarship ? 0 : (this.random.next() - 0.5) * 20;
 
     const spawnX = x + offsetX;
     const spawnY = y + offsetY;
@@ -555,7 +563,7 @@ export class FrenzyManager {
       maxHealth: health,
       targetX: spawnX,
       targetY: spawnY,
-      weaponCooldown: Math.random() * fireInterval,
+      weaponCooldown: this.random.next() * fireInterval,
       unitType,
       fireInterval,
     };
@@ -973,8 +981,8 @@ export class FrenzyManager {
 
     // Sample random positions around the unit
     for (let i = 0; i < 20; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = Math.random() * searchRadius + 5;
+      const angle = this.random.next() * Math.PI * 2;
+      const dist = this.random.next() * searchRadius + 5;
       const checkX = Math.floor(unit.x + Math.cos(angle) * dist);
       const checkY = Math.floor(unit.y + Math.sin(angle) * dist);
 
@@ -1010,8 +1018,8 @@ export class FrenzyManager {
     // If no good coastal target found, just patrol randomly on water
     if (!bestTarget) {
       for (let i = 0; i < 10; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const dist = Math.random() * 15 + 5;
+        const angle = this.random.next() * Math.PI * 2;
+        const dist = this.random.next() * 15 + 5;
         const checkX = Math.floor(unit.x + Math.cos(angle) * dist);
         const checkY = Math.floor(unit.y + Math.sin(angle) * dist);
 
