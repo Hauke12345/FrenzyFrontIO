@@ -87,6 +87,7 @@ export async function createGameRunner(
     game,
     new Executor(game, gameStart.gameID, clientID),
     callBack,
+    humans.length,
   );
   gr.init();
   return gr;
@@ -103,6 +104,7 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    private numHumanPlayers: number = 0,
   ) {}
 
   init() {
@@ -110,9 +112,13 @@ export class GameRunner {
       this.game.addExecution(...this.execManager.spawnPlayers());
     }
     if (this.game.config().bots() > 0) {
-      this.game.addExecution(
-        ...this.execManager.spawnBots(this.game.config().numBots()),
-      );
+      // Calculate actual bots: configured bots minus human players
+      // For CircleMap: bots = 20, so actual = 20 - numHumanPlayers
+      const configuredBots = this.game.config().numBots();
+      const actualBots = Math.max(0, configuredBots - this.numHumanPlayers);
+      if (actualBots > 0) {
+        this.game.addExecution(...this.execManager.spawnBots(actualBots));
+      }
     }
     if (this.game.config().spawnNPCs()) {
       this.game.addExecution(...this.execManager.fakeHumanExecutions());
