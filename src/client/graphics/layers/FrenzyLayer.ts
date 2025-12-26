@@ -1,5 +1,6 @@
 import { GameFork, UnitType } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
+import { FrameProfiler } from "../FrameProfiler";
 import { TransformHandler } from "../TransformHandler";
 import { Layer } from "./Layer";
 
@@ -78,6 +79,20 @@ export class FrenzyLayer implements Layer {
   private lastArtilleryIds = new Set<number>();
   private lastFrameTime: number = 0;
 
+  // Cached values to avoid repeated calculations per frame
+  private cachedTime: number = 0;
+  private cachedHalfWidth: number = 0;
+  private cachedHalfHeight: number = 0;
+  private viewportBounds: { minX: number; maxX: number; minY: number; maxY: number } = { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
+  // Protomolecule static cache (veins and boundaries - only redrawn when mines change)
+  private protoCache: {
+    canvas: HTMLCanvasElement | null;
+    context: CanvasRenderingContext2D | null;
+    mineHash: string; // Hash of mine positions to detect changes
+    veins: Array<{ x1: number; y1: number; x2: number; y2: number; ctrlX: number; ctrlY: number; isCrystal: boolean; crystalCount: number; alpha: number }>;
+  } = { canvas: null, context: null, mineHash: '', veins: [] };
+
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
@@ -112,6 +127,21 @@ export class FrenzyLayer implements Layer {
     const deltaTime = now - this.lastFrameTime;
     this.lastFrameTime = now;
 
+    // Cache frequently used values for this frame
+    this.cachedTime = now / 1000;
+    this.cachedHalfWidth = this.game.width() / 2;
+    this.cachedHalfHeight = this.game.height() / 2;
+
+    // Calculate viewport bounds for culling (in world coordinates)
+    const [topLeft, bottomRight] = this.transformHandler.screenBoundingRect();
+    const margin = 50; // Extra margin for objects at edges
+    this.viewportBounds = {
+      minX: topLeft.x - margin,
+      maxX: bottomRight.x + margin,
+      minY: topLeft.y - margin,
+      maxY: bottomRight.y + margin,
+    };
+
     // Process new gold payouts - convert to animated text effects only
     if (
       frenzyState.pendingGoldPayouts &&
@@ -139,9 +169,12 @@ export class FrenzyLayer implements Layer {
     }
 
     // Gather all structures into unified list
+    const gatherStart = FrameProfiler.start();
     const structures = this.gatherAllStructures(frenzyState);
+    FrameProfiler.end("FrenzyLayer:gatherStructures", gatherStart);
 
     // Get all mine data for protomolecule rendering
+    const mineStart = FrameProfiler.start();
     const allMines: MineData[] = structures
       .filter((s) => s.type === FrenzyStructureType.Mine)
       .map((s) => ({
@@ -189,26 +222,41 @@ export class FrenzyLayer implements Layer {
         }
       }
     }
+    FrameProfiler.end("FrenzyLayer:crystalAssignment", mineStart);
 
     // Render protomolecule effect (permanent veins and boundaries)
+    const protoStart = FrameProfiler.start();
     this.renderProtomoleculeEffect(context, allMines, frenzyState.crystals ?? []);
+    FrameProfiler.end("FrenzyLayer:protomolecule", protoStart);
 
-    // Render crystals (above protomolecule veins)
+    // Render crystals (above protomolecule veins) with viewport culling
+    const crystalStart = FrameProfiler.start();
     if (frenzyState.crystals) {
       for (const crystal of frenzyState.crystals) {
-        this.renderCrystal(context, crystal);
+        if (this.isInViewport(crystal.x, crystal.y)) {
+          this.renderCrystal(context, crystal);
+        }
       }
     }
+    FrameProfiler.end("FrenzyLayer:crystals", crystalStart);
 
-    // Render all structures with unified system
+    // Render all structures with unified system and viewport culling
+    const structStart = FrameProfiler.start();
     for (const structure of structures) {
-      this.renderStructure(context, structure);
+      if (this.isInViewport(structure.x, structure.y)) {
+        this.renderStructure(context, structure);
+      }
     }
+    FrameProfiler.end("FrenzyLayer:structures", structStart);
 
-    // Render units
+    // Render units with viewport culling
+    const unitStart = FrameProfiler.start();
     for (const unit of frenzyState.units) {
-      this.renderUnit(context, unit);
+      if (this.isInViewport(unit.x, unit.y)) {
+        this.renderUnit(context, unit);
+      }
     }
+    FrameProfiler.end("FrenzyLayer:units", unitStart);
 
     const projectileSize = Math.max(0.5, frenzyState.projectileSize ?? 2);
 
@@ -234,8 +282,10 @@ export class FrenzyLayer implements Layer {
       }
     }
     
-    // Render projectiles and check for near-impact artillery
+    // Render projectiles and check for near-impact artillery with viewport culling
+    const projStart = FrameProfiler.start();
     for (const projectile of frenzyState.projectiles) {
+      if (!this.isInViewport(projectile.x, projectile.y)) continue;
       this.renderProjectile(context, projectile, projectileSize);
       
       // Spawn explosion effect when artillery is about to impact (progress > 0.95)
@@ -258,6 +308,7 @@ export class FrenzyLayer implements Layer {
         }
       }
     }
+    FrameProfiler.end("FrenzyLayer:projectiles", projStart);
     
     // Update last artillery ids
     this.lastArtilleryIds = currentArtilleryIds;
@@ -421,8 +472,8 @@ export class FrenzyLayer implements Layer {
     const player = this.game.player(structure.playerId);
     if (!player) return;
 
-    const x = structure.x - this.game.width() / 2;
-    const y = structure.y - this.game.height() / 2;
+    const x = structure.x - this.cachedHalfWidth;
+    const y = structure.y - this.cachedHalfHeight;
 
     // Render icon based on type
     switch (structure.type) {
@@ -1057,9 +1108,8 @@ export class FrenzyLayer implements Layer {
     targetType: FrenzyStructureType,
     progress: number,
   ) {
-    const time = Date.now() / 1000;
-    // Pulsing scale animation (gentle pulse)
-    const pulse = 0.9 + 0.1 * Math.sin(time * 4);
+    // Pulsing scale animation (gentle pulse) - use cached time
+    const pulse = 0.9 + 0.1 * Math.sin(this.cachedTime * 4);
 
     context.save();
     context.translate(x, y);
@@ -1127,315 +1177,225 @@ export class FrenzyLayer implements Layer {
   /**
    * Render protomolecule effect - organic veins/roots from mines to crystals
    * with cold blue energy pulsing toward mines. Also draws Voronoi boundaries.
+   * 
+   * OPTIMIZATION: Static elements (veins, boundaries) are cached to an offscreen canvas.
+   * Only the animated pulses are drawn each frame.
    */
   private renderProtomoleculeEffect(
     context: CanvasRenderingContext2D,
     allMines: MineData[],
     allCrystals: Array<{ x: number; y: number; crystalCount: number }>,
   ) {
-    const halfWidth = this.game.width() / 2;
-    const halfHeight = this.game.height() / 2;
-    const time = performance.now() / 1000;
-    const mineRadius = 40; // Should match config.mineRadius
+    const halfWidth = this.cachedHalfWidth;
+    const halfHeight = this.cachedHalfHeight;
+    const time = this.cachedTime;
 
-    // First, calculate all bisection points between adjacent mines (draw once per pair)
+    // Create a hash of mine positions to detect when cache needs refresh
+    const mineHash = allMines.map(m => `${m.x},${m.y},${m.playerId}`).join('|') + 
+                     '|' + allCrystals.map(c => `${c.x},${c.y}`).join('|');
+
+    // Check if we need to rebuild the static cache
+    if (this.protoCache.mineHash !== mineHash || !this.protoCache.canvas) {
+      this.rebuildProtomoleculeCache(allMines, allCrystals, halfWidth, halfHeight);
+      this.protoCache.mineHash = mineHash;
+    }
+
+    // Draw the cached static elements (veins and boundaries)
+    if (this.protoCache.canvas) {
+      context.drawImage(
+        this.protoCache.canvas,
+        -halfWidth,
+        -halfHeight,
+      );
+    }
+
+    // Draw animated pulses on top (these change every frame)
+    this.drawAnimatedPulses(context, time);
+  }
+
+  /**
+   * Rebuild the static protomolecule cache (veins, boundaries)
+   */
+  private rebuildProtomoleculeCache(
+    allMines: MineData[],
+    allCrystals: Array<{ x: number; y: number; crystalCount: number }>,
+    halfWidth: number,
+    halfHeight: number,
+  ) {
+    const mineRadius = 40;
+
+    // Create or resize canvas
+    if (!this.protoCache.canvas) {
+      this.protoCache.canvas = document.createElement('canvas');
+      this.protoCache.canvas.width = this.game.width();
+      this.protoCache.canvas.height = this.game.height();
+      const ctx = this.protoCache.canvas.getContext('2d');
+      if (!ctx) return;
+      this.protoCache.context = ctx;
+    }
+
+    const ctx = this.protoCache.context;
+    if (!ctx) return;
+
+    // Clear the cache canvas
+    ctx.clearRect(0, 0, this.protoCache.canvas.width, this.protoCache.canvas.height);
+
+    // Save the context state and translate to match main canvas coordinates
+    ctx.save();
+    ctx.translate(halfWidth, halfHeight);
+
+    // Clear vein cache
+    this.protoCache.veins = [];
+
+    // Draw Voronoi boundaries (simplified - no territory checks for performance)
     const drawnBisections = new Set<string>();
+    ctx.strokeStyle = `rgba(100, 180, 255, 0.15)`;
+    ctx.lineWidth = 1;
 
-    // Draw subtle Voronoi boundaries
     for (let i = 0; i < allMines.length; i++) {
       const mine = allMines[i];
-      const mx = mine.x - halfWidth;
-      const my = mine.y - halfHeight;
-
       for (let j = i + 1; j < allMines.length; j++) {
         const other = allMines[j];
         const dist = Math.hypot(other.x - mine.x, other.y - mine.y);
 
-        // Only draw bisection if mines are within 2x radius (overlapping territories)
         if (dist < mineRadius * 2) {
-          const pairKey = `${Math.min(i, j)}_${Math.max(i, j)}`;
+          const pairKey = `${i}_${j}`;
           if (!drawnBisections.has(pairKey)) {
             drawnBisections.add(pairKey);
 
-            // Calculate bisection line (perpendicular at midpoint)
-            const midX = (mine.x + other.x) / 2;
-            const midY = (mine.y + other.y) / 2;
-
-            // Perpendicular direction
+            const midX = (mine.x + other.x) / 2 - halfWidth;
+            const midY = (mine.y + other.y) / 2 - halfHeight;
             const dx = other.x - mine.x;
             const dy = other.y - mine.y;
-            const perpX = -dy;
-            const perpY = dx;
-            const perpLen = Math.hypot(perpX, perpY);
+            const perpLen = Math.hypot(-dy, dx);
             if (perpLen === 0) continue;
 
-            // Normalize and scale to radius
-            const normPerpX = perpX / perpLen;
-            const normPerpY = perpY / perpLen;
+            const normPerpX = -dy / perpLen;
+            const normPerpY = dx / perpLen;
+            const lineLen = Math.min(mineRadius, dist / 2 + 5);
 
-            // Find where bisection intersects territory boundary
-            // Clip to the smaller of: mine radius, or territory boundary
-            const clipRadius = Math.min(mineRadius, dist / 2 + 5);
-
-            // Sample along the bisection line, only draw within owned territory
-            const segments: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-            const sampleDist = clipRadius;
-            let inTerritory = false;
-            let segStart = { x: 0, y: 0 };
-
-            for (let t = -sampleDist; t <= sampleDist; t += 2) {
-              const px = midX + normPerpX * t;
-              const py = midY + normPerpY * t;
-
-              // Check if point is within either mine's radius
-              const distToMine = Math.hypot(px - mine.x, py - mine.y);
-              const distToOther = Math.hypot(px - other.x, py - other.y);
-              const withinBounds = distToMine <= mineRadius || distToOther <= mineRadius;
-
-              // Check territory ownership
-              const tile = this.game.ref(Math.floor(px), Math.floor(py));
-              const owner = tile ? this.game.owner(tile) : null;
-              const isOwned = owner && owner.isPlayer() &&
-                (owner.id() === mine.playerId || owner.id() === other.playerId);
-
-              if (withinBounds && isOwned) {
-                if (!inTerritory) {
-                  inTerritory = true;
-                  segStart = { x: px - halfWidth, y: py - halfHeight };
-                }
-              } else {
-                if (inTerritory) {
-                  inTerritory = false;
-                  segments.push({
-                    x1: segStart.x,
-                    y1: segStart.y,
-                    x2: px - halfWidth - normPerpX * 2,
-                    y2: py - halfHeight - normPerpY * 2,
-                  });
-                }
-              }
-            }
-            // Close any open segment
-            if (inTerritory) {
-              segments.push({
-                x1: segStart.x,
-                y1: segStart.y,
-                x2: midX + normPerpX * sampleDist - halfWidth,
-                y2: midY + normPerpY * sampleDist - halfHeight,
-              });
-            }
-
-            // Draw bisection segments with subtle styling
-            context.strokeStyle = `rgba(100, 180, 255, 0.15)`;
-            context.lineWidth = 1;
-            for (const seg of segments) {
-              context.beginPath();
-              context.moveTo(seg.x1, seg.y1);
-              context.lineTo(seg.x2, seg.y2);
-              context.stroke();
-            }
+            ctx.beginPath();
+            ctx.moveTo(midX - normPerpX * lineLen, midY - normPerpY * lineLen);
+            ctx.lineTo(midX + normPerpX * lineLen, midY + normPerpY * lineLen);
+            ctx.stroke();
           }
         }
       }
     }
 
-    // Draw organic veins for each mine
+    // Draw veins and cache their geometry for pulse animation
     for (const mine of allMines) {
       const mx = mine.x - halfWidth;
       const my = mine.y - halfHeight;
 
-      // Check if mine is on owned territory
-      const mineTile = this.game.ref(Math.floor(mine.x), Math.floor(mine.y));
-      const mineOwner = mineTile ? this.game.owner(mineTile) : null;
-      if (!mineOwner || !mineOwner.isPlayer()) continue;
-      const ownerId = mineOwner.id();
-
-      // Draw veins to crystals in cell (dense, prominent)
+      // Draw veins to crystals
       for (const crystal of mine.crystalsInCell) {
-        this.drawOrganicVein(
-          context,
-          mx,
-          my,
-          crystal.x - halfWidth,
-          crystal.y - halfHeight,
-          time,
-          1.5, // line width
-          0.6, // alpha
-          true, // is crystal vein
-          crystal.count,
-        );
+        const cx = crystal.x - halfWidth;
+        const cy = crystal.y - halfHeight;
+        this.drawStaticVein(ctx, mx, my, cx, cy, 1.5, 0.6, true, crystal.count);
       }
 
-      // Draw sparse veins into the rest of the cell (area representation)
-      // Sample points within cell that are on owned territory
-      const areaVeinCount = 8; // Number of area veins per mine
+      // Draw area veins (simplified - no territory checks)
+      const areaVeinCount = 8;
       const angleStep = (Math.PI * 2) / areaVeinCount;
 
       for (let i = 0; i < areaVeinCount; i++) {
-        const baseAngle = i * angleStep + (mine.x * 0.1); // Offset by mine position for variety
+        const baseAngle = i * angleStep + (mine.x * 0.1);
         const veinLength = mineRadius * (0.5 + 0.3 * Math.sin(baseAngle * 3 + mine.y * 0.05));
+        const vx = mine.x + Math.cos(baseAngle) * veinLength - halfWidth;
+        const vy = mine.y + Math.sin(baseAngle) * veinLength - halfHeight;
 
-        // End point of vein
-        const vx = mine.x + Math.cos(baseAngle) * veinLength;
-        const vy = mine.y + Math.sin(baseAngle) * veinLength;
-
-        // Check if end is in Voronoi cell and owned territory
+        // Simple Voronoi check (skip territory ownership for performance)
         let inCell = true;
         for (const other of allMines) {
           if (other === mine) continue;
-          const distToOther = Math.hypot(vx - other.x, vy - other.y);
-          const distToThis = Math.hypot(vx - mine.x, vy - mine.y);
+          const distToOther = Math.hypot(vx + halfWidth - other.x, vy + halfHeight - other.y);
+          const distToThis = Math.hypot(vx - mx, vy - my);
           if (distToOther < distToThis) {
             inCell = false;
             break;
           }
         }
-
         if (!inCell) continue;
 
-        // Check territory ownership
-        const tile = this.game.ref(Math.floor(vx), Math.floor(vy));
-        const owner = tile ? this.game.owner(tile) : null;
-        if (!owner || !owner.isPlayer() || owner.id() !== ownerId) continue;
-
-        this.drawOrganicVein(
-          context,
-          mx,
-          my,
-          vx - halfWidth,
-          vy - halfHeight,
-          time,
-          0.8, // thinner line
-          0.25, // lower alpha
-          false, // not crystal vein
-          1,
-        );
+        this.drawStaticVein(ctx, mx, my, vx, vy, 0.8, 0.25, false, 1);
       }
 
-      // Draw subtle cell boundary (clipped to territory)
-      this.drawCellBoundary(context, mine, allMines, halfWidth, halfHeight);
+      // Draw cell boundary (simplified circular)
+      this.drawSimpleCellBoundary(ctx, mine, allMines, halfWidth, halfHeight);
     }
+
+    ctx.restore();
   }
 
   /**
-   * Draw an organic-looking vein with energy pulses
+   * Draw a static vein and cache its geometry for pulse animation
    */
-  private drawOrganicVein(
-    context: CanvasRenderingContext2D,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    time: number,
-    lineWidth: number,
-    alpha: number,
-    isCrystal: boolean,
-    crystalCount: number,
+  private drawStaticVein(
+    ctx: CanvasRenderingContext2D,
+    x1: number, y1: number,
+    x2: number, y2: number,
+    lineWidth: number, alpha: number,
+    isCrystal: boolean, crystalCount: number,
   ) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const length = Math.hypot(dx, dy);
     if (length < 2) return;
 
-    // Organic curve - add slight waviness
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
     const perpX = -dy / length;
     const perpY = dx / length;
-    const waveAmp = length * 0.05 * Math.sin(time * 0.5 + x1 * 0.1);
+    // Static waviness based on position (no time dependency)
+    const waveAmp = length * 0.03 * Math.sin(x1 * 0.1 + y1 * 0.1);
     const ctrlX = midX + perpX * waveAmp;
     const ctrlY = midY + perpY * waveAmp;
 
-    // Base vein color (cold blue)
-    context.strokeStyle = `rgba(80, 160, 220, ${alpha * 0.4})`;
-    context.lineWidth = lineWidth;
-    context.beginPath();
-    context.moveTo(x1, y1);
-    context.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
-    context.stroke();
+    // Draw static vein
+    ctx.strokeStyle = `rgba(80, 160, 220, ${alpha * 0.4})`;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
+    ctx.stroke();
 
-    // Energy pulses traveling toward mine (from crystal to mine direction)
-    const pulseCount = isCrystal ? 2 + crystalCount : 1;
-    const pulseSpeed = isCrystal ? 0.8 : 0.4; // pulses per second (slower)
-
-    for (let p = 0; p < pulseCount; p++) {
-      // Pulse position along the vein (0 = at crystal/source, 1 = at mine)
-      const pulseT = ((time * pulseSpeed + p / pulseCount) % 1);
-
-      // Position along quadratic curve: t=0 at x2 (crystal), t=1 at x1 (mine)
-      const t = pulseT;
-      const px = (1 - t) * (1 - t) * x2 + 2 * (1 - t) * t * ctrlX + t * t * x1;
-      const py = (1 - t) * (1 - t) * y2 + 2 * (1 - t) * t * ctrlY + t * t * y1;
-
-      // Pulse size varies
-      const pulseSizeBase = isCrystal ? 2.5 : 1.5;
-      const pulseSize = pulseSizeBase * (0.6 + 0.4 * Math.sin(pulseT * Math.PI));
-
-      // Pulse brightness - brighter near ends
-      const pulseAlpha = alpha * (0.5 + 0.5 * Math.sin(pulseT * Math.PI));
-
-      // Cold blue glow
-      const gradient = context.createRadialGradient(px, py, 0, px, py, pulseSize * 2);
-      gradient.addColorStop(0, `rgba(150, 220, 255, ${pulseAlpha})`);
-      gradient.addColorStop(0.5, `rgba(80, 180, 240, ${pulseAlpha * 0.5})`);
-      gradient.addColorStop(1, `rgba(40, 120, 200, 0)`);
-
-      context.fillStyle = gradient;
-      context.beginPath();
-      context.arc(px, py, pulseSize * 2, 0, Math.PI * 2);
-      context.fill();
-    }
+    // Cache vein geometry for pulse animation
+    this.protoCache.veins.push({ x1, y1, x2, y2, ctrlX, ctrlY, isCrystal, crystalCount, alpha });
   }
 
   /**
-   * Draw the Voronoi cell boundary for a mine (subtle, clipped to territory)
+   * Draw simplified cell boundary (no territory checks)
    */
-  private drawCellBoundary(
-    context: CanvasRenderingContext2D,
+  private drawSimpleCellBoundary(
+    ctx: CanvasRenderingContext2D,
     mine: MineData,
     allMines: MineData[],
     halfWidth: number,
     halfHeight: number,
   ) {
     const mineRadius = 40;
-    const mx = mine.x - halfWidth;
-    const my = mine.y - halfHeight;
-    const sampleCount = 48;
+    const sampleCount = 24;
 
-    // Check mine tile ownership
-    const mineTile = this.game.ref(Math.floor(mine.x), Math.floor(mine.y));
-    const mineOwner = mineTile ? this.game.owner(mineTile) : null;
-    if (!mineOwner || !mineOwner.isPlayer()) return;
-    const ownerId = mineOwner.id();
+    ctx.strokeStyle = `rgba(80, 160, 220, 0.2)`;
+    ctx.lineWidth = 0.8;
 
-    // Sample points around the cell boundary
-    context.strokeStyle = `rgba(80, 160, 220, 0.2)`;
-    context.lineWidth = 0.8;
-
-    let lastPoint: { x: number; y: number; valid: boolean } | null = null;
+    let lastPoint: { x: number; y: number } | null = null;
 
     for (let i = 0; i <= sampleCount; i++) {
       const angle = (i / sampleCount) * Math.PI * 2;
       let radius = mineRadius;
 
-      // Check Voronoi constraint - find where bisection clips the radius
+      // Voronoi clipping
       for (const other of allMines) {
         if (other === mine) continue;
         const dist = Math.hypot(other.x - mine.x, other.y - mine.y);
         if (dist < mineRadius * 2) {
-          // This mine might clip our boundary
-          // Find intersection of this angle ray with the bisection plane
-          const midX = (mine.x + other.x) / 2;
-          const midY = (mine.y + other.y) / 2;
-          const distToMid = Math.hypot(midX - mine.x, midY - mine.y);
-
-          // Direction to midpoint from mine
-          const angleToMid = Math.atan2(midY - mine.y, midX - mine.x);
+          const midDist = dist / 2;
+          const angleToMid = Math.atan2(other.y - mine.y, other.x - mine.x);
           const angleDiff = Math.abs(((angle - angleToMid + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-
-          // If angle is toward the other mine, clip radius
           if (angleDiff < Math.PI / 2) {
-            const clipDist = distToMid / Math.cos(angleDiff);
+            const clipDist = midDist / Math.cos(angleDiff);
             if (clipDist > 0 && clipDist < radius) {
               radius = clipDist;
             }
@@ -1443,28 +1403,48 @@ export class FrenzyLayer implements Layer {
         }
       }
 
-      const px = mine.x + Math.cos(angle) * radius;
-      const py = mine.y + Math.sin(angle) * radius;
+      const px = mine.x - halfWidth + Math.cos(angle) * radius;
+      const py = mine.y - halfHeight + Math.sin(angle) * radius;
 
-      // Check if this point is on owned territory
-      const tile = this.game.ref(Math.floor(px), Math.floor(py));
-      const owner = tile ? this.game.owner(tile) : null;
-      const isOwned = owner && owner.isPlayer() && owner.id() === ownerId;
-
-      const point = {
-        x: px - halfWidth,
-        y: py - halfHeight,
-        valid: !!isOwned,
-      };
-
-      if (lastPoint && lastPoint.valid && point.valid) {
-        context.beginPath();
-        context.moveTo(lastPoint.x, lastPoint.y);
-        context.lineTo(point.x, point.y);
-        context.stroke();
+      if (lastPoint) {
+        ctx.beginPath();
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(px, py);
+        ctx.stroke();
       }
 
-      lastPoint = point;
+      lastPoint = { x: px, y: py };
+    }
+  }
+
+  /**
+   * Draw only the animated pulses (called every frame)
+   */
+  private drawAnimatedPulses(context: CanvasRenderingContext2D, time: number) {
+    if (this.protoCache.veins.length === 0) return;
+
+    for (const vein of this.protoCache.veins) {
+      const pulseCount = vein.isCrystal ? Math.min(3, 2 + vein.crystalCount) : 1;
+      const pulseSpeed = vein.isCrystal ? 0.8 : 0.4;
+
+      for (let p = 0; p < pulseCount; p++) {
+        const pulseT = ((time * pulseSpeed + p / pulseCount) % 1);
+        const t = pulseT;
+
+        // Position along quadratic curve
+        const px = (1 - t) * (1 - t) * vein.x2 + 2 * (1 - t) * t * vein.ctrlX + t * t * vein.x1;
+        const py = (1 - t) * (1 - t) * vein.y2 + 2 * (1 - t) * t * vein.ctrlY + t * t * vein.y1;
+
+        const pulseSizeBase = vein.isCrystal ? 2.5 : 1.5;
+        const pulseSize = pulseSizeBase * (0.6 + 0.4 * Math.sin(pulseT * Math.PI));
+        const pulseAlpha = vein.alpha * (0.5 + 0.5 * Math.sin(pulseT * Math.PI));
+
+        // Simple circle instead of gradient (much faster)
+        context.fillStyle = `rgba(150, 220, 255, ${pulseAlpha})`;
+        context.beginPath();
+        context.arc(px, py, pulseSize, 0, Math.PI * 2);
+        context.fill();
+      }
     }
   }
 
@@ -1482,8 +1462,8 @@ export class FrenzyLayer implements Layer {
       // Calculate animation progress
       const t = effect.lifeTime / effect.duration;
       const riseDistance = 15; // 50% smaller
-      const x = effect.x - this.game.width() / 2;
-      const y = effect.y - this.game.height() / 2 - t * riseDistance;
+      const x = effect.x - this.cachedHalfWidth;
+      const y = effect.y - this.cachedHalfHeight - t * riseDistance;
       const alpha = 1 - t;
 
       // Gold text styling
@@ -1522,8 +1502,8 @@ export class FrenzyLayer implements Layer {
 
       // Calculate animation progress (0 to 1)
       const t = explosion.lifeTime / explosion.duration;
-      const x = explosion.x - this.game.width() / 2;
-      const y = explosion.y - this.game.height() / 2;
+      const x = explosion.x - this.cachedHalfWidth;
+      const y = explosion.y - this.cachedHalfHeight;
       
       // Flash grows quickly then fades
       const growthPhase = Math.min(t * 5, 1); // Reaches full size at 20% of duration
@@ -1573,12 +1553,24 @@ export class FrenzyLayer implements Layer {
     return romans[tier - 1] || tier.toString();
   }
 
+  /**
+   * Check if a world coordinate is within the current viewport (with margin)
+   */
+  private isInViewport(worldX: number, worldY: number): boolean {
+    return (
+      worldX >= this.viewportBounds.minX &&
+      worldX <= this.viewportBounds.maxX &&
+      worldY >= this.viewportBounds.minY &&
+      worldY <= this.viewportBounds.maxY
+    );
+  }
+
   private renderUnit(context: CanvasRenderingContext2D, unit: any) {
     const player = this.game.player(unit.playerId);
     if (!player) return;
 
-    const x = unit.x - this.game.width() / 2;
-    const y = unit.y - this.game.height() / 2;
+    const x = unit.x - this.cachedHalfWidth;
+    const y = unit.y - this.cachedHalfHeight;
 
     const isDefensePost = unit.unitType === "defensePost";
     const isEliteSoldier = unit.unitType === "eliteSoldier";
@@ -1593,7 +1585,7 @@ export class FrenzyLayer implements Layer {
       
       // Draw shield bubble (if active)
       if (unit.shieldHealth && unit.shieldHealth > 0) {
-        const shieldAlpha = 0.15 + 0.1 * Math.sin(Date.now() / 500);
+        const shieldAlpha = 0.15 + 0.1 * Math.sin(this.cachedTime * 2);
         const shieldGradient = context.createRadialGradient(x, y, 0, x, y, shieldRadius);
         shieldGradient.addColorStop(0, `rgba(100, 200, 255, ${shieldAlpha * 0.3})`);
         shieldGradient.addColorStop(0.7, `rgba(80, 180, 240, ${shieldAlpha * 0.5})`);
@@ -1605,7 +1597,7 @@ export class FrenzyLayer implements Layer {
         context.fill();
         
         // Shield edge glow
-        context.strokeStyle = `rgba(120, 220, 255, ${0.3 + 0.2 * Math.sin(Date.now() / 300)})`;
+        context.strokeStyle = `rgba(120, 220, 255, ${0.3 + 0.2 * Math.sin(this.cachedTime * 3.3)})`;
         context.lineWidth = 2;
         context.stroke();
       }
@@ -1624,7 +1616,7 @@ export class FrenzyLayer implements Layer {
       context.fill();
       
       // Center energy core
-      const coreGlow = 0.5 + 0.3 * Math.sin(Date.now() / 200);
+      const coreGlow = 0.5 + 0.3 * Math.sin(this.cachedTime * 5);
       context.fillStyle = `rgba(100, 200, 255, ${coreGlow})`;
       context.beginPath();
       context.arc(x, y, size * 0.4, 0, Math.PI * 2);
@@ -1645,7 +1637,7 @@ export class FrenzyLayer implements Layer {
       context.stroke();
     } else if (isArtillery) {
       // Artillery: cannon/mortar shape
-      const size = 7;
+      const size = 4;
       
       // Base platform (rectangle)
       context.fillStyle = "#555";
@@ -1796,8 +1788,8 @@ export class FrenzyLayer implements Layer {
     projectile: any,
     diameter: number,
   ) {
-    const x = projectile.x - this.game.width() / 2;
-    const y = projectile.y - this.game.height() / 2;
+    const x = projectile.x - this.cachedHalfWidth;
+    const y = projectile.y - this.cachedHalfHeight;
 
     // Check if this is a beam (defense post red laser)
     if (
@@ -1891,10 +1883,10 @@ export class FrenzyLayer implements Layer {
     const progress = projectile.progress || 0;
     
     // Calculate start and end points in screen space
-    const startX = (projectile.startX ?? projectile.x) - this.game.width() / 2;
-    const startY = (projectile.startY ?? projectile.y) - this.game.height() / 2;
-    const targetX = (projectile.targetX ?? projectile.x) - this.game.width() / 2;
-    const targetY = (projectile.targetY ?? projectile.y) - this.game.height() / 2;
+    const startX = (projectile.startX ?? projectile.x) - this.cachedHalfWidth;
+    const startY = (projectile.startY ?? projectile.y) - this.cachedHalfHeight;
+    const targetX = (projectile.targetX ?? projectile.x) - this.cachedHalfWidth;
+    const targetY = (projectile.targetY ?? projectile.y) - this.cachedHalfHeight;
     
     // Calculate horizontal distance for arc height
     const dx = targetX - startX;
@@ -1934,10 +1926,10 @@ export class FrenzyLayer implements Layer {
   }
 
   private renderBeam(context: CanvasRenderingContext2D, projectile: any) {
-    const startX = projectile.startX - this.game.width() / 2;
-    const startY = projectile.startY - this.game.height() / 2;
-    const endX = projectile.x - this.game.width() / 2;
-    const endY = projectile.y - this.game.height() / 2;
+    const startX = projectile.startX - this.cachedHalfWidth;
+    const startY = projectile.startY - this.cachedHalfHeight;
+    const endX = projectile.x - this.cachedHalfWidth;
+    const endY = projectile.y - this.cachedHalfHeight;
 
     // Red beam like C&C Obelisk of Light
     // Outer glow (wider, semi-transparent)
@@ -1987,8 +1979,8 @@ export class FrenzyLayer implements Layer {
       rotations?: number[];
     },
   ) {
-    const x = crystal.x - this.game.width() / 2;
-    const y = crystal.y - this.game.height() / 2;
+    const x = crystal.x - this.cachedHalfWidth;
+    const y = crystal.y - this.cachedHalfHeight;
     const rotations = crystal.rotations ?? [];
 
     // Base size scales with crystal count
@@ -2049,7 +2041,7 @@ export class FrenzyLayer implements Layer {
     rotation: number,
   ) {
     // Growth animation - subtle pulse (crystals are hard, no movement)
-    const time = performance.now() / 1000;
+    const time = this.cachedTime;
     const halfWidth = size / 2;
     const height = size * 1.8; // Taller crystal
     const bottomY = y + height * 0.3; // Bottom anchor point

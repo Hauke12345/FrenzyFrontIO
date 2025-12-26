@@ -8,6 +8,7 @@ import {
 } from "../../InputHandler";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
+import { PerformanceLogger } from "../PerformanceLogger";
 import { Layer } from "./Layer";
 
 @customElement("performance-overlay")
@@ -380,6 +381,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
     if (layerDurations) {
       this.updateLayerStats(layerDurations);
+      
+      // Record to PerformanceLogger for file export
+      PerformanceLogger.recordFrame(this.currentFPS, this.frameTime, layerDurations);
     }
 
     this.requestUpdate();
@@ -420,6 +424,9 @@ export class PerformanceOverlay extends LitElement implements Layer {
 
   updateTickMetrics(tickExecutionDuration?: number, tickDelay?: number) {
     if (!this.isVisible || !this.userSettings.performanceOverlay()) return;
+
+    // Record to PerformanceLogger for file export
+    PerformanceLogger.recordTick(tickExecutionDuration ?? 0, tickDelay ?? 0);
 
     // Update tick execution duration stats
     if (tickExecutionDuration !== undefined) {
