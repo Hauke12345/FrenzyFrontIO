@@ -1,0 +1,798 @@
+import { UnitType } from "../../../../core/game/Game";
+import { GameView, PlayerView, UnitView } from "../../../../core/game/GameView";
+import { FrenzyRenderContext, getPlayerById, getTierRoman } from "./FrenzyRenderContext";
+
+/**
+ * Structure types in Frenzy mode
+ */
+export enum FrenzyStructureType {
+  HQ = "hq",
+  Mine = "mine",
+  Factory = "factory",
+  DefensePost = "defensePost",
+  Port = "port",
+  MissileSilo = "missileSilo",
+  SAMLauncher = "samLauncher",
+  Artillery = "artillery",
+  ShieldGenerator = "shieldGenerator",
+  Construction = "construction",
+}
+
+/**
+ * Unified structure interface for consistent rendering
+ */
+export interface FrenzyStructure {
+  type: FrenzyStructureType;
+  x: number;
+  y: number;
+  playerId: string;
+  tier: number;
+  health: number;
+  maxHealth: number;
+  unit?: UnitView;
+  constructionType?: FrenzyStructureType;
+  constructionProgress?: number;
+}
+
+/**
+ * Renders all structure types in Frenzy mode:
+ * HQ, Mine, Factory, DefensePost, Port, MissileSilo, SAMLauncher, Artillery, ShieldGenerator
+ */
+export class StructureRenderer {
+  constructor(private game: GameView) {}
+
+  /**
+   * Gather all structures from frenzy state and game state
+   */
+  gatherAllStructures(frenzyState: any): FrenzyStructure[] {
+    const structures: FrenzyStructure[] = [];
+
+    // Add HQs from frenzy state
+    for (const building of frenzyState.coreBuildings) {
+      structures.push({
+        type: FrenzyStructureType.HQ,
+        x: building.x,
+        y: building.y,
+        playerId: building.playerId,
+        tier: building.tier ?? 1,
+        health: building.health ?? 1000,
+        maxHealth: building.maxHealth ?? 1000,
+      });
+    }
+
+    // Add factories from frenzy state
+    if (frenzyState.factories) {
+      for (const factory of frenzyState.factories) {
+        structures.push({
+          type: FrenzyStructureType.Factory,
+          x: factory.x,
+          y: factory.y,
+          playerId: factory.playerId,
+          tier: factory.tier ?? 1,
+          health: factory.health ?? 400,
+          maxHealth: factory.maxHealth ?? 400,
+        });
+      }
+    }
+
+    // Add structures from game units
+    for (const player of this.game.players()) {
+      for (const unit of player.units()) {
+        const tile = unit.tile();
+        if (!tile) continue;
+
+        const x = this.game.x(tile);
+        const y = this.game.y(tile);
+        const unitInfo = this.game.unitInfo(unit.type());
+        const maxHealth = unitInfo?.maxHealth ?? 100;
+        const health = unit.health();
+
+        let structureType: FrenzyStructureType | null = null;
+        switch (unit.type()) {
+          case UnitType.City:
+            structureType = FrenzyStructureType.Mine;
+            break;
+          case UnitType.DefensePost:
+            structureType = FrenzyStructureType.DefensePost;
+            break;
+          case UnitType.Port:
+            structureType = FrenzyStructureType.Port;
+            break;
+          case UnitType.MissileSilo:
+            structureType = FrenzyStructureType.MissileSilo;
+            break;
+          case UnitType.SAMLauncher:
+            structureType = FrenzyStructureType.SAMLauncher;
+            break;
+          case UnitType.Artillery:
+            structureType = FrenzyStructureType.Artillery;
+            break;
+          case UnitType.ShieldGenerator:
+            structureType = FrenzyStructureType.ShieldGenerator;
+            break;
+        }
+
+        if (structureType) {
+          structures.push({
+            type: structureType,
+            x,
+            y,
+            playerId: player.id(),
+            tier: unit.level(),
+            health,
+            maxHealth,
+            unit,
+          });
+        }
+
+        // Handle construction units
+        if (unit.type() === UnitType.Construction) {
+          const constructionUnitType = unit.constructionType();
+          let constrType: FrenzyStructureType | null = null;
+          switch (constructionUnitType) {
+            case UnitType.City:
+              constrType = FrenzyStructureType.Mine;
+              break;
+            case UnitType.Factory:
+              constrType = FrenzyStructureType.Factory;
+              break;
+            case UnitType.DefensePost:
+              constrType = FrenzyStructureType.DefensePost;
+              break;
+            case UnitType.Port:
+              constrType = FrenzyStructureType.Port;
+              break;
+            case UnitType.MissileSilo:
+              constrType = FrenzyStructureType.MissileSilo;
+              break;
+            case UnitType.SAMLauncher:
+              constrType = FrenzyStructureType.SAMLauncher;
+              break;
+            case UnitType.Artillery:
+              constrType = FrenzyStructureType.Artillery;
+              break;
+            case UnitType.ShieldGenerator:
+              constrType = FrenzyStructureType.ShieldGenerator;
+              break;
+          }
+          if (constrType && constructionUnitType) {
+            const unitInfo = this.game.unitInfo(constructionUnitType);
+            const constDuration = unitInfo?.constructionDuration ?? 100;
+            const elapsed = this.game.ticks() - unit.createdAt();
+            const progress = Math.min(
+              1,
+              elapsed / (constDuration === 0 ? 1 : constDuration),
+            );
+            structures.push({
+              type: FrenzyStructureType.Construction,
+              x,
+              y,
+              playerId: player.id(),
+              tier: 1,
+              health: 1,
+              maxHealth: 1,
+              unit,
+              constructionType: constrType,
+              constructionProgress: progress,
+            });
+          }
+        }
+      }
+    }
+
+    return structures;
+  }
+
+  /**
+   * Render a structure with icon and healthbar
+   */
+  render(ctx: FrenzyRenderContext, structure: FrenzyStructure) {
+    const player = this.game.player(structure.playerId);
+    if (!player) return;
+
+    const x = structure.x - ctx.halfWidth;
+    const y = structure.y - ctx.halfHeight;
+
+    // Render icon based on type
+    switch (structure.type) {
+      case FrenzyStructureType.HQ:
+        this.renderHQIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Mine:
+        this.renderMineIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Factory:
+        this.renderFactoryIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.DefensePost:
+        this.renderDefensePostIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Port:
+        this.renderPortIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.MissileSilo:
+        this.renderMissileSiloIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.SAMLauncher:
+        this.renderSAMLauncherIcon(ctx.context, x, y, player, structure.tier);
+        break;
+      case FrenzyStructureType.Construction:
+        this.renderConstructionIcon(
+          ctx,
+          x,
+          y,
+          player,
+          structure.constructionType!,
+          structure.constructionProgress ?? 0,
+        );
+        break;
+    }
+
+    // Render healthbar if damaged
+    if (structure.health < structure.maxHealth && structure.health > 0) {
+      this.renderHealthBar(
+        ctx.context,
+        x,
+        y,
+        structure.health,
+        structure.maxHealth,
+        this.getStructureSize(structure.type),
+      );
+    }
+  }
+
+  private getStructureSize(type: FrenzyStructureType): number {
+    switch (type) {
+      case FrenzyStructureType.HQ:
+        return 14;
+      case FrenzyStructureType.Mine:
+      case FrenzyStructureType.Factory:
+      case FrenzyStructureType.Port:
+        return 10;
+      case FrenzyStructureType.DefensePost:
+      case FrenzyStructureType.MissileSilo:
+      case FrenzyStructureType.SAMLauncher:
+        return 8;
+      default:
+        return 8;
+    }
+  }
+
+  private renderHealthBar(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    health: number,
+    maxHealth: number,
+    structureSize: number,
+  ) {
+    const barWidth = structureSize + 4;
+    const barHeight = 2;
+    const barY = y + structureSize / 2 + 3;
+    const healthPercent = health / maxHealth;
+
+    // Background
+    context.fillStyle = "rgba(0, 0, 0, 0.7)";
+    context.fillRect(x - barWidth / 2, barY, barWidth, barHeight);
+
+    // Health fill
+    const r = Math.floor(255 * (1 - healthPercent));
+    const g = Math.floor(255 * healthPercent);
+    context.fillStyle = `rgb(${r}, ${g}, 0)`;
+    context.fillRect(x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.5;
+    context.strokeRect(x - barWidth / 2, barY, barWidth, barHeight);
+  }
+
+  private renderHQIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const circleRadius = 6;
+    const spikeCount = 8;
+    const spikeLength = 5;
+    const spikeBaseWidth = 2.5;
+
+    // Draw spikes first (behind circle)
+    context.fillStyle = player.territoryColor().toRgbString();
+    for (let i = 0; i < spikeCount; i++) {
+      const angle = (i * 2 * Math.PI) / spikeCount - Math.PI / 2;
+      const tipX = x + Math.cos(angle) * (circleRadius + spikeLength);
+      const tipY = y + Math.sin(angle) * (circleRadius + spikeLength);
+      const leftAngle = angle - Math.PI / 2;
+      const rightAngle = angle + Math.PI / 2;
+      const baseX1 = x + Math.cos(angle) * circleRadius + Math.cos(leftAngle) * spikeBaseWidth;
+      const baseY1 = y + Math.sin(angle) * circleRadius + Math.sin(leftAngle) * spikeBaseWidth;
+      const baseX2 = x + Math.cos(angle) * circleRadius + Math.cos(rightAngle) * spikeBaseWidth;
+      const baseY2 = y + Math.sin(angle) * circleRadius + Math.sin(rightAngle) * spikeBaseWidth;
+
+      context.beginPath();
+      context.moveTo(tipX, tipY);
+      context.lineTo(baseX1, baseY1);
+      context.lineTo(baseX2, baseY2);
+      context.closePath();
+      context.fill();
+
+      context.strokeStyle = "#000";
+      context.lineWidth = 1;
+      context.stroke();
+    }
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.arc(x, y, circleRadius + 2, 0, Math.PI * 2);
+    context.fill();
+
+    // Main circle
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.arc(x, y, circleRadius, 0, Math.PI * 2);
+    context.fill();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(x, y, circleRadius, 0, Math.PI * 2);
+    context.stroke();
+
+    // Tier
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 6px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y);
+    }
+  }
+
+  private renderMineIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    level: number,
+  ) {
+    const size = 8;
+    const sides = 6;
+    const angleOffset = Math.PI / 6;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides + angleOffset;
+      const px = x + Math.cos(angle) * (size / 2 + 2);
+      const py = y + Math.sin(angle) * (size / 2 + 2);
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+
+    // Main hexagon
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    for (let i = 0; i < sides; i++) {
+      const angle = (i * 2 * Math.PI) / sides + angleOffset;
+      const px = x + Math.cos(angle) * (size / 2);
+      const py = y + Math.sin(angle) * (size / 2);
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+
+    // Border
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.stroke();
+
+    if (level >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(level), x, y);
+    }
+  }
+
+  private renderFactoryIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 8;
+    const halfSize = size / 2;
+    const notch = size * 0.15;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x - halfSize - 2 + notch, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2 - notch, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y - halfSize - 2 + notch);
+    context.lineTo(x + halfSize + 2, y + halfSize + 2 - notch);
+    context.lineTo(x + halfSize + 2 - notch, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2 + notch, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y + halfSize + 2 - notch);
+    context.lineTo(x - halfSize - 2, y - halfSize - 2 + notch);
+    context.closePath();
+    context.fill();
+
+    // Main body
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x - halfSize + notch, y - halfSize);
+    context.lineTo(x + halfSize - notch, y - halfSize);
+    context.lineTo(x + halfSize, y - halfSize + notch);
+    context.lineTo(x + halfSize, y + halfSize - notch);
+    context.lineTo(x + halfSize - notch, y + halfSize);
+    context.lineTo(x - halfSize + notch, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize - notch);
+    context.lineTo(x - halfSize, y - halfSize + notch);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.stroke();
+
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y);
+    }
+  }
+
+  private renderDefensePostIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y - halfSize * 0.3);
+    context.lineTo(x + halfSize + 2, y + halfSize * 0.5);
+    context.quadraticCurveTo(x, y + halfSize + 4, x, y + halfSize + 2);
+    context.quadraticCurveTo(x, y + halfSize + 4, x - halfSize - 2, y + halfSize * 0.5);
+    context.lineTo(x - halfSize - 2, y - halfSize * 0.3);
+    context.closePath();
+    context.fill();
+
+    // Main shield
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y - halfSize * 0.3);
+    context.lineTo(x + halfSize, y + halfSize * 0.5);
+    context.quadraticCurveTo(x, y + halfSize + 2, x, y + halfSize);
+    context.quadraticCurveTo(x, y + halfSize + 2, x - halfSize, y + halfSize * 0.5);
+    context.lineTo(x - halfSize, y - halfSize * 0.3);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.stroke();
+
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y - 1);
+    }
+  }
+
+  private renderPortIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 8;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.arc(x, y, halfSize + 2, 0, Math.PI * 2);
+    context.fill();
+
+    // Main circle
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.arc(x, y, halfSize, 0, Math.PI * 2);
+    context.fill();
+
+    // Wave pattern
+    context.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x - halfSize * 0.7, y + 1);
+    context.quadraticCurveTo(x - halfSize * 0.35, y - 1, x, y + 1);
+    context.quadraticCurveTo(x + halfSize * 0.35, y + 3, x + halfSize * 0.7, y + 1);
+    context.stroke();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.arc(x, y, halfSize, 0, Math.PI * 2);
+    context.stroke();
+
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 5px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y);
+    }
+  }
+
+  private renderMissileSiloIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y);
+    context.lineTo(x, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y);
+    context.closePath();
+    context.fill();
+
+    // Main diamond
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y);
+    context.lineTo(x, y + halfSize);
+    context.lineTo(x - halfSize, y);
+    context.closePath();
+    context.fill();
+
+    // Missile line
+    context.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(x, y - halfSize * 0.5);
+    context.lineTo(x, y + halfSize * 0.5);
+    context.stroke();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y);
+    context.lineTo(x, y + halfSize);
+    context.lineTo(x - halfSize, y);
+    context.closePath();
+    context.stroke();
+
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 4px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y);
+    }
+  }
+
+  private renderSAMLauncherIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    tier: number,
+  ) {
+    const size = 6.4;
+    const halfSize = size / 2;
+
+    // Outer glow
+    context.fillStyle = player.territoryColor().alpha(0.4).toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize - 2);
+    context.lineTo(x + halfSize + 2, y + halfSize + 2);
+    context.lineTo(x - halfSize - 2, y + halfSize + 2);
+    context.closePath();
+    context.fill();
+
+    // Main triangle
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize);
+    context.closePath();
+    context.fill();
+
+    // Radar circle
+    context.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.arc(x, y - halfSize * 0.3, halfSize * 0.35, 0, Math.PI * 2);
+    context.stroke();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(x, y - halfSize);
+    context.lineTo(x + halfSize, y + halfSize);
+    context.lineTo(x - halfSize, y + halfSize);
+    context.closePath();
+    context.stroke();
+
+    if (tier >= 1) {
+      context.fillStyle = "#fff";
+      context.font = "bold 4px sans-serif";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(getTierRoman(tier), x, y + 1);
+    }
+  }
+
+  private renderArtilleryIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+  ) {
+    const size = 6;
+
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.ellipse(x, y + size * 0.3, size, size * 0.4, 0, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = "#4a4a4a";
+    context.save();
+    context.translate(x, y);
+    context.rotate(-Math.PI / 4);
+    context.fillRect(-size * 0.2, -size * 1.2, size * 0.4, size * 1.2);
+    context.restore();
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.5;
+    context.beginPath();
+    context.ellipse(x, y + size * 0.3, size, size * 0.4, 0, 0, Math.PI * 2);
+    context.stroke();
+  }
+
+  private renderShieldGeneratorIcon(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+  ) {
+    const size = 6;
+
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3 - Math.PI / 6;
+      const px = x + Math.cos(angle) * size;
+      const py = y + Math.sin(angle) * size;
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.fill();
+
+    context.fillStyle = "rgba(100, 200, 255, 0.6)";
+    context.beginPath();
+    context.arc(x, y, size * 0.4, 0, Math.PI * 2);
+    context.fill();
+
+    context.strokeStyle = "#1a5a8e";
+    context.lineWidth = 1;
+    context.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3 - Math.PI / 6;
+      const px = x + Math.cos(angle) * size;
+      const py = y + Math.sin(angle) * size;
+      if (i === 0) context.moveTo(px, py);
+      else context.lineTo(px, py);
+    }
+    context.closePath();
+    context.stroke();
+  }
+
+  private renderConstructionIcon(
+    ctx: FrenzyRenderContext,
+    x: number,
+    y: number,
+    player: PlayerView,
+    targetType: FrenzyStructureType,
+    progress: number,
+  ) {
+    const context = ctx.context;
+    const pulse = 0.9 + 0.1 * Math.sin(ctx.time * 4);
+
+    context.save();
+    context.translate(x, y);
+    context.scale(pulse, pulse);
+
+    // Gray ghost color
+    const grayColor = {
+      territoryColor: () => ({
+        alpha: (a: number) => ({
+          toRgbString: () => `rgba(150, 150, 150, ${a})`,
+        }),
+        toRgbString: () => "rgb(150, 150, 150)",
+      }),
+    } as unknown as PlayerView;
+
+    // Render ghost shape
+    switch (targetType) {
+      case FrenzyStructureType.Mine:
+        this.renderMineIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.Factory:
+        this.renderFactoryIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.DefensePost:
+        this.renderDefensePostIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.Port:
+        this.renderPortIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.MissileSilo:
+        this.renderMissileSiloIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.SAMLauncher:
+        this.renderSAMLauncherIcon(context, 0, 0, grayColor, 0);
+        break;
+      case FrenzyStructureType.Artillery:
+        this.renderArtilleryIcon(context, 0, 0, grayColor);
+        break;
+      case FrenzyStructureType.ShieldGenerator:
+        this.renderShieldGeneratorIcon(context, 0, 0, grayColor);
+        break;
+    }
+
+    context.restore();
+
+    // Progress bar
+    const barWidth = 10;
+    const barHeight = 2;
+    const barY = y + 8;
+
+    context.fillStyle = "rgba(0, 0, 0, 0.5)";
+    context.fillRect(x - barWidth / 2, barY, barWidth, barHeight);
+
+    context.fillStyle = "rgba(255, 200, 0, 0.9)";
+    context.fillRect(x - barWidth / 2, barY, barWidth * progress, barHeight);
+
+    context.strokeStyle = "#000";
+    context.lineWidth = 0.5;
+    context.strokeRect(x - barWidth / 2, barY, barWidth, barHeight);
+  }
+}
