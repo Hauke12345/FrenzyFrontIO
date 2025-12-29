@@ -927,20 +927,14 @@ export class PlayerImpl implements Player {
   public buildableUnits(tile: TileRef | null): BuildableUnit[] {
     const validTiles = tile !== null ? this.validStructureSpawnTiles(tile) : [];
     return Object.values(UnitType).map((u) => {
-      let canUpgrade: number | false = false;
-      if (!this.mg.inSpawnPhase()) {
-        const existingUnit = tile !== null && this.findUnitToUpgrade(u, tile);
-        if (existingUnit !== false) {
-          canUpgrade = existingUnit.id();
-        }
-      }
+      // Upgrades are done via radial menu, not by building on top
       return {
         type: u,
         canBuild:
           this.mg.inSpawnPhase() || tile === null
             ? false
             : this.canBuild(u, tile, validTiles),
-        canUpgrade: canUpgrade,
+        canUpgrade: false, // Upgrades only via radial menu
         cost: this.mg.config().unitInfo(u).cost(this),
       } as BuildableUnit;
     });
@@ -966,8 +960,10 @@ export class PlayerImpl implements Player {
         }
         return this.nukeSpawn(targetTile);
       case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
         return this.nukeSpawn(targetTile);
+      case UnitType.HydrogenBomb:
+        // Hydrogen bombs require a tier 2+ missile silo
+        return this.nukeSpawn(targetTile, true);
       case UnitType.MIRVWarhead:
         return targetTile;
       case UnitType.Port:
@@ -997,7 +993,7 @@ export class PlayerImpl implements Player {
     }
   }
 
-  nukeSpawn(tile: TileRef): TileRef | false {
+  nukeSpawn(tile: TileRef, requireTier2: boolean = false): TileRef | false {
     const owner = this.mg.owner(tile);
     if (owner.isPlayer()) {
       if (this.isOnSameTeam(owner)) {
@@ -1005,9 +1001,12 @@ export class PlayerImpl implements Player {
       }
     }
     // only get missilesilos that are not on cooldown
+    // if requireTier2 is true, also filter for tier 2+ silos (level >= 2)
     const spawns = this.units(UnitType.MissileSilo)
       .filter((silo) => {
-        return !silo.isInCooldown();
+        if (silo.isInCooldown()) return false;
+        if (requireTier2 && silo.level() < 2) return false;
+        return true;
       })
       .sort(distSortUnit(this.mg, tile));
     if (spawns.length === 0) {
@@ -1089,6 +1088,8 @@ export class PlayerImpl implements Player {
     const validSet: Set<TileRef> = new Set(nearbyTiles);
 
     const minDistSquared = this.mg.config().structureMinDist() ** 2;
+
+    // Remove tiles that are too close to regular game units
     for (const t of nearbyTiles) {
       for (const { unit } of nearbyUnits) {
         if (this.mg.euclideanDistSquared(unit.tile(), t) < minDistSquared) {
@@ -1097,6 +1098,24 @@ export class PlayerImpl implements Player {
         }
       }
     }
+
+    // In Frenzy mode, also consider Frenzy structures (mines, factories, ports, towers)
+    const frenzyManager = this.mg.frenzyManager();
+    if (frenzyManager) {
+      const frenzyStructureTiles = frenzyManager.getAllStructureTiles();
+      const towerTiles = frenzyManager.getTowerTilesForPlayer(this.id());
+      const allFrenzyTiles = [...frenzyStructureTiles, ...towerTiles];
+
+      for (const t of Array.from(validSet)) {
+        for (const structureTile of allFrenzyTiles) {
+          if (this.mg.euclideanDistSquared(structureTile, t) < minDistSquared) {
+            validSet.delete(t);
+            break;
+          }
+        }
+      }
+    }
+
     const valid = Array.from(validSet);
     valid.sort(
       (a, b) =>

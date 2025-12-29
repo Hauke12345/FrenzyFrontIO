@@ -117,7 +117,19 @@ export class ConstructionExecution implements Execution {
         );
         break;
       case UnitType.Port:
-        this.mg.addExecution(new PortExecution(player, this.tile));
+        // In Frenzy mode, register port with FrenzyManager
+        if (
+          this.mg.config().gameConfig().gameFork === GameFork.Frenzy &&
+          this.mg.frenzyManager()
+        ) {
+          const tileX = this.mg.x(this.tile);
+          const tileY = this.mg.y(this.tile);
+          this.mg
+            .frenzyManager()!
+            .registerPort(player.id(), this.tile, tileX, tileY);
+        } else {
+          this.mg.addExecution(new PortExecution(player, this.tile));
+        }
         break;
       case UnitType.MissileSilo:
         this.mg.addExecution(new MissileSiloExecution(player, this.tile));
@@ -154,14 +166,28 @@ export class ConstructionExecution implements Execution {
         ) {
           const tileX = this.mg.x(this.tile);
           const tileY = this.mg.y(this.tile);
-          this.mg.frenzyManager()!.spawnShieldGenerator(player.id(), tileX, tileY);
+          this.mg
+            .frenzyManager()!
+            .spawnShieldGenerator(player.id(), tileX, tileY);
         }
         break;
       case UnitType.SAMLauncher:
         this.mg.addExecution(new SAMLauncherExecution(player, this.tile));
         break;
       case UnitType.City:
-        this.mg.addExecution(new CityExecution(player, this.tile));
+        // In Frenzy mode, register mine with FrenzyManager
+        if (
+          this.mg.config().gameConfig().gameFork === GameFork.Frenzy &&
+          this.mg.frenzyManager()
+        ) {
+          const tileX = this.mg.x(this.tile);
+          const tileY = this.mg.y(this.tile);
+          this.mg
+            .frenzyManager()!
+            .registerMine(player.id(), this.tile, tileX, tileY);
+        } else {
+          this.mg.addExecution(new CityExecution(player, this.tile));
+        }
         break;
       case UnitType.Factory:
         this.mg.addExecution(new FactoryExecution(player, this.tile));

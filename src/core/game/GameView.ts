@@ -535,9 +535,54 @@ export class GameView implements GameMap {
       crystals?: Array<{ x: number; y: number; count: number }>;
       cellArea?: number;
     }>;
+    // Unified structures array
+    structures?: Array<{
+      id: number;
+      type: string;
+      playerId: string;
+      tile: number;
+      x: number;
+      y: number;
+      tier: number;
+      health: number;
+      maxHealth: number;
+    }>;
     // Helper methods for UI
     canUpgradeFactory: (playerId: string) => boolean;
     getFactoryTier: (tile: number) => number;
+    getHQTier: (playerId: string) => number;
+    findNearbyFrenzyUnit: (
+      x: number,
+      y: number,
+      range: number,
+      unitType: string,
+      playerId: string,
+    ) => {
+      id: number;
+      playerId: string;
+      x: number;
+      y: number;
+      health: number;
+      unitType: string;
+      tier?: number;
+    } | null;
+    findNearbyStructure: (
+      x: number,
+      y: number,
+      range: number,
+      structureType: string,
+      playerId: string,
+    ) => {
+      id: number;
+      type: string;
+      playerId: string;
+      tile: number;
+      x: number;
+      y: number;
+      tier: number;
+    } | null;
+    getMineTier: (tile: number) => number;
+    getPortTier: (tile: number) => number;
   } | null = null;
 
   constructor(
@@ -625,11 +670,17 @@ export class GameView implements GameMap {
         })),
         coreBuildings,
         factories,
+        structures: frenzyData.structures ?? [],
         projectiles: frenzyData.projectiles,
         projectileSize: frenzyData.projectileSize,
         maxUnitsPerPlayer: frenzyData.maxUnitsPerPlayer,
         crystals: frenzyData.crystals ?? [],
         pendingGoldPayouts: frenzyData.pendingGoldPayouts ?? [],
+        // Helper method to get HQ tier
+        getHQTier: (playerId: string) => {
+          const hq = coreBuildings.find((b: any) => b.playerId === playerId);
+          return hq?.tier ?? 1;
+        },
         // Helper method to check if player can upgrade factories (HQ tier >= 2)
         canUpgradeFactory: (playerId: string) => {
           const hq = coreBuildings.find((b: any) => b.playerId === playerId);
@@ -639,6 +690,59 @@ export class GameView implements GameMap {
         getFactoryTier: (tile: number) => {
           const factory = factories.find((f: any) => f.tile === tile);
           return factory?.tier ?? 1;
+        },
+        // Helper method to find nearby Frenzy units by type and player
+        findNearbyFrenzyUnit: (
+          x: number,
+          y: number,
+          range: number,
+          unitType: string,
+          playerId: string,
+        ) => {
+          const rangeSquared = range * range;
+          const units = frenzyData.units.filter((u: any) => {
+            if (u.unitType !== unitType) return false;
+            if (u.playerId !== playerId) return false;
+            const dx = u.x - x;
+            const dy = u.y - y;
+            return dx * dx + dy * dy <= rangeSquared;
+          });
+          return units.length > 0 ? units[0] : null;
+        },
+        // Helper method to find nearby structures by type and player
+        findNearbyStructure: (
+          x: number,
+          y: number,
+          range: number,
+          structureType: string,
+          playerId: string,
+        ) => {
+          const rangeSquared = range * range;
+          const allStructures = frenzyData.structures ?? [];
+          const matching = allStructures.filter((s: any) => {
+            if (s.type !== structureType) return false;
+            if (s.playerId !== playerId) return false;
+            const dx = s.x - x;
+            const dy = s.y - y;
+            return dx * dx + dy * dy <= rangeSquared;
+          });
+          return matching.length > 0 ? matching[0] : null;
+        },
+        // Helper method to get mine tier at tile
+        getMineTier: (tile: number) => {
+          const structures = frenzyData.structures ?? [];
+          const mine = structures.find(
+            (s: any) => s.tile === tile && s.type === "mine",
+          );
+          return mine?.tier ?? 1;
+        },
+        // Helper method to get port tier at tile
+        getPortTier: (tile: number) => {
+          const structures = frenzyData.structures ?? [];
+          const port = structures.find(
+            (s: any) => s.tile === tile && s.type === "port",
+          );
+          return port?.tier ?? 1;
         },
       };
     }

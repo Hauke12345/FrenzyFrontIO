@@ -346,15 +346,15 @@ function getAllEnabledUnits(myPlayer: boolean, config: Config): Set<UnitType> {
   return Units;
 }
 
-// Strategic structures - economic/production
-const STRATEGIC_UNIT_TYPES: UnitType[] = [
+// Buildings - economic/production structures (right build menu)
+const BUILDING_UNIT_TYPES: UnitType[] = [
   UnitType.City,
   UnitType.Port,
   UnitType.Factory,
 ];
 
-// Tactical structures - military/defensive
-const TACTICAL_UNIT_TYPES: UnitType[] = [
+// Towers - military/defensive structures (left build menu)
+const TOWER_UNIT_TYPES: UnitType[] = [
   UnitType.DefensePost,
   UnitType.SAMLauncher,
   UnitType.MissileSilo,
@@ -371,7 +371,7 @@ const ATTACK_UNIT_TYPES: UnitType[] = [
 
 function createMenuElements(
   params: MenuElementParams,
-  filterType: "attack" | "build" | "strategic" | "tactical",
+  filterType: "attack" | "build" | "buildings" | "towers",
   elementIdPrefix: string,
 ): MenuElement[] {
   const unitTypes: Set<UnitType> = getAllEnabledUnits(
@@ -382,14 +382,14 @@ function createMenuElements(
   return flattenedBuildTable
     .filter((item) => {
       if (!unitTypes.has(item.unitType)) return false;
-      
+
       switch (filterType) {
         case "attack":
           return ATTACK_UNIT_TYPES.includes(item.unitType);
-        case "strategic":
-          return STRATEGIC_UNIT_TYPES.includes(item.unitType);
-        case "tactical":
-          return TACTICAL_UNIT_TYPES.includes(item.unitType);
+        case "buildings":
+          return BUILDING_UNIT_TYPES.includes(item.unitType);
+        case "towers":
+          return TOWER_UNIT_TYPES.includes(item.unitType);
         case "build":
         default:
           return !ATTACK_UNIT_TYPES.includes(item.unitType);
@@ -534,12 +534,12 @@ export const upgradeHQElement: MenuElement = {
     // Only show in Frenzy mode when clicking on own HQ
     const frenzyState = params.game.frenzyManager();
     if (!frenzyState) return false;
-    
+
     const myHQ = frenzyState.coreBuildings.find(
       (b) => b.playerId === params.myPlayer.id(),
     );
     if (!myHQ) return false;
-    
+
     // Check if the click is near the HQ (within 20 pixels)
     const tileX = params.game.x(params.tile);
     const tileY = params.game.y(params.tile);
@@ -576,6 +576,12 @@ export const upgradeHQElement: MenuElement = {
 
 const FACTORY_UPGRADE_COST = BigInt(100_000);
 
+// Range in pixels for detecting clicks on structures
+const STRUCTURE_CLICK_RANGE = 15;
+
+// All structure upgrades require HQ tier 2
+const REQUIRED_HQ_TIER_FOR_UPGRADES = 2;
+
 export const upgradeFactoryElement: MenuElement = {
   id: "upgrade_factory",
   name: "upgrade_factory",
@@ -583,22 +589,24 @@ export const upgradeFactoryElement: MenuElement = {
     // Only show in Frenzy mode when clicking on own factory
     const frenzyState = params.game.frenzyManager();
     if (!frenzyState) return false;
-    
+
     // Check if HQ tier >= 2 (required to upgrade factories)
     if (!frenzyState.canUpgradeFactory(params.myPlayer.id())) return false;
-    
+
     // Check if clicking on a factory owned by this player
-    const nearbyUnits = params.game.nearbyUnits(params.tile, 3, [UnitType.Factory]);
-    const myFactory = nearbyUnits.find(
-      ({ unit }) =>
-        unit.owner().isPlayer() &&
-        (unit.owner() as PlayerView).id() === params.myPlayer.id(),
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myFactory = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "factory",
+      params.myPlayer.id(),
     );
     if (!myFactory) return false;
-    
+
     // Check if factory is already tier 2
-    const factoryTier = frenzyState.getFactoryTier(myFactory.unit.tile());
-    return factoryTier < 2;
+    return myFactory.tier < 2;
   },
   disabled: (params: MenuElementParams) => {
     return params.myPlayer.gold() < FACTORY_UPGRADE_COST;
@@ -623,15 +631,503 @@ export const upgradeFactoryElement: MenuElement = {
     },
   ],
   action: (params: MenuElementParams) => {
-    // Find the factory tile
-    const nearbyUnits = params.game.nearbyUnits(params.tile, 3, [UnitType.Factory]);
-    const myFactory = nearbyUnits.find(
-      ({ unit }) =>
-        unit.owner().isPlayer() &&
-        (unit.owner() as PlayerView).id() === params.myPlayer.id(),
+    // Find the factory structure and upgrade it
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myFactory = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "factory",
+      params.myPlayer.id(),
     );
     if (myFactory) {
-      params.playerActionHandler.handleUpgradeFactory(myFactory.unit.tile());
+      params.playerActionHandler.handleUpgradeFactory(myFactory.tile);
+    }
+    params.closeMenu();
+  },
+};
+
+const MINE_UPGRADE_COST = BigInt(100_000);
+
+export const upgradeMineElement: MenuElement = {
+  id: "upgrade_mine",
+  name: "upgrade_mine",
+  displayed: (params: MenuElementParams) => {
+    // Only show in Frenzy mode when clicking on own mine
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement (must be tier 2+ to upgrade structures)
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    // Find nearby mine from frenzyState structures
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myMine = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "mine",
+      params.myPlayer.id(),
+    );
+    if (!myMine) return false;
+
+    // Check if mine is already tier 2 (max level)
+    return myMine.tier < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < MINE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    {
+      key: "radial_menu.upgrade_mine_title",
+      className: "title",
+    },
+    {
+      key: "radial_menu.upgrade_mine_description",
+      className: "description",
+    },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(MINE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    // Find the mine structure and upgrade it using its tile
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myMine = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "mine",
+      params.myPlayer.id(),
+    );
+    if (myMine) {
+      params.playerActionHandler.handleUpgradeMine(myMine.tile);
+    }
+    params.closeMenu();
+  },
+};
+
+const STRUCTURE_UPGRADE_COST = BigInt(100_000);
+
+// Port upgrade element
+export const upgradePortElement: MenuElement = {
+  id: "upgrade_port",
+  name: "upgrade_port",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myPort = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "port",
+      params.myPlayer.id(),
+    );
+    if (!myPort) return false;
+
+    return myPort.tier < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_port_title", className: "title" },
+    { key: "radial_menu.upgrade_port_description", className: "description" },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myPort = frenzyState.findNearbyStructure(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "port",
+      params.myPlayer.id(),
+    );
+    if (myPort) {
+      params.playerActionHandler.handleUpgradePort(myPort.tile);
+    }
+    params.closeMenu();
+  },
+};
+
+// Defense Post upgrade element
+export const upgradeDefensePostElement: MenuElement = {
+  id: "upgrade_defense_post",
+  name: "upgrade_defense_post",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myDefensePost = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "defensePost",
+      params.myPlayer.id(),
+    );
+    if (!myDefensePost) return false;
+
+    return (myDefensePost.tier ?? 1) < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_defense_post_title", className: "title" },
+    {
+      key: "radial_menu.upgrade_defense_post_description",
+      className: "description",
+    },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myDefensePost = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "defensePost",
+      params.myPlayer.id(),
+    );
+    if (myDefensePost) {
+      params.playerActionHandler.handleUpgradeFrenzyUnit(
+        myDefensePost.id,
+        "defensePost",
+      );
+    }
+    params.closeMenu();
+  },
+};
+
+// SAM Launcher upgrade element
+export const upgradeSAMElement: MenuElement = {
+  id: "upgrade_sam",
+  name: "upgrade_sam",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const mySAM = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "samLauncher",
+      params.myPlayer.id(),
+    );
+    if (!mySAM) return false;
+
+    return (mySAM.tier ?? 1) < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_sam_title", className: "title" },
+    { key: "radial_menu.upgrade_sam_description", className: "description" },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const mySAM = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "samLauncher",
+      params.myPlayer.id(),
+    );
+    if (mySAM) {
+      params.playerActionHandler.handleUpgradeFrenzyUnit(
+        mySAM.id,
+        "samLauncher",
+      );
+    }
+    params.closeMenu();
+  },
+};
+
+// Shield Generator upgrade element
+export const upgradeShieldElement: MenuElement = {
+  id: "upgrade_shield",
+  name: "upgrade_shield",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myShield = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "shieldGenerator",
+      params.myPlayer.id(),
+    );
+    if (!myShield) return false;
+
+    return (myShield.tier ?? 1) < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_shield_title", className: "title" },
+    { key: "radial_menu.upgrade_shield_description", className: "description" },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myShield = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "shieldGenerator",
+      params.myPlayer.id(),
+    );
+    if (myShield) {
+      params.playerActionHandler.handleUpgradeFrenzyUnit(
+        myShield.id,
+        "shieldGenerator",
+      );
+    }
+    params.closeMenu();
+  },
+};
+
+// Artillery upgrade element
+export const upgradeArtilleryElement: MenuElement = {
+  id: "upgrade_artillery",
+  name: "upgrade_artillery",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myArtillery = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "artillery",
+      params.myPlayer.id(),
+    );
+    if (!myArtillery) return false;
+
+    return (myArtillery.tier ?? 1) < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_artillery_title", className: "title" },
+    {
+      key: "radial_menu.upgrade_artillery_description",
+      className: "description",
+    },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const myArtillery = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "artillery",
+      params.myPlayer.id(),
+    );
+    if (myArtillery) {
+      params.playerActionHandler.handleUpgradeFrenzyUnit(
+        myArtillery.id,
+        "artillery",
+      );
+    }
+    params.closeMenu();
+  },
+};
+
+// Missile Silo upgrade element
+export const upgradeSiloElement: MenuElement = {
+  id: "upgrade_silo",
+  name: "upgrade_silo",
+  displayed: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return false;
+
+    // Check HQ tier requirement
+    if (
+      frenzyState.getHQTier(params.myPlayer.id()) <
+      REQUIRED_HQ_TIER_FOR_UPGRADES
+    )
+      return false;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const mySilo = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "missileSilo",
+      params.myPlayer.id(),
+    );
+    if (!mySilo) return false;
+
+    return (mySilo.tier ?? 1) < 2;
+  },
+  disabled: (params: MenuElementParams) => {
+    return params.myPlayer.gold() < STRUCTURE_UPGRADE_COST;
+  },
+  text: "⬆",
+  fontSize: "24px",
+  color: "#FFD700",
+  tooltipKeys: [
+    { key: "radial_menu.upgrade_silo_title", className: "title" },
+    { key: "radial_menu.upgrade_silo_description", className: "description" },
+  ],
+  tooltipItems: [
+    {
+      text: `Cost: ${renderNumber(STRUCTURE_UPGRADE_COST)}`,
+      className: "cost",
+    },
+  ],
+  action: (params: MenuElementParams) => {
+    const frenzyState = params.game.frenzyManager();
+    if (!frenzyState) return;
+
+    const tileX = params.game.x(params.tile);
+    const tileY = params.game.y(params.tile);
+    const mySilo = frenzyState.findNearbyFrenzyUnit(
+      tileX,
+      tileY,
+      STRUCTURE_CLICK_RANGE,
+      "missileSilo",
+      params.myPlayer.id(),
+    );
+    if (mySilo) {
+      params.playerActionHandler.handleUpgradeFrenzyUnit(
+        mySilo.id,
+        "missileSilo",
+      );
     }
     params.closeMenu();
   },
@@ -646,31 +1142,31 @@ export const buildMenuElement: MenuElement = {
 
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-    // Strategic structures + tactical submenu
-    const strategicItems = createMenuElements(params, "strategic", "build");
-    return [...strategicItems, tacticalMenuElement];
+    // Buildings + towers submenu
+    const buildingItems = createMenuElements(params, "buildings", "build");
+    return [...buildingItems, towersMenuElement];
   },
 };
 
-export const tacticalMenuElement: MenuElement = {
-  id: "tactical",
-  name: "tactical",
+export const towersMenuElement: MenuElement = {
+  id: "towers",
+  name: "towers",
   disabled: (params: MenuElementParams) => params.game.inSpawnPhase(),
   icon: shieldIcon,
   color: COLORS.attack,
   tooltipKeys: [
     {
-      key: "radial_menu.tactical_title",
+      key: "radial_menu.towers_title",
       className: "title",
     },
     {
-      key: "radial_menu.tactical_description",
+      key: "radial_menu.towers_description",
       className: "description",
     },
   ],
   subMenu: (params: MenuElementParams) => {
     if (params === undefined) return [];
-    return createMenuElements(params, "tactical", "tactical");
+    return createMenuElements(params, "towers", "towers");
   },
 };
 
@@ -747,11 +1243,11 @@ export const rootMenuElement: MenuElement = {
       tileOwner.isPlayer() &&
       (tileOwner as PlayerView).id() === params.myPlayer.id();
 
-    // Check if clicking on own HQ or factory in Frenzy mode
+    // Check if clicking on own HQ or structures in Frenzy mode
     let isClickingOnHQ = false;
-    let isClickingOnOwnFactory = false;
     let isClickingOnStructure = false;
-    let canUpgradeFactory = false;
+    let structureUpgradeElement: MenuElement | null = null;
+
     const frenzyState = params.game.frenzyManager();
     if (frenzyState) {
       const myHQ = frenzyState.coreBuildings.find(
@@ -763,46 +1259,161 @@ export const rootMenuElement: MenuElement = {
         const dist = Math.hypot(tileX - myHQ.x, tileY - myHQ.y);
         isClickingOnHQ = dist <= 20;
       }
-      
-      // Check if clicking on own factory
-      const nearbyFactories = params.game.nearbyUnits(params.tile, 3, [UnitType.Factory]);
-      const myFactory = nearbyFactories.find(
-        ({ unit }) =>
-          unit.owner().isPlayer() &&
-          (unit.owner() as PlayerView).id() === params.myPlayer.id(),
+
+      // Check each structure type and set appropriate upgrade element
+      // Priority order: HQ > Factory > Mine > Port > Silo > SAM > Shield > Artillery > DefensePost
+
+      const tileXClick = params.game.x(params.tile);
+      const tileYClick = params.game.y(params.tile);
+
+      // Factory
+      const myFactory = frenzyState.findNearbyStructure(
+        tileXClick,
+        tileYClick,
+        STRUCTURE_CLICK_RANGE,
+        "factory",
+        params.myPlayer.id(),
       );
       if (myFactory) {
-        isClickingOnOwnFactory = true;
         isClickingOnStructure = true;
-        // Check if factory can be upgraded (HQ tier >= 2 and factory tier < 2)
-        canUpgradeFactory = frenzyState.canUpgradeFactory(params.myPlayer.id()) &&
-          frenzyState.getFactoryTier(myFactory.unit.tile()) < 2;
+        const canUpgrade =
+          frenzyState.canUpgradeFactory(params.myPlayer.id()) &&
+          myFactory.tier < 2;
+        if (canUpgrade) {
+          structureUpgradeElement = upgradeFactoryElement;
+        }
       }
-      
-      // Check if clicking on any structure (mine, port, etc.)
-      const nearbyStructures = params.game.nearbyUnits(params.tile, 3, [
-        UnitType.City, UnitType.Port, UnitType.MissileSilo, 
-        UnitType.SAMLauncher, UnitType.DefensePost,
-        UnitType.ShieldGenerator, UnitType.Artillery
-      ]);
-      if (nearbyStructures.some(({ unit }) => 
-        unit.owner().isPlayer() && 
-        (unit.owner() as PlayerView).id() === params.myPlayer.id()
-      )) {
-        isClickingOnStructure = true;
+
+      // Mine (City)
+      if (!structureUpgradeElement) {
+        const myMine = frenzyState.findNearbyStructure(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "mine",
+          params.myPlayer.id(),
+        );
+        if (myMine) {
+          isClickingOnStructure = true;
+          if (myMine.tier < 2) {
+            structureUpgradeElement = upgradeMineElement;
+          }
+        }
+      }
+
+      // Port
+      if (!structureUpgradeElement) {
+        const myPort = frenzyState.findNearbyStructure(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "port",
+          params.myPlayer.id(),
+        );
+        if (myPort) {
+          isClickingOnStructure = true;
+          if (myPort.tier < 2) {
+            structureUpgradeElement = upgradePortElement;
+          }
+        }
+      }
+
+      // Missile Silo
+      if (!structureUpgradeElement) {
+        const mySilo = frenzyState.findNearbyFrenzyUnit(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "missileSilo",
+          params.myPlayer.id(),
+        );
+        if (mySilo) {
+          isClickingOnStructure = true;
+          if ((mySilo.tier ?? 1) < 2) {
+            structureUpgradeElement = upgradeSiloElement;
+          }
+        }
+      }
+
+      // SAM Launcher
+      if (!structureUpgradeElement) {
+        const mySAM = frenzyState.findNearbyFrenzyUnit(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "samLauncher",
+          params.myPlayer.id(),
+        );
+        if (mySAM) {
+          isClickingOnStructure = true;
+          if ((mySAM.tier ?? 1) < 2) {
+            structureUpgradeElement = upgradeSAMElement;
+          }
+        }
+      }
+
+      // Shield Generator
+      if (!structureUpgradeElement) {
+        const myShield = frenzyState.findNearbyFrenzyUnit(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "shieldGenerator",
+          params.myPlayer.id(),
+        );
+        if (myShield) {
+          isClickingOnStructure = true;
+          if ((myShield.tier ?? 1) < 2) {
+            structureUpgradeElement = upgradeShieldElement;
+          }
+        }
+      }
+
+      // Artillery
+      if (!structureUpgradeElement) {
+        const myArtillery = frenzyState.findNearbyFrenzyUnit(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "artillery",
+          params.myPlayer.id(),
+        );
+        if (myArtillery) {
+          isClickingOnStructure = true;
+          if ((myArtillery.tier ?? 1) < 2) {
+            structureUpgradeElement = upgradeArtilleryElement;
+          }
+        }
+      }
+
+      // Defense Post
+      if (!structureUpgradeElement) {
+        const myDefensePost = frenzyState.findNearbyFrenzyUnit(
+          tileXClick,
+          tileYClick,
+          STRUCTURE_CLICK_RANGE,
+          "defensePost",
+          params.myPlayer.id(),
+        );
+        if (myDefensePost) {
+          isClickingOnStructure = true;
+          if ((myDefensePost.tier ?? 1) < 2) {
+            structureUpgradeElement = upgradeDefensePostElement;
+          }
+        }
       }
     }
 
     // In own territory: determine what to show in the first slot
     // - On HQ: upgrade HQ
-    // - On Factory: upgrade factory
-    // - On other structure: delete unit
-    // - On empty land: tactical menu
-    let ownTerritoryFirstItem: MenuElement = tacticalMenuElement;
+    // - On upgradeable structure: upgrade element
+    // - On maxed structure: delete unit
+    // - On empty land: towers menu
+    let ownTerritoryFirstItem: MenuElement = towersMenuElement;
     if (isClickingOnHQ) {
       ownTerritoryFirstItem = upgradeHQElement;
-    } else if (isClickingOnOwnFactory && canUpgradeFactory) {
-      ownTerritoryFirstItem = upgradeFactoryElement;
+    } else if (structureUpgradeElement) {
+      ownTerritoryFirstItem = structureUpgradeElement;
     } else if (isClickingOnStructure) {
       ownTerritoryFirstItem = deleteUnitElement;
     }

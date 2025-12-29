@@ -1,5 +1,5 @@
 import { EventBus } from "../../../core/EventBus";
-import { PlayerActions, PlayerID } from "../../../core/game/Game";
+import { PlayerActions, PlayerID, UnitType } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameView, PlayerView } from "../../../core/game/GameView";
 import {
@@ -14,8 +14,12 @@ import {
   SendEmojiIntentEvent,
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
-  SendUpgradeHQIntentEvent,
   SendUpgradeFactoryIntentEvent,
+  SendUpgradeFrenzyUnitIntentEvent,
+  SendUpgradeHQIntentEvent,
+  SendUpgradeMineIntentEvent,
+  SendUpgradePortIntentEvent,
+  SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 import { UIState } from "../UIState";
 
@@ -114,5 +118,21 @@ export class PlayerActionHandler {
 
   handleUpgradeFactory(tile: TileRef) {
     this.eventBus.emit(new SendUpgradeFactoryIntentEvent(tile));
+  }
+
+  handleUpgradeMine(tile: TileRef) {
+    this.eventBus.emit(new SendUpgradeMineIntentEvent(tile));
+  }
+
+  handleUpgradePort(tile: TileRef) {
+    this.eventBus.emit(new SendUpgradePortIntentEvent(tile));
+  }
+
+  handleUpgradeStructure(unitId: number, unitType: UnitType) {
+    this.eventBus.emit(new SendUpgradeStructureIntentEvent(unitId, unitType));
+  }
+
+  handleUpgradeFrenzyUnit(unitId: number, unitType: string) {
+    this.eventBus.emit(new SendUpgradeFrenzyUnitIntentEvent(unitId, unitType));
   }
 }

@@ -1,3 +1,4 @@
+import { getMobileConfig } from "../../MobileOptimizations";
 import { FrenzyRenderContext } from "./FrenzyRenderContext";
 
 /**
@@ -102,7 +103,7 @@ export class EffectsRenderer {
             this.explosionEffects.push({
               x: targetX,
               y: targetY,
-              radius: projectile.areaRadius || 15,
+              radius: projectile.areaRadius ?? 15,
               lifeTime: 0,
               duration: 600,
             });
@@ -165,6 +166,7 @@ export class EffectsRenderer {
    */
   renderExplosions(ctx: FrenzyRenderContext, deltaTime: number) {
     const context = ctx.context;
+    const mobileConfig = getMobileConfig();
 
     this.explosionEffects = this.explosionEffects.filter((explosion) => {
       explosion.lifeTime += deltaTime;
@@ -181,17 +183,32 @@ export class EffectsRenderer {
       const currentRadius = explosion.radius * growthPhase;
       const alpha = Math.pow(1 - t, 2);
 
-      // Flash gradient
-      const flashGradient = context.createRadialGradient(x, y, 0, x, y, currentRadius);
-      flashGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-      flashGradient.addColorStop(0.3, `rgba(255, 255, 200, ${alpha * 0.8})`);
-      flashGradient.addColorStop(0.6, `rgba(255, 200, 100, ${alpha * 0.4})`);
-      flashGradient.addColorStop(1, `rgba(255, 150, 50, 0)`);
+      // Simplified rendering for mobile - single circle instead of gradient
+      if (mobileConfig.reducedParticles) {
+        context.fillStyle = `rgba(255, 200, 100, ${alpha * 0.5})`;
+        context.beginPath();
+        context.arc(x, y, currentRadius, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        // Flash gradient
+        const flashGradient = context.createRadialGradient(
+          x,
+          y,
+          0,
+          x,
+          y,
+          currentRadius,
+        );
+        flashGradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        flashGradient.addColorStop(0.3, `rgba(255, 255, 200, ${alpha * 0.8})`);
+        flashGradient.addColorStop(0.6, `rgba(255, 200, 100, ${alpha * 0.4})`);
+        flashGradient.addColorStop(1, `rgba(255, 150, 50, 0)`);
 
-      context.fillStyle = flashGradient;
-      context.beginPath();
-      context.arc(x, y, currentRadius, 0, Math.PI * 2);
-      context.fill();
+        context.fillStyle = flashGradient;
+        context.beginPath();
+        context.arc(x, y, currentRadius, 0, Math.PI * 2);
+        context.fill();
+      }
 
       return true;
     });

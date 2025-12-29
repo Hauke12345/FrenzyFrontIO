@@ -521,6 +521,7 @@ export class DefaultConfig implements Config {
           cost: this.costWrapper(() => 25_000, UnitType.DefensePost),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
         };
       case UnitType.SAMLauncher:
         return {

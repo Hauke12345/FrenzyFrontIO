@@ -155,6 +155,21 @@ export class SendUpgradeFactoryIntentEvent implements GameEvent {
   constructor(public readonly tile: number) {}
 }
 
+export class SendUpgradeMineIntentEvent implements GameEvent {
+  constructor(public readonly tile: number) {}
+}
+
+export class SendUpgradePortIntentEvent implements GameEvent {
+  constructor(public readonly tile: number) {}
+}
+
+export class SendUpgradeFrenzyUnitIntentEvent implements GameEvent {
+  constructor(
+    public readonly unitId: number,
+    public readonly unitType: string,
+  ) {}
+}
+
 export class CancelAttackIntentEvent implements GameEvent {
   constructor(public readonly attackID: string) {}
 }
@@ -278,6 +293,18 @@ export class Transport {
 
     this.eventBus.on(SendUpgradeFactoryIntentEvent, (e) =>
       this.onSendUpgradeFactoryIntent(e),
+    );
+
+    this.eventBus.on(SendUpgradeMineIntentEvent, (e) =>
+      this.onSendUpgradeMineIntent(e),
+    );
+
+    this.eventBus.on(SendUpgradePortIntentEvent, (e) =>
+      this.onSendUpgradePortIntent(e),
+    );
+
+    this.eventBus.on(SendUpgradeFrenzyUnitIntentEvent, (e) =>
+      this.onSendUpgradeFrenzyUnitIntent(e),
     );
 
     this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
@@ -679,6 +706,33 @@ export class Transport {
       type: "upgrade_factory",
       clientID: this.lobbyConfig.clientID,
       tile: event.tile,
+    });
+  }
+
+  private onSendUpgradeMineIntent(event: SendUpgradeMineIntentEvent) {
+    this.sendIntent({
+      type: "upgrade_mine",
+      clientID: this.lobbyConfig.clientID,
+      tile: event.tile,
+    });
+  }
+
+  private onSendUpgradePortIntent(event: SendUpgradePortIntentEvent) {
+    this.sendIntent({
+      type: "upgrade_port",
+      clientID: this.lobbyConfig.clientID,
+      tile: event.tile,
+    });
+  }
+
+  private onSendUpgradeFrenzyUnitIntent(
+    event: SendUpgradeFrenzyUnitIntentEvent,
+  ) {
+    this.sendIntent({
+      type: "upgrade_frenzy_unit",
+      clientID: this.lobbyConfig.clientID,
+      unitId: event.unitId,
+      unitType: event.unitType,
     });
   }
 

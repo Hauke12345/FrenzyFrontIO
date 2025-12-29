@@ -4,15 +4,41 @@ import { TileRef } from "../GameMap";
 /**
  * Frenzy Mode: Strategic unit-based warfare with continuous movement
  * and flowing territory boundaries
+ *
+ * ALL buildings and units are managed by FrenzyManager as Frenzy structures/units.
+ * This avoids confusion between game units and Frenzy units.
  */
 
+/**
+ * Frenzy structure types (stationary buildings)
+ * - HQ: Main building, spawns soldiers
+ * - Mine: Generates gold from nearby crystals
+ * - Factory: Spawns soldiers (tier 2: elite soldiers)
+ * - Port: Spawns warships (tier 2: elite warships)
+ */
+export enum FrenzyStructureType {
+  HQ = "hq",
+  Mine = "mine",
+  Factory = "factory",
+  Port = "port",
+}
+
+/**
+ * Frenzy unit types
+ * - Mobile: soldier, eliteSoldier, warship (move and attack)
+ * - Towers: defensePost, samLauncher, missileSilo, shieldGenerator, artillery (stationary defensive)
+ */
 export enum FrenzyUnitType {
+  // Mobile units
   Soldier = "soldier",
   EliteSoldier = "eliteSoldier",
-  DefensePost = "defensePost",
   Warship = "warship",
-  Artillery = "artillery",
+  // Towers (stationary)
+  DefensePost = "defensePost",
+  SAMLauncher = "samLauncher",
+  MissileSilo = "missileSilo",
   ShieldGenerator = "shieldGenerator",
+  Artillery = "artillery",
 }
 
 // Per-unit-type configuration
@@ -68,43 +94,61 @@ export interface FrenzyProjectile {
   targetY?: number; // Target position Y (for artillery)
 }
 
-export interface CoreBuilding {
+/**
+ * Base structure interface for all Frenzy buildings
+ */
+export interface FrenzyStructure {
+  id: number; // Unique structure ID
+  type: FrenzyStructureType;
   playerId: PlayerID;
-  x: number;
+  x: number; // Pixel coordinates
   y: number;
   tile: TileRef;
-  tileX: number;
-  tileY: number;
-  spawnTimer: number; // Seconds until next spawn
+  tier: number; // Structure tier (1 = base, 2+ = upgraded)
+  health: number; // Current HP
+  maxHealth: number; // Max HP
+  // Spawner properties (for HQ, Factory, Port)
+  spawnTimer?: number; // Seconds until next spawn
+  spawnInterval?: number; // Seconds between spawns
+  unitCount?: number; // Only for HQ - total units spawned
+  // Construction properties
+  constructionProgress?: number; // 0-1 for buildings under construction
+  isConstruction?: boolean; // True while building
+}
+
+/**
+ * HQ building (spawns soldiers, main base)
+ */
+export interface CoreBuilding extends FrenzyStructure {
+  type: FrenzyStructureType.HQ;
+  spawnTimer: number;
   spawnInterval: number;
   unitCount: number;
-  tier: number; // HQ tier level (1 = base, 2+ = upgraded)
-  health: number; // Current HP (default: 1000 for HQ)
-  maxHealth: number; // Max HP (default: 1000 for HQ)
 }
 
-export interface FactorySpawner {
-  playerId: PlayerID;
-  x: number;
-  y: number;
-  tile: TileRef;
+/**
+ * Factory building (spawns soldiers/elite soldiers)
+ */
+export interface FactorySpawner extends FrenzyStructure {
+  type: FrenzyStructureType.Factory;
   spawnTimer: number;
   spawnInterval: number;
-  health: number; // Current HP (default: 400 for factories/cities)
-  maxHealth: number; // Max HP (default: 400 for factories/cities)
-  tier: number; // Factory tier (1 = base, 2 = elite units)
 }
 
-export interface PortSpawner {
-  playerId: PlayerID;
-  x: number;
-  y: number;
-  tile: TileRef;
+/**
+ * Port building (spawns warships)
+ */
+export interface PortSpawner extends FrenzyStructure {
+  type: FrenzyStructureType.Port;
   spawnTimer: number;
   spawnInterval: number;
-  health: number;
-  maxHealth: number;
-  tier: number; // Port tier (1 = base, 2 = elite warships)
+}
+
+/**
+ * Mine building (generates gold from crystals)
+ */
+export interface MineStructure extends FrenzyStructure {
+  type: FrenzyStructureType.Mine;
 }
 
 export interface CrystalCluster {
@@ -119,12 +163,16 @@ export interface CrystalCluster {
 export interface FrenzyConfig {
   // Unit type configurations
   units: {
+    // Mobile units
     soldier: UnitTypeConfig;
     eliteSoldier: UnitTypeConfig;
-    defensePost: UnitTypeConfig;
     warship: UnitTypeConfig;
-    artillery: UnitTypeConfig;
+    // Towers
+    defensePost: UnitTypeConfig;
+    samLauncher: UnitTypeConfig;
+    missileSilo: UnitTypeConfig;
     shieldGenerator: UnitTypeConfig;
+    artillery: UnitTypeConfig;
   };
 
   // Spawning
@@ -175,14 +223,18 @@ export function getUnitConfig(
       return config.units.soldier;
     case FrenzyUnitType.EliteSoldier:
       return config.units.eliteSoldier;
-    case FrenzyUnitType.DefensePost:
-      return config.units.defensePost;
     case FrenzyUnitType.Warship:
       return config.units.warship;
-    case FrenzyUnitType.Artillery:
-      return config.units.artillery;
+    case FrenzyUnitType.DefensePost:
+      return config.units.defensePost;
+    case FrenzyUnitType.SAMLauncher:
+      return config.units.samLauncher;
+    case FrenzyUnitType.MissileSilo:
+      return config.units.missileSilo;
     case FrenzyUnitType.ShieldGenerator:
       return config.units.shieldGenerator;
+    case FrenzyUnitType.Artillery:
+      return config.units.artillery;
     default:
       return config.units.soldier;
   }
@@ -191,6 +243,7 @@ export function getUnitConfig(
 export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   // Unit configurations
   units: {
+    // Mobile units
     soldier: {
       health: 100,
       speed: 2.5,
@@ -205,14 +258,6 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       range: 37.5, // 1.5x soldier range
       fireInterval: 1,
     },
-    defensePost: {
-      health: 200, // 2x soldier health
-      speed: 0, // Stationary
-      dps: 0, // Uses projectileDamage instead
-      range: 25, // Same as soldier (tier 2: 37.5)
-      fireInterval: 0.5, // Double soldier fire rate (tier 2: 4.0)
-      projectileDamage: 15, // Same as soldier damage (tier 2: 100, one-shots units)
-    },
     warship: {
       health: 250, // Tough naval unit
       speed: 2.0, // Slower than land units
@@ -221,14 +266,29 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       fireInterval: 1.5, // Moderate fire rate
       projectileDamage: 50, // Good projectile damage
     },
-    artillery: {
-      health: 150, // Fragile
+    // Towers
+    defensePost: {
+      health: 200, // 2x soldier health
       speed: 0, // Stationary
       dps: 0, // Uses projectileDamage instead
-      range: 80, // Very long range
-      fireInterval: 8.0, // Very slow firing, long cooldown
-      projectileDamage: 60, // High damage
-      areaRadius: 15, // Splash damage radius
+      range: 25, // Same as soldier (tier 2: 37.5)
+      fireInterval: 0.5, // Double soldier fire rate (tier 2: 4.0)
+      projectileDamage: 15, // Same as soldier damage (tier 2: 100, one-shots units)
+    },
+    samLauncher: {
+      health: 150, // Moderate HP
+      speed: 0, // Stationary
+      dps: 0, // Uses projectileDamage instead
+      range: 60, // Good anti-air range
+      fireInterval: 2.0, // Moderate fire rate
+      projectileDamage: 100, // High damage to aircraft
+    },
+    missileSilo: {
+      health: 300, // High HP
+      speed: 0, // Stationary
+      dps: 0, // Uses missiles
+      range: 0, // Global range via missiles
+      fireInterval: 0, // Manual launching
     },
     shieldGenerator: {
       health: 100, // Low HP
@@ -238,6 +298,15 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       fireInterval: 0, // No firing
       shieldRadius: 30, // Protection radius
       shieldHealth: 500, // Shield absorbs 500 damage before breaking
+    },
+    artillery: {
+      health: 150, // Fragile
+      speed: 0, // Stationary
+      dps: 0, // Uses projectileDamage instead
+      range: 80, // Very long range
+      fireInterval: 8.0, // Very slow firing, long cooldown
+      projectileDamage: 60, // High damage
+      areaRadius: 15, // Splash damage radius
     },
   },
 
@@ -277,6 +346,39 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   crystalGoldBonus: 1000,
   mineGoldInterval: 10,
   mineRadius: 40,
+};
+
+/**
+ * Structure upgrade configuration
+ * Defines HQ tier requirements and upgrade costs for each structure type
+ */
+export interface StructureUpgradeInfo {
+  requiredHQTier: number; // Minimum HQ tier required to upgrade this structure
+  upgradeCost: number; // Gold cost for upgrade
+  maxTier: number; // Maximum tier for this structure
+}
+
+/**
+ * Structure upgrade configurations for all upgradable structures
+ * All structures require HQ tier 2 to upgrade (same as factory)
+ *
+ * Buildings (right menu - economic/production):
+ *   - mine, factory, port
+ *
+ * Towers (left menu - military/defensive):
+ *   - defensePost, sam, shield, artillery, silo
+ */
+export const STRUCTURE_UPGRADES: Record<string, StructureUpgradeInfo> = {
+  // Buildings
+  mine: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  factory: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  port: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  // Towers
+  defensePost: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  sam: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  shield: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  artillery: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  silo: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
 };
 
 export enum Stance {

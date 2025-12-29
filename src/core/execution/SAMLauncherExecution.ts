@@ -83,10 +83,15 @@ class SAMTargetingSystem {
   public getSingleTarget(ticks: number): Target | null {
     // Look beyond the SAM range so it can preshot nukes
     const detectionRange = this.mg.config().maxSamRange() * 2;
+    // Tier 1 SAM can only target AtomBomb, tier 2 can target HydrogenBomb too
+    const targetableTypes =
+      this.sam.level() >= 2
+        ? [UnitType.AtomBomb, UnitType.HydrogenBomb]
+        : [UnitType.AtomBomb];
     const nukes = this.mg.nearbyUnits(
       this.sam.tile(),
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb],
+      targetableTypes,
       ({ unit }) => {
         return (
           isUnit(unit) &&

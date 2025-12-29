@@ -51,7 +51,10 @@ export type Intent =
   | KickPlayerIntent
   | DefensiveStanceIntent
   | UpgradeHQIntent
-  | UpgradeFactoryIntent;
+  | UpgradeFactoryIntent
+  | UpgradeMineIntent
+  | UpgradePortIntent
+  | UpgradeFrenzyUnitIntent;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -83,11 +86,14 @@ export type AllianceExtensionIntent = z.infer<
 >;
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
-export type DefensiveStanceIntent = z.infer<
-  typeof DefensiveStanceIntentSchema
->;
+export type DefensiveStanceIntent = z.infer<typeof DefensiveStanceIntentSchema>;
 export type UpgradeHQIntent = z.infer<typeof UpgradeHQIntentSchema>;
 export type UpgradeFactoryIntent = z.infer<typeof UpgradeFactoryIntentSchema>;
+export type UpgradeMineIntent = z.infer<typeof UpgradeMineIntentSchema>;
+export type UpgradePortIntent = z.infer<typeof UpgradePortIntentSchema>;
+export type UpgradeFrenzyUnitIntent = z.infer<
+  typeof UpgradeFrenzyUnitIntentSchema
+>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;
@@ -375,6 +381,22 @@ export const UpgradeFactoryIntentSchema = BaseIntentSchema.extend({
   tile: z.number(),
 });
 
+export const UpgradeMineIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_mine"),
+  tile: z.number(),
+});
+
+export const UpgradePortIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_port"),
+  tile: z.number(),
+});
+
+export const UpgradeFrenzyUnitIntentSchema = BaseIntentSchema.extend({
+  type: z.literal("upgrade_frenzy_unit"),
+  unitId: z.number(),
+  unitType: z.string(),
+});
+
 const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
@@ -401,6 +423,9 @@ const IntentSchema = z.discriminatedUnion("type", [
   DefensiveStanceIntentSchema,
   UpgradeHQIntentSchema,
   UpgradeFactoryIntentSchema,
+  UpgradeMineIntentSchema,
+  UpgradePortIntentSchema,
+  UpgradeFrenzyUnitIntentSchema,
 ]);
 
 //

@@ -1,6 +1,6 @@
 import { UnitType } from "../../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../../core/game/GameView";
-import { FrenzyRenderContext, getPlayerById, getTierRoman } from "./FrenzyRenderContext";
+import { FrenzyRenderContext, getTierRoman } from "./FrenzyRenderContext";
 
 /**
  * Structure types in Frenzy mode
@@ -42,40 +42,59 @@ export class StructureRenderer {
   constructor(private game: GameView) {}
 
   /**
-   * Gather all structures from frenzy state and game state
+   * Gather all structures from frenzy state
+   * All Frenzy buildings (HQ, Mine, Factory, Port) are now managed by FrenzyManager
    */
   gatherAllStructures(frenzyState: any): FrenzyStructure[] {
     const structures: FrenzyStructure[] = [];
 
-    // Add HQs from frenzy state
-    for (const building of frenzyState.coreBuildings) {
-      structures.push({
-        type: FrenzyStructureType.HQ,
-        x: building.x,
-        y: building.y,
-        playerId: building.playerId,
-        tier: building.tier ?? 1,
-        health: building.health ?? 1000,
-        maxHealth: building.maxHealth ?? 1000,
-      });
-    }
-
-    // Add factories from frenzy state
-    if (frenzyState.factories) {
-      for (const factory of frenzyState.factories) {
+    // Use the unified structures array if available (new format)
+    if (frenzyState.structures) {
+      for (const s of frenzyState.structures) {
         structures.push({
-          type: FrenzyStructureType.Factory,
-          x: factory.x,
-          y: factory.y,
-          playerId: factory.playerId,
-          tier: factory.tier ?? 1,
-          health: factory.health ?? 400,
-          maxHealth: factory.maxHealth ?? 400,
+          type: s.type as FrenzyStructureType,
+          x: s.x,
+          y: s.y,
+          playerId: s.playerId,
+          tier: s.tier ?? 1,
+          health: s.health ?? 100,
+          maxHealth: s.maxHealth ?? 100,
         });
+      }
+    } else {
+      // Legacy fallback: use separate arrays
+      // Add HQs from frenzy state
+      for (const building of frenzyState.coreBuildings) {
+        structures.push({
+          type: FrenzyStructureType.HQ,
+          x: building.x,
+          y: building.y,
+          playerId: building.playerId,
+          tier: building.tier ?? 1,
+          health: building.health ?? 1000,
+          maxHealth: building.maxHealth ?? 1000,
+        });
+      }
+
+      // Add factories from frenzy state
+      if (frenzyState.factories) {
+        for (const factory of frenzyState.factories) {
+          structures.push({
+            type: FrenzyStructureType.Factory,
+            x: factory.x,
+            y: factory.y,
+            playerId: factory.playerId,
+            tier: factory.tier ?? 1,
+            health: factory.health ?? 400,
+            maxHealth: factory.maxHealth ?? 400,
+          });
+        }
       }
     }
 
-    // Add structures from game units
+    // Add game units that are still managed as game units
+    // Note: Mines, Ports, DefensePosts, Artillery, ShieldGenerators are now Frenzy units
+    // Only SAMLaunchers and MissileSilos remain as game units (for now)
     for (const player of this.game.players()) {
       for (const unit of player.units()) {
         const tile = unit.tile();
@@ -89,26 +108,11 @@ export class StructureRenderer {
 
         let structureType: FrenzyStructureType | null = null;
         switch (unit.type()) {
-          case UnitType.City:
-            structureType = FrenzyStructureType.Mine;
-            break;
-          case UnitType.DefensePost:
-            structureType = FrenzyStructureType.DefensePost;
-            break;
-          case UnitType.Port:
-            structureType = FrenzyStructureType.Port;
-            break;
           case UnitType.MissileSilo:
             structureType = FrenzyStructureType.MissileSilo;
             break;
           case UnitType.SAMLauncher:
             structureType = FrenzyStructureType.SAMLauncher;
-            break;
-          case UnitType.Artillery:
-            structureType = FrenzyStructureType.Artillery;
-            break;
-          case UnitType.ShieldGenerator:
-            structureType = FrenzyStructureType.ShieldGenerator;
             break;
         }
 
@@ -279,7 +283,12 @@ export class StructureRenderer {
     const r = Math.floor(255 * (1 - healthPercent));
     const g = Math.floor(255 * healthPercent);
     context.fillStyle = `rgb(${r}, ${g}, 0)`;
-    context.fillRect(x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
+    context.fillRect(
+      x - barWidth / 2,
+      barY,
+      barWidth * healthPercent,
+      barHeight,
+    );
 
     // Border
     context.strokeStyle = "#000";
@@ -307,10 +316,22 @@ export class StructureRenderer {
       const tipY = y + Math.sin(angle) * (circleRadius + spikeLength);
       const leftAngle = angle - Math.PI / 2;
       const rightAngle = angle + Math.PI / 2;
-      const baseX1 = x + Math.cos(angle) * circleRadius + Math.cos(leftAngle) * spikeBaseWidth;
-      const baseY1 = y + Math.sin(angle) * circleRadius + Math.sin(leftAngle) * spikeBaseWidth;
-      const baseX2 = x + Math.cos(angle) * circleRadius + Math.cos(rightAngle) * spikeBaseWidth;
-      const baseY2 = y + Math.sin(angle) * circleRadius + Math.sin(rightAngle) * spikeBaseWidth;
+      const baseX1 =
+        x +
+        Math.cos(angle) * circleRadius +
+        Math.cos(leftAngle) * spikeBaseWidth;
+      const baseY1 =
+        y +
+        Math.sin(angle) * circleRadius +
+        Math.sin(leftAngle) * spikeBaseWidth;
+      const baseX2 =
+        x +
+        Math.cos(angle) * circleRadius +
+        Math.cos(rightAngle) * spikeBaseWidth;
+      const baseY2 =
+        y +
+        Math.sin(angle) * circleRadius +
+        Math.sin(rightAngle) * spikeBaseWidth;
 
       context.beginPath();
       context.moveTo(tipX, tipY);
@@ -473,7 +494,12 @@ export class StructureRenderer {
     context.lineTo(x + halfSize + 2, y - halfSize * 0.3);
     context.lineTo(x + halfSize + 2, y + halfSize * 0.5);
     context.quadraticCurveTo(x, y + halfSize + 4, x, y + halfSize + 2);
-    context.quadraticCurveTo(x, y + halfSize + 4, x - halfSize - 2, y + halfSize * 0.5);
+    context.quadraticCurveTo(
+      x,
+      y + halfSize + 4,
+      x - halfSize - 2,
+      y + halfSize * 0.5,
+    );
     context.lineTo(x - halfSize - 2, y - halfSize * 0.3);
     context.closePath();
     context.fill();
@@ -485,7 +511,12 @@ export class StructureRenderer {
     context.lineTo(x + halfSize, y - halfSize * 0.3);
     context.lineTo(x + halfSize, y + halfSize * 0.5);
     context.quadraticCurveTo(x, y + halfSize + 2, x, y + halfSize);
-    context.quadraticCurveTo(x, y + halfSize + 2, x - halfSize, y + halfSize * 0.5);
+    context.quadraticCurveTo(
+      x,
+      y + halfSize + 2,
+      x - halfSize,
+      y + halfSize * 0.5,
+    );
     context.lineTo(x - halfSize, y - halfSize * 0.3);
     context.closePath();
     context.fill();
@@ -531,7 +562,12 @@ export class StructureRenderer {
     context.beginPath();
     context.moveTo(x - halfSize * 0.7, y + 1);
     context.quadraticCurveTo(x - halfSize * 0.35, y - 1, x, y + 1);
-    context.quadraticCurveTo(x + halfSize * 0.35, y + 3, x + halfSize * 0.7, y + 1);
+    context.quadraticCurveTo(
+      x + halfSize * 0.35,
+      y + 3,
+      x + halfSize * 0.7,
+      y + 1,
+    );
     context.stroke();
 
     context.strokeStyle = "#000";

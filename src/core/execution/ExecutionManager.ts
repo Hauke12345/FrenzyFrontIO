@@ -174,6 +174,40 @@ export class Executor {
         }
         return new NoOpExecution();
       }
+      case "upgrade_mine": {
+        // Upgrade mine in Frenzy mode
+        if (this.mg.config().gameConfig().gameFork === GameFork.Frenzy) {
+          const frenzyManager = this.mg.frenzyManager();
+          if (frenzyManager) {
+            frenzyManager.upgradeMine(player.id(), intent.tile);
+          }
+        }
+        return new NoOpExecution();
+      }
+      case "upgrade_port": {
+        // Upgrade port in Frenzy mode
+        if (this.mg.config().gameConfig().gameFork === GameFork.Frenzy) {
+          const frenzyManager = this.mg.frenzyManager();
+          if (frenzyManager) {
+            frenzyManager.upgradePort(player.id(), intent.tile);
+          }
+        }
+        return new NoOpExecution();
+      }
+      case "upgrade_frenzy_unit": {
+        // Upgrade frenzy unit (towers, silo, SAM, etc.) in Frenzy mode
+        if (this.mg.config().gameConfig().gameFork === GameFork.Frenzy) {
+          const frenzyManager = this.mg.frenzyManager();
+          if (frenzyManager) {
+            frenzyManager.upgradeFrenzyUnit(
+              player.id(),
+              intent.unitId,
+              intent.unitType,
+            );
+          }
+        }
+        return new NoOpExecution();
+      }
       default:
         throw new Error(`intent type ${intent} not found`);
     }

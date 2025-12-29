@@ -506,12 +506,12 @@ Inspired by Age of Empires tier progression combined with Supreme Commander's vi
 
 #### Four Tiers (Like Ages in AoE)
 
-| Tier | Name | Cost | Unlock |
-|------|------|------|--------|
-| **Tier 1** | Militia | Start | Basic units, HQ only |
-| **Tier 2** | Soldiers | 100g | Barracks, +25% unit health |
-| **Tier 3** | Warriors | 250g | Factory, +50% damage, +1 income/s |
-| **Tier 4** | Elites | 500g | Fortress, +100% all stats, +3 income/s |
+| Tier       | Name     | Cost  | Unlock                                 |
+| ---------- | -------- | ----- | -------------------------------------- |
+| **Tier 1** | Militia  | Start | Basic units, HQ only                   |
+| **Tier 2** | Soldiers | 100g  | Barracks, +25% unit health             |
+| **Tier 3** | Warriors | 250g  | Factory, +50% damage, +1 income/s      |
+| **Tier 4** | Elites   | 500g  | Fortress, +100% all stats, +3 income/s |
 
 #### Tier Upgrade Mechanics
 
@@ -580,12 +580,12 @@ Tier 4: Largest, glowing aura effect
 
 ### Buildings Unlocked by Tier
 
-| Building | Tier Required | Effect |
-|----------|---------------|--------|
-| **HQ** | 1 | Spawns units, upgrades tier |
-| **Barracks** | 2 | Additional spawn point, +1 unit cap |
-| **Factory** | 3 | Spawns faster, +2 income/s |
-| **Fortress** | 4 | Defensive structure, area damage |
+| Building     | Tier Required | Effect                              |
+| ------------ | ------------- | ----------------------------------- |
+| **HQ**       | 1             | Spawns units, upgrades tier         |
+| **Barracks** | 2             | Additional spawn point, +1 unit cap |
+| **Factory**  | 3             | Spawns faster, +2 income/s          |
+| **Fortress** | 4             | Defensive structure, area damage    |
 
 ### Streaming Economy Display
 
@@ -636,18 +636,50 @@ Gold: 156  [+12/s]
 interface TierDefinition {
   tier: number;
   name: string;
-  cost: number;           // Gold to upgrade TO this tier
+  cost: number; // Gold to upgrade TO this tier
   healthMultiplier: number;
   damageMultiplier: number;
-  incomeBonus: number;    // Added to base income
+  incomeBonus: number; // Added to base income
   unlockedBuildings: string[];
 }
 
 const TIERS: TierDefinition[] = [
-  { tier: 1, name: "Militia",   cost: 0,   healthMultiplier: 1.0, damageMultiplier: 1.0, incomeBonus: 0, unlockedBuildings: ["hq"] },
-  { tier: 2, name: "Soldiers",  cost: 100, healthMultiplier: 1.25, damageMultiplier: 1.0, incomeBonus: 0, unlockedBuildings: ["barracks"] },
-  { tier: 3, name: "Warriors",  cost: 250, healthMultiplier: 1.5, damageMultiplier: 1.5, incomeBonus: 1, unlockedBuildings: ["factory"] },
-  { tier: 4, name: "Elites",    cost: 500, healthMultiplier: 2.0, damageMultiplier: 2.0, incomeBonus: 3, unlockedBuildings: ["fortress"] },
+  {
+    tier: 1,
+    name: "Militia",
+    cost: 0,
+    healthMultiplier: 1.0,
+    damageMultiplier: 1.0,
+    incomeBonus: 0,
+    unlockedBuildings: ["hq"],
+  },
+  {
+    tier: 2,
+    name: "Soldiers",
+    cost: 100,
+    healthMultiplier: 1.25,
+    damageMultiplier: 1.0,
+    incomeBonus: 0,
+    unlockedBuildings: ["barracks"],
+  },
+  {
+    tier: 3,
+    name: "Warriors",
+    cost: 250,
+    healthMultiplier: 1.5,
+    damageMultiplier: 1.5,
+    incomeBonus: 1,
+    unlockedBuildings: ["factory"],
+  },
+  {
+    tier: 4,
+    name: "Elites",
+    cost: 500,
+    healthMultiplier: 2.0,
+    damageMultiplier: 2.0,
+    incomeBonus: 3,
+    unlockedBuildings: ["fortress"],
+  },
 ];
 ```
 
@@ -717,3 +749,71 @@ const TIERS: TierDefinition[] = [
 - Add `gameMode: "classic" | "frenzy"` to game settings
 - Branch game loop based on mode
 - Share 90% of codebase, mode-specific logic in separate classes
+
+---
+
+## Launch Roadmap
+
+### Phase 1: Pre-Launch Fixes (Current Priority)
+
+Get the game stable enough for initial hosting.
+
+- [ ] **Mobile Sync Issues**: Investigate why mobile clients fall behind on tick processing
+  - Diagnostic logging added (clients behind >30 turns get warnings)
+  - Consider: tick catch-up mechanism, state snapshots
+- [ ] **Performance on Mobile**: Game lags on mobile devices
+  - ✅ FPS throttling implemented (30/45/60 based on device)
+  - ✅ Protomolecule effects skip on low-end devices
+  - ✅ Simplified unit rendering on low-end devices
+  - ✅ Reduced explosion gradients on mobile
+  - ✅ Bots set to 0 (only FakeHumans for lighter load)
+- [ ] **Input Registration**: Late-game inputs not registering on mobile
+  - Likely caused by client being behind on game state
+  - Fix sync issues first, then re-test
+- [ ] **UI Responsiveness**: Touch controls difficult to use when lagging
+  - May improve automatically once sync is fixed
+
+### Phase 2: Initial Hosting
+
+Launch with URL for testing with real users.
+
+- [ ] Deploy to production server
+- [ ] Monitor logs for "client significantly behind" warnings
+- [ ] Gather player feedback on mobile experience
+- [ ] Identify any remaining critical bugs
+
+### Phase 3: PixiJS Migration (Post-Launch)
+
+Move from Canvas 2D to GPU-accelerated rendering.
+
+**Why PixiJS?**
+
+- 2-5x performance improvement on mobile (GPU vs CPU rendering)
+- WebGL batched draw calls reduce overhead
+- Already bundled in package.json (v8.11.0)
+
+**Migration Strategy:**
+
+1. **Layer-by-layer migration** (not big-bang rewrite)
+2. **Priority order** (heaviest layers first):
+   - FrenzyLayer (units, protomolecule, projectiles)
+   - TerrainLayer
+   - TerritoryLayer
+   - UnitLayer
+3. **Hybrid approach**: Keep Canvas 2D for UI layers, PixiJS for game world
+
+**Technical Notes:**
+
+- Current: All layers use `canvas.getContext("2d")`
+- Target: Heavy layers use PIXI.Application with WebGL/WebGPU
+- Challenge: TransformHandler needs to work with both systems
+- Benefit: Sprite batching, texture atlases, GPU shaders
+
+### Phase 4: Future Improvements
+
+After stable PixiJS migration.
+
+- [ ] State resync mechanism for desynced clients
+- [ ] Progressive loading for slow connections
+- [ ] WebWorker pool for parallel bot AI
+- [ ] Replay system optimization

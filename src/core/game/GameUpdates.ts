@@ -281,6 +281,9 @@ export interface FrenzyUpdate {
     y: number;
     health: number;
     unitType: string;
+    tier?: number;
+    shieldHealth?: number;
+    maxShieldHealth?: number;
   }>;
   coreBuildings: Array<{
     playerId: string;
@@ -302,6 +305,22 @@ export interface FrenzyUpdate {
     tier: number;
     health?: number;
     maxHealth?: number;
+  }>;
+  // Unified structures array containing all buildings
+  structures?: Array<{
+    id: number;
+    type: string;
+    playerId: string;
+    tile: number;
+    x: number;
+    y: number;
+    tier: number;
+    health: number;
+    maxHealth: number;
+    spawnTimer?: number;
+    spawnInterval?: number;
+    unitCount?: number;
+    maxUnits?: number;
   }>;
   projectiles: Array<{
     id: number;

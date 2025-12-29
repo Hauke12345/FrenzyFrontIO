@@ -753,12 +753,16 @@ function sanitizeConfig(partial: Partial<FrenzyConfig>): FrenzyConfig {
   const merged: FrenzyConfig = {
     ...DEFAULT_FRENZY_CONFIG,
     units: {
+      // Mobile units
       soldier: { ...DEFAULT_FRENZY_CONFIG.units.soldier },
       eliteSoldier: { ...DEFAULT_FRENZY_CONFIG.units.eliteSoldier },
-      defensePost: { ...DEFAULT_FRENZY_CONFIG.units.defensePost },
       warship: { ...DEFAULT_FRENZY_CONFIG.units.warship },
-      artillery: { ...DEFAULT_FRENZY_CONFIG.units.artillery },
+      // Towers
+      defensePost: { ...DEFAULT_FRENZY_CONFIG.units.defensePost },
+      samLauncher: { ...DEFAULT_FRENZY_CONFIG.units.samLauncher },
+      missileSilo: { ...DEFAULT_FRENZY_CONFIG.units.missileSilo },
       shieldGenerator: { ...DEFAULT_FRENZY_CONFIG.units.shieldGenerator },
+      artillery: { ...DEFAULT_FRENZY_CONFIG.units.artillery },
     },
   };
 
@@ -773,19 +777,28 @@ function sanitizeConfig(partial: Partial<FrenzyConfig>): FrenzyConfig {
 
   // Handle nested unit configs
   if (partial.units) {
-    (["soldier", "eliteSoldier", "defensePost", "warship", "artillery", "shieldGenerator"] as const).forEach(
-      (unitType) => {
-        const unitConfig = partial.units?.[unitType];
-        if (unitConfig) {
-          Object.keys(unitConfig).forEach((prop) => {
-            const value = (unitConfig as any)[prop];
-            if (typeof value === "number" && Number.isFinite(value)) {
-              (merged.units[unitType] as any)[prop] = value;
-            }
-          });
-        }
-      },
-    );
+    (
+      [
+        "soldier",
+        "eliteSoldier",
+        "warship",
+        "defensePost",
+        "samLauncher",
+        "missileSilo",
+        "shieldGenerator",
+        "artillery",
+      ] as const
+    ).forEach((unitType) => {
+      const unitConfig = partial.units?.[unitType];
+      if (unitConfig) {
+        Object.keys(unitConfig).forEach((prop) => {
+          const value = (unitConfig as any)[prop];
+          if (typeof value === "number" && Number.isFinite(value)) {
+            (merged.units[unitType] as any)[prop] = value;
+          }
+        });
+      }
+    });
   }
 
   return merged;

@@ -1,6 +1,60 @@
+import { FrenzyStructureType } from "../../game/frenzy/FrenzyTypes";
 import { Game, Player, Relation, UnitType } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { closestTile, closestTwoTiles } from "../Util";
+
+/**
+ * Get tiles of structures of the same type, including Frenzy structures
+ */
+function getOtherStructureTiles(
+  mg: Game,
+  player: Player,
+  type: UnitType,
+): Set<TileRef> {
+  const otherTiles: Set<TileRef> = new Set();
+
+  // Get regular game units
+  for (const unit of player.units(type)) {
+    otherTiles.add(unit.tile());
+  }
+
+  // In Frenzy mode, also get Frenzy structures
+  const frenzyManager = mg.frenzyManager();
+  if (frenzyManager) {
+    // Map UnitType to FrenzyStructureType
+    let frenzyType: FrenzyStructureType | null = null;
+    switch (type) {
+      case UnitType.City:
+        frenzyType = FrenzyStructureType.Mine;
+        break;
+      case UnitType.Factory:
+        frenzyType = FrenzyStructureType.Factory;
+        break;
+      case UnitType.Port:
+        frenzyType = FrenzyStructureType.Port;
+        break;
+    }
+
+    if (frenzyType) {
+      for (const tile of frenzyManager.getStructureTilesByType(frenzyType)) {
+        otherTiles.add(tile);
+      }
+    }
+
+    // For towers (DefensePost, SAMLauncher, MissileSilo), get tower tiles
+    if (
+      type === UnitType.DefensePost ||
+      type === UnitType.SAMLauncher ||
+      type === UnitType.MissileSilo
+    ) {
+      for (const tile of frenzyManager.getTowerTilesForPlayer(player.id())) {
+        otherTiles.add(tile);
+      }
+    }
+  }
+
+  return otherTiles;
+}
 
 export function structureSpawnTileValue(
   mg: Game,
@@ -8,7 +62,7 @@ export function structureSpawnTileValue(
   type: UnitType,
 ): (tile: TileRef) => number {
   const borderTiles = player.borderTiles();
-  const otherUnits = player.units(type);
+  const otherTiles = getOtherStructureTiles(mg, player, type);
   // Prefer spacing structures out of atom bomb range
   const borderSpacing = mg.config().nukeMagnitudes(UnitType.AtomBomb).outer;
   const structureSpacing = borderSpacing * 2;
@@ -27,11 +81,9 @@ export function structureSpawnTileValue(
         w += Math.min(closestBorderDist, borderSpacing);
 
         // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        const otherTilesCopy = new Set(otherTiles);
+        otherTilesCopy.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTilesCopy, [tile]);
         if (closestOther !== null) {
           const d = mg.manhattanDist(closestOther.x, tile);
           w += Math.min(d, structureSpacing);
@@ -46,11 +98,9 @@ export function structureSpawnTileValue(
         let w = 0;
 
         // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const [, closestOtherDist] = closestTile(mg, otherTiles, tile);
+        const otherTilesCopy = new Set(otherTiles);
+        otherTilesCopy.delete(tile);
+        const [, closestOtherDist] = closestTile(mg, otherTilesCopy, tile);
         w += Math.min(closestOtherDist, structureSpacing);
 
         return w;
@@ -88,11 +138,9 @@ export function structureSpawnTileValue(
         }
 
         // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        const otherTilesCopy2 = new Set(otherTiles);
+        otherTilesCopy2.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTilesCopy2, [tile]);
         if (closestOther !== null) {
           const d = mg.manhattanDist(closestOther.x, tile);
           w += Math.min(d, structureSpacing);
@@ -128,11 +176,9 @@ export function structureSpawnTileValue(
         }
 
         // Prefer to be away from other structures of the same type
-        const otherTiles: Set<TileRef> = new Set(
-          otherUnits.map((u) => u.tile()),
-        );
-        otherTiles.delete(tile);
-        const closestOther = closestTwoTiles(mg, otherTiles, [tile]);
+        const otherTilesCopy3 = new Set(otherTiles);
+        otherTilesCopy3.delete(tile);
+        const closestOther = closestTwoTiles(mg, otherTilesCopy3, [tile]);
         if (closestOther !== null) {
           const d = mg.manhattanDist(closestOther.x, tile);
           w += Math.min(d, structureSpacing);

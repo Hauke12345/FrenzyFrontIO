@@ -297,6 +297,16 @@ export class GameServer {
           }
           case "hash": {
             client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+            // Diagnostic: check if client is significantly behind
+            const turnsBehind = this.turns.length - clientMsg.turnNumber;
+            if (turnsBehind > 30) {
+              this.log.warn("client significantly behind", {
+                clientID: client.clientID,
+                clientTurn: clientMsg.turnNumber,
+                serverTurn: this.turns.length,
+                turnsBehind: turnsBehind,
+              });
+            }
             break;
           }
           case "winner": {

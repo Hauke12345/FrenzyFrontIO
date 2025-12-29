@@ -1,4 +1,5 @@
 import { GameView } from "../../../../core/game/GameView";
+import { shouldSkipExpensiveEffect } from "../../MobileOptimizations";
 import { FrenzyRenderContext } from "./FrenzyRenderContext";
 
 /**
@@ -80,7 +81,10 @@ export class ProtomoleculeRenderer {
           let isClosest = true;
           for (const other of allMines) {
             if (other === mine) continue;
-            const otherDist = Math.hypot(crystal.x - other.x, crystal.y - other.y);
+            const otherDist = Math.hypot(
+              crystal.x - other.x,
+              crystal.y - other.y,
+            );
             if (otherDist < dist) {
               isClosest = false;
               break;
@@ -106,7 +110,16 @@ export class ProtomoleculeRenderer {
   /**
    * Render the full protomolecule effect
    */
-  render(ctx: FrenzyRenderContext, allMines: MineData[], allCrystals: CrystalData[]) {
+  render(
+    ctx: FrenzyRenderContext,
+    allMines: MineData[],
+    allCrystals: CrystalData[],
+  ) {
+    // Skip expensive protomolecule effects on low-end mobile devices
+    if (shouldSkipExpensiveEffect()) {
+      return;
+    }
+
     const halfWidth = ctx.halfWidth;
     const halfHeight = ctx.halfHeight;
 
@@ -140,7 +153,10 @@ export class ProtomoleculeRenderer {
     const rotations = crystal.rotations ?? [];
     const baseSize = 3 + crystal.crystalCount * 1.5;
 
-    const positions = this.getCrystalClusterPositions(crystal.crystalCount, baseSize);
+    const positions = this.getCrystalClusterPositions(
+      crystal.crystalCount,
+      baseSize,
+    );
 
     for (let i = 0; i < positions.length; i++) {
       const pos = positions[i];
@@ -231,7 +247,8 @@ export class ProtomoleculeRenderer {
 
       for (let i = 0; i < areaVeinCount; i++) {
         const baseAngle = i * angleStep + mine.x * 0.1;
-        const veinLength = mineRadius * (0.5 + 0.3 * Math.sin(baseAngle * 3 + mine.y * 0.05));
+        const veinLength =
+          mineRadius * (0.5 + 0.3 * Math.sin(baseAngle * 3 + mine.y * 0.05));
         const vx = mine.x + Math.cos(baseAngle) * veinLength - halfWidth;
         const vy = mine.y + Math.sin(baseAngle) * veinLength - halfHeight;
 
@@ -239,7 +256,10 @@ export class ProtomoleculeRenderer {
         let inCell = true;
         for (const other of allMines) {
           if (other === mine) continue;
-          const distToOther = Math.hypot(vx + halfWidth - other.x, vy + halfHeight - other.y);
+          const distToOther = Math.hypot(
+            vx + halfWidth - other.x,
+            vy + halfHeight - other.y,
+          );
           const distToThis = Math.hypot(vx - mx, vy - my);
           if (distToOther < distToThis) {
             inCell = false;
@@ -289,7 +309,17 @@ export class ProtomoleculeRenderer {
     ctx.quadraticCurveTo(ctrlX, ctrlY, x2, y2);
     ctx.stroke();
 
-    this.cache.veins.push({ x1, y1, x2, y2, ctrlX, ctrlY, isCrystal, crystalCount, alpha });
+    this.cache.veins.push({
+      x1,
+      y1,
+      x2,
+      y2,
+      ctrlX,
+      ctrlY,
+      isCrystal,
+      crystalCount,
+      alpha,
+    });
   }
 
   private drawSimpleCellBoundary(
@@ -317,7 +347,9 @@ export class ProtomoleculeRenderer {
         if (dist < mineRadius * 2) {
           const midDist = dist / 2;
           const angleToMid = Math.atan2(other.y - mine.y, other.x - mine.x);
-          const angleDiff = Math.abs(((angle - angleToMid + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+          const angleDiff = Math.abs(
+            ((angle - angleToMid + Math.PI * 3) % (Math.PI * 2)) - Math.PI,
+          );
           if (angleDiff < Math.PI / 2) {
             const clipDist = midDist / Math.cos(angleDiff);
             if (clipDist > 0 && clipDist < radius) {
@@ -345,19 +377,29 @@ export class ProtomoleculeRenderer {
     if (this.cache.veins.length === 0) return;
 
     for (const vein of this.cache.veins) {
-      const pulseCount = vein.isCrystal ? Math.min(3, 2 + vein.crystalCount) : 1;
+      const pulseCount = vein.isCrystal
+        ? Math.min(3, 2 + vein.crystalCount)
+        : 1;
       const pulseSpeed = vein.isCrystal ? 0.8 : 0.4;
 
       for (let p = 0; p < pulseCount; p++) {
         const pulseT = (time * pulseSpeed + p / pulseCount) % 1;
         const t = pulseT;
 
-        const px = (1 - t) * (1 - t) * vein.x2 + 2 * (1 - t) * t * vein.ctrlX + t * t * vein.x1;
-        const py = (1 - t) * (1 - t) * vein.y2 + 2 * (1 - t) * t * vein.ctrlY + t * t * vein.y1;
+        const px =
+          (1 - t) * (1 - t) * vein.x2 +
+          2 * (1 - t) * t * vein.ctrlX +
+          t * t * vein.x1;
+        const py =
+          (1 - t) * (1 - t) * vein.y2 +
+          2 * (1 - t) * t * vein.ctrlY +
+          t * t * vein.y1;
 
         const pulseSizeBase = vein.isCrystal ? 2.5 : 1.5;
-        const pulseSize = pulseSizeBase * (0.6 + 0.4 * Math.sin(pulseT * Math.PI));
-        const pulseAlpha = vein.alpha * (0.5 + 0.5 * Math.sin(pulseT * Math.PI));
+        const pulseSize =
+          pulseSizeBase * (0.6 + 0.4 * Math.sin(pulseT * Math.PI));
+        const pulseAlpha =
+          vein.alpha * (0.5 + 0.5 * Math.sin(pulseT * Math.PI));
 
         context.fillStyle = `rgba(150, 220, 255, ${pulseAlpha})`;
         context.beginPath();
@@ -421,11 +463,20 @@ export class ProtomoleculeRenderer {
       size * 1.5 * radiationPulse,
     );
     glowGradient.addColorStop(0, `rgba(120, 200, 255, ${glowIntensity})`);
-    glowGradient.addColorStop(0.5, `rgba(80, 160, 220, ${glowIntensity * 0.5})`);
+    glowGradient.addColorStop(
+      0.5,
+      `rgba(80, 160, 220, ${glowIntensity * 0.5})`,
+    );
     glowGradient.addColorStop(1, "rgba(40, 120, 200, 0)");
     context.fillStyle = glowGradient;
     context.beginPath();
-    context.arc(x, y - height * 0.2, size * 1.5 * radiationPulse, 0, Math.PI * 2);
+    context.arc(
+      x,
+      y - height * 0.2,
+      size * 1.5 * radiationPulse,
+      0,
+      Math.PI * 2,
+    );
     context.fill();
 
     // Crystal body

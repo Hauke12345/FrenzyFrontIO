@@ -5,6 +5,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  UnitType,
 } from "../core/game/Game";
 import { GameConfig } from "../core/Schemas";
 
@@ -35,8 +36,8 @@ export class MapPlaylist {
       disableNPCs: false,
       gameMode: GameMode.FFA,
       playerTeams: undefined,
-      bots: CIRCLE_MAP_MAX_PLAYERS, // Will be adjusted to (20 - numRealPlayers) in GameRunner
-      disabledUnits: [],
+      bots: 0, // Disabled for performance - only FakeHumans remain
+      disabledUnits: [UnitType.MIRV, UnitType.MIRVWarhead], // MIRVs removed from Frenzy
     } satisfies GameConfig;
   }
 }

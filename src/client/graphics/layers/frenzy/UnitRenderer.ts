@@ -1,5 +1,6 @@
 import { GameView, PlayerView } from "../../../../core/game/GameView";
-import { FrenzyRenderContext, getPlayerById } from "./FrenzyRenderContext";
+import { getMobileConfig } from "../../MobileOptimizations";
+import { FrenzyRenderContext } from "./FrenzyRenderContext";
 
 /**
  * Frenzy unit data from the game state
@@ -22,7 +23,11 @@ export interface FrenzyUnitData {
  * Soldier, EliteSoldier, Warship, Artillery, ShieldGenerator, DefensePost
  */
 export class UnitRenderer {
-  constructor(private game: GameView) {}
+  private simplifiedUnits: boolean;
+
+  constructor(private game: GameView) {
+    this.simplifiedUnits = getMobileConfig().simplifiedUnits;
+  }
 
   /**
    * Render a single unit
@@ -33,6 +38,13 @@ export class UnitRenderer {
 
     const x = unit.x - ctx.halfWidth;
     const y = unit.y - ctx.halfHeight;
+    const tier = unit.tier ?? 1;
+
+    // Simplified rendering for low-end mobile: just colored circles
+    if (this.simplifiedUnits) {
+      this.renderSimplifiedUnit(ctx.context, x, y, player, unit);
+      return;
+    }
 
     const isDefensePost = unit.unitType === "defensePost";
     const isEliteSoldier = unit.unitType === "eliteSoldier";
@@ -43,9 +55,9 @@ export class UnitRenderer {
     if (isShieldGenerator) {
       this.renderShieldGenerator(ctx, x, y, player, unit);
     } else if (isArtillery) {
-      this.renderArtillery(ctx.context, x, y, player);
+      this.renderArtillery(ctx.context, x, y, player, tier);
     } else if (isDefensePost) {
-      this.renderDefensePost(ctx.context, x, y, player);
+      this.renderDefensePost(ctx.context, x, y, player, tier);
     } else if (isEliteSoldier) {
       this.renderEliteSoldier(ctx.context, x, y, player);
     } else if (isWarship) {
@@ -53,6 +65,30 @@ export class UnitRenderer {
     } else {
       this.renderSoldier(ctx.context, x, y, player);
     }
+  }
+
+  /**
+   * Simplified unit rendering for mobile performance
+   */
+  private renderSimplifiedUnit(
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    player: PlayerView,
+    unit: FrenzyUnitData,
+  ) {
+    // Size based on unit type
+    let size = 3;
+    if (unit.unitType === "warship") size = 6;
+    else if (unit.unitType === "artillery") size = 5;
+    else if (unit.unitType === "eliteSoldier") size = 4;
+    else if (unit.unitType === "shieldGenerator") size = 5;
+    else if (unit.unitType === "defensePost") size = 5;
+
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.beginPath();
+    context.arc(x, y, size, 0, Math.PI * 2);
+    context.fill();
   }
 
   private renderShieldGenerator(
@@ -64,24 +100,59 @@ export class UnitRenderer {
   ) {
     const context = ctx.context;
     const size = 6;
-    const shieldRadius = 30;
+    // Tier 2 shields have 1.5x radius
+    const baseShieldRadius = 30;
+    const shieldRadius =
+      (unit.tier ?? 1) >= 2 ? baseShieldRadius * 1.5 : baseShieldRadius;
+    const mobileConfig = getMobileConfig();
 
     // Draw shield bubble if active
     if (unit.shieldHealth && unit.shieldHealth > 0) {
-      const shieldAlpha = 0.15 + 0.1 * Math.sin(ctx.time * 2);
-      const shieldGradient = context.createRadialGradient(x, y, 0, x, y, shieldRadius);
-      shieldGradient.addColorStop(0, `rgba(100, 200, 255, ${shieldAlpha * 0.3})`);
-      shieldGradient.addColorStop(0.7, `rgba(80, 180, 240, ${shieldAlpha * 0.5})`);
-      shieldGradient.addColorStop(1, `rgba(60, 150, 220, ${shieldAlpha})`);
+      if (mobileConfig.reducedAnimations) {
+        // Simplified shield rendering for mobile
+        context.fillStyle = `rgba(100, 200, 255, 0.15)`;
+        context.beginPath();
+        context.arc(x, y, shieldRadius, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        const shieldAlpha = 0.15 + 0.1 * Math.sin(ctx.time * 2);
+        const shieldGradient = context.createRadialGradient(
+          x,
+          y,
+          0,
+          x,
+          y,
+          shieldRadius,
+        );
+        shieldGradient.addColorStop(
+          0,
+          `rgba(100, 200, 255, ${shieldAlpha * 0.3})`,
+        );
+        shieldGradient.addColorStop(
+          0.7,
+          `rgba(80, 180, 240, ${shieldAlpha * 0.5})`,
+        );
+        shieldGradient.addColorStop(1, `rgba(60, 150, 220, ${shieldAlpha})`);
 
-      context.fillStyle = shieldGradient;
-      context.beginPath();
-      context.arc(x, y, shieldRadius, 0, Math.PI * 2);
-      context.fill();
+        context.fillStyle = shieldGradient;
+        context.beginPath();
+        context.arc(x, y, shieldRadius, 0, Math.PI * 2);
+        context.fill();
 
-      // Shield edge glow
-      context.strokeStyle = `rgba(120, 220, 255, ${0.3 + 0.2 * Math.sin(ctx.time * 3.3)})`;
+        // Shield edge glow
+        context.strokeStyle = `rgba(120, 220, 255, ${0.3 + 0.2 * Math.sin(ctx.time * 3.3)})`;
+        context.lineWidth = 2;
+        context.stroke();
+      }
+    }
+
+    // Golden ring for tier 2 towers
+    const tier = unit.tier ?? 1;
+    if (tier >= 2) {
+      context.strokeStyle = "#FFD700";
       context.lineWidth = 2;
+      context.beginPath();
+      context.arc(x, y, size + 2, 0, Math.PI * 2);
       context.stroke();
     }
 
@@ -125,8 +196,18 @@ export class UnitRenderer {
     x: number,
     y: number,
     player: PlayerView,
+    tier: number = 1,
   ) {
     const size = 4;
+
+    // Golden ring for tier 2 towers
+    if (tier >= 2) {
+      context.strokeStyle = "#FFD700";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(x, y, size + 2, 0, Math.PI * 2);
+      context.stroke();
+    }
 
     // Base platform
     context.fillStyle = "#555";
@@ -165,8 +246,18 @@ export class UnitRenderer {
     x: number,
     y: number,
     player: PlayerView,
+    tier: number = 1,
   ) {
     const size = 4;
+
+    // Golden ring for tier 2 towers
+    if (tier >= 2) {
+      context.strokeStyle = "#FFD700";
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(x, y, size + 1, 0, Math.PI * 2);
+      context.stroke();
+    }
 
     // Shield shape
     context.fillStyle = player.territoryColor().toRgbString();

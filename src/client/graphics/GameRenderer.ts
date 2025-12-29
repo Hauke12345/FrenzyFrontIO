@@ -4,9 +4,6 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { GameStartingModal } from "../GameStartingModal";
 import { RefreshGraphicsEvent as RedrawGraphicsEvent } from "../InputHandler";
 import { FrameProfiler } from "./FrameProfiler";
-import { TransformHandler } from "./TransformHandler";
-import { UIState } from "./UIState";
-import { VideoModeManager, VideoModeToggleEvent } from "./VideoModeManager";
 import { AdTimer } from "./layers/AdTimer";
 import { AlertFrame } from "./layers/AlertFrame";
 import { BuildMenu } from "./layers/BuildMenu";
@@ -42,6 +39,10 @@ import { UILayer } from "./layers/UILayer";
 import { UnitDisplay } from "./layers/UnitDisplay";
 import { UnitLayer } from "./layers/UnitLayer";
 import { WinModal } from "./layers/WinModal";
+import { getMobileConfig } from "./MobileOptimizations";
+import { TransformHandler } from "./TransformHandler";
+import { UIState } from "./UIState";
+import { VideoModeManager, VideoModeToggleEvent } from "./VideoModeManager";
 
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -298,6 +299,8 @@ export function createRenderer(
 export class GameRenderer {
   private context: CanvasRenderingContext2D;
   private videoModeManager: VideoModeManager;
+  private lastFrameTime: number = 0;
+  private minFrameInterval: number;
 
   constructor(
     private game: GameView,
@@ -312,6 +315,10 @@ export class GameRenderer {
     if (context === null) throw new Error("2d context not supported");
     this.context = context;
     this.videoModeManager = new VideoModeManager(canvas, eventBus);
+
+    // Set frame rate limit based on device capability
+    const mobileConfig = getMobileConfig();
+    this.minFrameInterval = 1000 / mobileConfig.maxFPS;
   }
 
   initialize() {
@@ -329,13 +336,13 @@ export class GameRenderer {
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
 
-    let rafId = requestAnimationFrame(() => this.renderGame());
+    let rafId = requestAnimationFrame((ts) => this.renderGame(ts));
     this.canvas.addEventListener("contextlost", () => {
       cancelAnimationFrame(rafId);
     });
     this.canvas.addEventListener("contextrestored", () => {
       this.redraw();
-      rafId = requestAnimationFrame(() => this.renderGame());
+      rafId = requestAnimationFrame((ts) => this.renderGame(ts));
     });
   }
 
@@ -358,7 +365,15 @@ export class GameRenderer {
     });
   }
 
-  renderGame() {
+  renderGame(timestamp: number = performance.now()) {
+    // Frame rate limiting for mobile devices
+    const elapsed = timestamp - this.lastFrameTime;
+    if (elapsed < this.minFrameInterval) {
+      requestAnimationFrame((ts) => this.renderGame(ts));
+      return;
+    }
+    this.lastFrameTime = timestamp;
+
     FrameProfiler.clear();
     const start = performance.now();
     // Set background
@@ -400,7 +415,7 @@ export class GameRenderer {
     handleTransformState(false, isTransformActive); // Ensure context is clean after rendering
     this.transformHandler.resetChanged();
 
-    requestAnimationFrame(() => this.renderGame());
+    requestAnimationFrame((ts) => this.renderGame(ts));
     const duration = performance.now() - start;
 
     const layerDurations = FrameProfiler.consume();
