@@ -1,14 +1,21 @@
 // Frenzy mode rendering system
+export { EffectsRenderer } from "./EffectsRenderer";
+export type { ExplosionEffect, GoldTextEffect } from "./EffectsRenderer";
 export { FrenzyLayer } from "./FrenzyLayer";
-export { StructureRenderer, FrenzyStructureType } from "./StructureRenderer";
+export {
+  getPlayerById,
+  getTierRoman,
+  isInViewport,
+} from "./FrenzyRenderContext";
+export type {
+  FrenzyRenderContext,
+  ViewportBounds,
+} from "./FrenzyRenderContext";
+export { MiningCellsRenderer } from "./MiningCellsRenderer";
+export type { CrystalData, MineData } from "./MiningCellsRenderer";
+export { ProjectileRenderer } from "./ProjectileRenderer";
+export type { FrenzyProjectileData } from "./ProjectileRenderer";
+export { FrenzyStructureType, StructureRenderer } from "./StructureRenderer";
 export type { FrenzyStructure } from "./StructureRenderer";
 export { UnitRenderer } from "./UnitRenderer";
 export type { FrenzyUnitData } from "./UnitRenderer";
-export { ProtomoleculeRenderer } from "./ProtomoleculeRenderer";
-export type { MineData, CrystalData } from "./ProtomoleculeRenderer";
-export { ProjectileRenderer } from "./ProjectileRenderer";
-export type { FrenzyProjectileData } from "./ProjectileRenderer";
-export { EffectsRenderer } from "./EffectsRenderer";
-export type { GoldTextEffect, ExplosionEffect } from "./EffectsRenderer";
-export type { FrenzyRenderContext, ViewportBounds } from "./FrenzyRenderContext";
-export { isInViewport, getPlayerById, getTierRoman } from "./FrenzyRenderContext";

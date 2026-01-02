@@ -10,7 +10,7 @@ export interface MobileConfig {
   // Rendering quality settings
   devicePixelRatio: number; // Lower = faster rendering
   maxFPS: number; // Cap framerate
-  skipProtomoleculeEffects: boolean; // Most expensive visual effect
+  skipMiningCellsEffects: boolean; // Most expensive visual effect
   reducedParticles: boolean; // Fewer explosion particles
   simplifiedUnits: boolean; // Simpler unit rendering
   reducedAnimations: boolean; // Skip non-essential animations
@@ -72,7 +72,7 @@ function createMobileConfig(): MobileConfig {
       isLowEnd: false,
       devicePixelRatio: window.devicePixelRatio || 1,
       maxFPS: 60,
-      skipProtomoleculeEffects: false,
+      skipMiningCellsEffects: false,
       reducedParticles: false,
       simplifiedUnits: false,
       reducedAnimations: false,
@@ -88,7 +88,7 @@ function createMobileConfig(): MobileConfig {
       isLowEnd: true,
       devicePixelRatio: 1, // Render at 1x regardless of screen
       maxFPS: 30,
-      skipProtomoleculeEffects: true,
+      skipMiningCellsEffects: true,
       reducedParticles: true,
       simplifiedUnits: true,
       reducedAnimations: true,
@@ -103,7 +103,7 @@ function createMobileConfig(): MobileConfig {
     isLowEnd: false,
     devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2), // Cap at 2x
     maxFPS: 45,
-    skipProtomoleculeEffects: false,
+    skipMiningCellsEffects: false,
     reducedParticles: true,
     simplifiedUnits: false,
     reducedAnimations: true,
@@ -125,7 +125,7 @@ export function getMobileConfig(): MobileConfig {
 
 // Utility to check if we should skip expensive rendering
 export function shouldSkipExpensiveEffect(): boolean {
-  return getMobileConfig().skipProtomoleculeEffects;
+  return getMobileConfig().skipMiningCellsEffects;
 }
 
 // Utility to get effective device pixel ratio

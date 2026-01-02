@@ -8,8 +8,8 @@ import { FrenzyRenderContext, isInViewport } from "./FrenzyRenderContext";
 import {
   CrystalData,
   MineData,
-  ProtomoleculeRenderer,
-} from "./ProtomoleculeRenderer";
+  MiningCellsRenderer,
+} from "./MiningCellsRenderer";
 import { ProjectileRenderer } from "./ProjectileRenderer";
 import { FrenzyStructureType, StructureRenderer } from "./StructureRenderer";
 import { UnitRenderer } from "./UnitRenderer";
@@ -20,7 +20,7 @@ import { UnitRenderer } from "./UnitRenderer";
  * This layer delegates rendering to specialized sub-renderers:
  * - StructureRenderer: HQ, mines, factories, defense posts, etc.
  * - UnitRenderer: Soldiers, warships, artillery, etc.
- * - ProtomoleculeRenderer: Veins, crystals, energy pulses
+ * - MiningCellsRenderer: Veins, crystals, energy pulses
  * - ProjectileRenderer: Plasma, beams, artillery shells
  * - EffectsRenderer: Gold popups, explosions
  */
@@ -30,7 +30,7 @@ export class FrenzyLayer implements Layer {
   // Sub-renderers
   private structureRenderer: StructureRenderer;
   private unitRenderer: UnitRenderer;
-  private protomoleculeRenderer: ProtomoleculeRenderer;
+  private miningCellsRenderer: MiningCellsRenderer;
   private projectileRenderer: ProjectileRenderer;
   private effectsRenderer: EffectsRenderer;
 
@@ -40,7 +40,7 @@ export class FrenzyLayer implements Layer {
   ) {
     this.structureRenderer = new StructureRenderer(game);
     this.unitRenderer = new UnitRenderer(game);
-    this.protomoleculeRenderer = new ProtomoleculeRenderer(game);
+    this.miningCellsRenderer = new MiningCellsRenderer(game);
     this.projectileRenderer = new ProjectileRenderer();
     this.effectsRenderer = new EffectsRenderer();
   }
@@ -95,15 +95,19 @@ export class FrenzyLayer implements Layer {
     };
 
     // Process effects (gold payouts, artillery impacts)
-    this.effectsRenderer.processGoldPayouts(frenzyState.pendingGoldPayouts ?? []);
-    this.effectsRenderer.processArtilleryProjectiles(frenzyState.projectiles ?? []);
+    this.effectsRenderer.processGoldPayouts(
+      frenzyState.pendingGoldPayouts ?? [],
+    );
+    this.effectsRenderer.processArtilleryProjectiles(
+      frenzyState.projectiles ?? [],
+    );
 
     // Gather structures
     const gatherStart = FrameProfiler.start();
     const structures = this.structureRenderer.gatherAllStructures(frenzyState);
     FrameProfiler.end("FrenzyLayer:gatherStructures", gatherStart);
 
-    // Build mine data for protomolecule
+    // Build mine data for mining cells
     const mineStart = FrameProfiler.start();
     const allMines: MineData[] = structures
       .filter((s) => s.type === FrenzyStructureType.Mine)
@@ -124,29 +128,35 @@ export class FrenzyLayer implements Layer {
         };
       });
 
-    const crystals: CrystalData[] = (frenzyState.crystals ?? []).map((c: any) => ({
-      id: c.id,
-      x: c.x,
-      y: c.y,
-      crystalCount: c.crystalCount,
-      rotations: c.rotations,
-    }));
+    const crystals: CrystalData[] = (frenzyState.crystals ?? []).map(
+      (c: any) => ({
+        id: c.id,
+        x: c.x,
+        y: c.y,
+        crystalCount: c.crystalCount,
+        rotations: c.rotations,
+      }),
+    );
 
     // Assign crystals to mines
     const mineRadius = 40;
-    this.protomoleculeRenderer.assignCrystalsToMines(allMines, crystals, mineRadius);
+    this.miningCellsRenderer.assignCrystalsToMines(
+      allMines,
+      crystals,
+      mineRadius,
+    );
     FrameProfiler.end("FrenzyLayer:crystalAssignment", mineStart);
 
-    // Render protomolecule effect
+    // Render mining cells effect
     const protoStart = FrameProfiler.start();
-    this.protomoleculeRenderer.render(ctx, allMines, crystals);
-    FrameProfiler.end("FrenzyLayer:protomolecule", protoStart);
+    this.miningCellsRenderer.render(ctx, allMines, crystals);
+    FrameProfiler.end("FrenzyLayer:miningCells", protoStart);
 
     // Render crystals
     const crystalStart = FrameProfiler.start();
     for (const crystal of crystals) {
       if (isInViewport(crystal.x, crystal.y, ctx.viewportBounds)) {
-        this.protomoleculeRenderer.renderCrystal(ctx, crystal);
+        this.miningCellsRenderer.renderCrystal(ctx, crystal);
       }
     }
     FrameProfiler.end("FrenzyLayer:crystals", crystalStart);
@@ -214,7 +224,8 @@ export class FrenzyLayer implements Layer {
     for (const unit of units) {
       if (unit.playerId !== myPlayerId) continue;
       if (!unit.hasAttackOrder) continue;
-      if (unit.attackOrderX === undefined || unit.attackOrderY === undefined) continue;
+      if (unit.attackOrderX === undefined || unit.attackOrderY === undefined)
+        continue;
 
       const unitX = unit.x - ctx.halfWidth;
       const unitY = unit.y - ctx.halfHeight;

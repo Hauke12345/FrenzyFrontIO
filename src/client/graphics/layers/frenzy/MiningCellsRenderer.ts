@@ -3,7 +3,7 @@ import { shouldSkipExpensiveEffect } from "../../MobileOptimizations";
 import { FrenzyRenderContext } from "./FrenzyRenderContext";
 
 /**
- * Mine data for protomolecule rendering
+ * Mine data for mining cells rendering
  */
 export interface MineData {
   x: number;
@@ -41,13 +41,13 @@ interface VeinCache {
 }
 
 /**
- * Renders the protomolecule effect:
+ * Renders the mining cells effect:
  * - Organic veins connecting mines to crystals
  * - Energy pulses flowing along veins
  * - Voronoi cell boundaries
  * - Crystal clusters
  */
-export class ProtomoleculeRenderer {
+export class MiningCellsRenderer {
   // Static cache for veins and boundaries (only redrawn when mines change)
   private cache: {
     canvas: HTMLCanvasElement | null;
@@ -129,14 +129,14 @@ export class ProtomoleculeRenderer {
   }
 
   /**
-   * Render the full protomolecule effect
+   * Render the full mining cells effect
    */
   render(
     ctx: FrenzyRenderContext,
     allMines: MineData[],
     allCrystals: CrystalData[],
   ) {
-    // Skip expensive protomolecule effects on low-end mobile devices
+    // Skip expensive mining cells effects on low-end mobile devices
     if (shouldSkipExpensiveEffect()) {
       return;
     }
@@ -223,10 +223,10 @@ export class ProtomoleculeRenderer {
       const mine = allMines[i];
       for (let j = i + 1; j < allMines.length; j++) {
         const other = allMines[j];
-        
+
         // Only draw bisection between mines owned by same player
         if (mine.playerId !== other.playerId) continue;
-        
+
         const dist = Math.hypot(other.x - mine.x, other.y - mine.y);
 
         if (dist < mineRadius * 2) {
@@ -236,20 +236,22 @@ export class ProtomoleculeRenderer {
 
             const worldMidX = (mine.x + other.x) / 2;
             const worldMidY = (mine.y + other.y) / 2;
-            
+
             // Only draw if midpoint is on owned land
             if (!this.isOwnedByPlayer(worldMidX, worldMidY, mine.playerId)) {
               continue;
             }
-            
+
             // Use player's territory color
             if (mine.territoryColor) {
-              const colorMatch = mine.territoryColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+              const colorMatch = mine.territoryColor.match(
+                /rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+              );
               if (colorMatch) {
                 ctx.strokeStyle = `rgba(${colorMatch[1]}, ${colorMatch[2]}, ${colorMatch[3]}, 0.25)`;
               }
             }
-            
+
             const midX = worldMidX - halfWidth;
             const midY = worldMidY - halfHeight;
             const dx = other.x - mine.x;
@@ -383,7 +385,9 @@ export class ProtomoleculeRenderer {
     // Use player's territory color if available, otherwise default blue
     if (mine.territoryColor) {
       // Parse the rgb color and add alpha
-      const colorMatch = mine.territoryColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      const colorMatch = mine.territoryColor.match(
+        /rgb\((\d+),\s*(\d+),\s*(\d+)\)/,
+      );
       if (colorMatch) {
         ctx.strokeStyle = `rgba(${colorMatch[1]}, ${colorMatch[2]}, ${colorMatch[3]}, 0.4)`;
       } else {

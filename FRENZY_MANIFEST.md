@@ -763,7 +763,7 @@ Get the game stable enough for initial hosting.
   - Consider: tick catch-up mechanism, state snapshots
 - [ ] **Performance on Mobile**: Game lags on mobile devices
   - ✅ FPS throttling implemented (30/45/60 based on device)
-  - ✅ Protomolecule effects skip on low-end devices
+  - ✅ Mining cells effects skip on low-end devices
   - ✅ Simplified unit rendering on low-end devices
   - ✅ Reduced explosion gradients on mobile
   - ✅ Bots set to 0 (only FakeHumans for lighter load)
@@ -796,7 +796,7 @@ Move from Canvas 2D to GPU-accelerated rendering.
 
 1. **Layer-by-layer migration** (not big-bang rewrite)
 2. **Priority order** (heaviest layers first):
-   - FrenzyLayer (units, protomolecule, projectiles)
+   - FrenzyLayer (units, mining cells, projectiles)
    - TerrainLayer
    - TerritoryLayer
    - UnitLayer
