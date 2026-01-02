@@ -22,11 +22,10 @@ export class FrenzyServerConfig extends DefaultServerConfig {
   }
 
   // Override jwtIssuer to skip external API calls for cosmetics
-  // We don't have an external API server, so just disable JWT verification
+  // We don't have an external API server, so point to localhost which will fail gracefully
+  // The PrivilegeRefresher will fail but fail-open is designed for this
   jwtIssuer(): string {
-    // Return empty string to effectively disable cosmetics fetching
-    // The PrivilegeRefresher will fail but fail-open is designed for this
-    return "";
+    return "http://localhost:3000";
   }
 
   adminToken(): string {
