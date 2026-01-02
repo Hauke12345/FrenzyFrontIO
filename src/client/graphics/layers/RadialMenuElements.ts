@@ -540,11 +540,11 @@ export const upgradeHQElement: MenuElement = {
     );
     if (!myHQ) return false;
 
-    // Check if the click is near the HQ (within 20 pixels)
+    // Check if the click is near the HQ (within 10 pixels)
     const tileX = params.game.x(params.tile);
     const tileY = params.game.y(params.tile);
     const dist = Math.hypot(tileX - myHQ.x, tileY - myHQ.y);
-    return dist <= 20;
+    return dist <= 10;
   },
   disabled: (params: MenuElementParams) => {
     return params.myPlayer.gold() < HQ_UPGRADE_COST;

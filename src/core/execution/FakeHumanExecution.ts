@@ -461,6 +461,9 @@ export class FakeHumanExecution implements Execution {
    * Uses defensive stance to determine priority:
    * - Defensive (stance < 0.5): Prioritize defensive structures (DefensePost, SAM, Shield, Artillery)
    * - Offensive (stance >= 0.5): Prioritize economy/offense (Factory, Port, Mine)
+   * 
+   * Multiplier formula: Higher multiplier = higher perceived cost = builds fewer of that type
+   * We use (num + X) where X controls how many are built before cost becomes prohibitive
    */
   private handleFrenzyUnits(): boolean {
     if (!this.player || !this.mg.frenzyManager()) return false;
@@ -472,33 +475,34 @@ export class FakeHumanExecution implements Execution {
     
     if (stance < 0.5) {
       // Defensive: Prioritize defense, then economy
+      // Lower base multiplier = will build more before moving to next type
       return (
-        // Defense structures first
-        this.maybeSpawnStructure(UnitType.DefensePost, (num) => Math.max(1, num)) ||
-        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Artillery, (num) => (num + 1) ** 2) ||
+        // Defense structures first - build several before economy
+        this.maybeSpawnStructure(UnitType.DefensePost, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Artillery, (num) => num + 1) ||
         // Then economy
-        this.maybeSpawnStructure(UnitType.City, (num) => Math.max(1, num)) || // Mine
-        this.maybeSpawnStructure(UnitType.Factory, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Port, (num) => (num + 1) ** 2) ||
+        this.maybeSpawnStructure(UnitType.City, (num) => num + 1) || // Mine
+        this.maybeSpawnStructure(UnitType.Factory, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Port, (num) => num + 2) ||
         this.maybeSpawnWarship() ||
-        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => (num + 1) ** 2)
+        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num + 3)
       );
     } else {
       // Offensive: Prioritize economy/offense, then defense
       return (
         // Economy and offense first
-        this.maybeSpawnStructure(UnitType.City, (num) => Math.max(1, num)) || // Mine
-        this.maybeSpawnStructure(UnitType.Factory, (num) => Math.max(1, num)) ||
-        this.maybeSpawnStructure(UnitType.Port, (num) => Math.max(1, num)) ||
+        this.maybeSpawnStructure(UnitType.City, (num) => num + 1) || // Mine
+        this.maybeSpawnStructure(UnitType.Factory, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.Port, (num) => num + 1) ||
         this.maybeSpawnWarship() ||
-        // Then defense (with higher cost multiplier so less built)
-        this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Artillery, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => (num + 1) ** 2)
+        // Then defense (with higher base multiplier so fewer built)
+        this.maybeSpawnStructure(UnitType.DefensePost, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Artillery, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num + 2)
       );
     }
   }
@@ -508,7 +512,13 @@ export class FakeHumanExecution implements Execution {
     multiplier: (num: number) => number,
   ) {
     if (this.player === null) throw new Error("not initialized");
-    const owned = this.player.unitsOwned(type);
+    
+    // In Frenzy mode, use FrenzyManager's structure count instead of game units
+    const frenzyManager = this.mg.frenzyManager();
+    const owned = frenzyManager
+      ? frenzyManager.getStructureCountForPlayer(this.player.id(), type)
+      : this.player.unitsOwned(type);
+      
     const perceivedCostMultiplier = multiplier(owned + 1);
     const realCost = this.cost(type);
     const perceivedCost = realCost * BigInt(perceivedCostMultiplier);

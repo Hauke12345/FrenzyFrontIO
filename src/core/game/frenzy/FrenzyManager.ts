@@ -96,10 +96,18 @@ export class FrenzyManager {
             ...DEFAULT_FRENZY_CONFIG.units.warship,
             ...config.units.warship,
           },
+          eliteWarship: {
+            ...DEFAULT_FRENZY_CONFIG.units.eliteWarship,
+            ...config.units.eliteWarship,
+          },
           // Towers
           defensePost: {
             ...DEFAULT_FRENZY_CONFIG.units.defensePost,
             ...config.units.defensePost,
+          },
+          eliteDefensePost: {
+            ...DEFAULT_FRENZY_CONFIG.units.eliteDefensePost,
+            ...config.units.eliteDefensePost,
           },
           samLauncher: {
             ...DEFAULT_FRENZY_CONFIG.units.samLauncher,
@@ -229,10 +237,18 @@ export class FrenzyManager {
             ...this.config.units.warship,
             ...overrides.units.warship,
           },
+          eliteWarship: {
+            ...this.config.units.eliteWarship,
+            ...overrides.units.eliteWarship,
+          },
           // Towers
           defensePost: {
             ...this.config.units.defensePost,
             ...overrides.units.defensePost,
+          },
+          eliteDefensePost: {
+            ...this.config.units.eliteDefensePost,
+            ...overrides.units.eliteDefensePost,
           },
           samLauncher: {
             ...this.config.units.samLauncher,
@@ -430,11 +446,15 @@ export class FrenzyManager {
         // Find a water tile near the port to spawn the warship
         const waterSpawn = this.findWaterSpawnNearPort(port.x, port.y);
         if (waterSpawn) {
+          // Use port tier from FrenzyManager's port object (set by upgradePort)
+          const portTier = port.tier ?? 1;
+          
           this.spawnUnit(
             port.playerId,
             waterSpawn.x,
             waterSpawn.y,
             FrenzyUnitType.Warship,
+            portTier, // Tier 2 ports spawn tier 2 warships
           );
         }
         port.spawnTimer = port.spawnInterval;
@@ -674,6 +694,7 @@ export class FrenzyManager {
     x: number,
     y: number,
     unitType: FrenzyUnitType = FrenzyUnitType.Soldier,
+    tier: number = 1,
   ) {
     const building = this.coreBuildings.get(playerId);
     if (!building) return;
@@ -691,7 +712,15 @@ export class FrenzyManager {
 
     // For warships, verify spawn position is on water
     if (isWarship) {
-      const tile = this.game.ref(Math.floor(spawnX), Math.floor(spawnY));
+      const floorX = Math.floor(spawnX);
+      const floorY = Math.floor(spawnY);
+      if (!this.game.isValidCoord(floorX, floorY)) {
+        console.warn(
+          `[FrenzyManager] Warship spawn aborted - position out of bounds: ${spawnX}, ${spawnY}`,
+        );
+        return;
+      }
+      const tile = this.game.ref(floorX, floorY);
       if (!tile || !this.game.isWater(tile)) {
         console.warn(
           `[FrenzyManager] Warship spawn aborted - position not on water: ${spawnX}, ${spawnY}`,
@@ -702,8 +731,13 @@ export class FrenzyManager {
 
     // Get unit-specific configuration
     const unitConfig = getUnitConfig(this.config, unitType);
-    const health = unitConfig.health;
+    let health = unitConfig.health;
     const fireInterval = unitConfig.fireInterval;
+    
+    // Tier 2 warships get 50% more health
+    if (unitType === FrenzyUnitType.Warship && tier >= 2) {
+      health = Math.floor(health * 1.5);
+    }
 
     const unit: FrenzyUnit = {
       id: this.nextUnitId++,
@@ -719,7 +753,7 @@ export class FrenzyManager {
       weaponCooldown: this.random.next() * fireInterval,
       unitType,
       fireInterval,
-      tier: 1, // Units start at tier 1
+      tier, // Use provided tier
     };
 
     // Initialize shield for shield generators
@@ -1176,41 +1210,57 @@ export class FrenzyManager {
     const nextX = unit.x + vx * deltaTime;
     const nextY = unit.y + vy * deltaTime;
     
-    // Check if next position is water
-    const nextTile = this.game.ref(Math.floor(nextX), Math.floor(nextY));
-    if (nextTile && this.game.isWater(nextTile)) {
-      unit.x = nextX;
-      unit.y = nextY;
-      unit.vx = vx;
-      unit.vy = vy;
-    } else {
-      // Can't move in ideal direction - try just angular movement
-      const altX = unit.x + tangentX * angularSpeed * deltaTime;
-      const altY = unit.y + tangentY * angularSpeed * deltaTime;
-      const altTile = this.game.ref(Math.floor(altX), Math.floor(altY));
-      
+    // Check if next position is water (with bounds checking)
+    const floorNextX = Math.floor(nextX);
+    const floorNextY = Math.floor(nextY);
+    if (this.game.isValidCoord(floorNextX, floorNextY)) {
+      const nextTile = this.game.ref(floorNextX, floorNextY);
+      if (nextTile && this.game.isWater(nextTile)) {
+        unit.x = nextX;
+        unit.y = nextY;
+        unit.vx = vx;
+        unit.vy = vy;
+        return;
+      }
+    }
+    
+    // Can't move in ideal direction - try just angular movement
+    const altX = unit.x + tangentX * angularSpeed * deltaTime;
+    const altY = unit.y + tangentY * angularSpeed * deltaTime;
+    const floorAltX = Math.floor(altX);
+    const floorAltY = Math.floor(altY);
+    
+    if (this.game.isValidCoord(floorAltX, floorAltY)) {
+      const altTile = this.game.ref(floorAltX, floorAltY);
       if (altTile && this.game.isWater(altTile)) {
         unit.x = altX;
         unit.y = altY;
         unit.vx = tangentX * angularSpeed;
         unit.vy = tangentY * angularSpeed;
-      } else {
-        // Try opposite angular direction
-        const alt2X = unit.x - tangentX * angularSpeed * deltaTime;
-        const alt2Y = unit.y - tangentY * angularSpeed * deltaTime;
-        const alt2Tile = this.game.ref(Math.floor(alt2X), Math.floor(alt2Y));
-        
-        if (alt2Tile && this.game.isWater(alt2Tile)) {
-          unit.x = alt2X;
-          unit.y = alt2Y;
-          unit.vx = -tangentX * angularSpeed;
-          unit.vy = -tangentY * angularSpeed;
-        } else {
-          unit.vx = 0;
-          unit.vy = 0;
-        }
+        return;
       }
     }
+    
+    // Try opposite angular direction
+    const alt2X = unit.x - tangentX * angularSpeed * deltaTime;
+    const alt2Y = unit.y - tangentY * angularSpeed * deltaTime;
+    const floorAlt2X = Math.floor(alt2X);
+    const floorAlt2Y = Math.floor(alt2Y);
+    
+    if (this.game.isValidCoord(floorAlt2X, floorAlt2Y)) {
+      const alt2Tile = this.game.ref(floorAlt2X, floorAlt2Y);
+      if (alt2Tile && this.game.isWater(alt2Tile)) {
+        unit.x = alt2X;
+        unit.y = alt2Y;
+        unit.vx = -tangentX * angularSpeed;
+        unit.vy = -tangentY * angularSpeed;
+        return;
+      }
+    }
+    
+    // Can't move at all
+    unit.vx = 0;
+    unit.vy = 0;
   }
 
   /**
@@ -1231,6 +1281,8 @@ export class FrenzyManager {
       const checkX = Math.floor(unit.x + Math.cos(angle) * dist);
       const checkY = Math.floor(unit.y + Math.sin(angle) * dist);
 
+      // Bounds check before ref
+      if (!this.game.isValidCoord(checkX, checkY)) continue;
       const tile = this.game.ref(checkX, checkY);
       if (!tile || !this.game.isWater(tile)) continue;
 
@@ -1268,6 +1320,8 @@ export class FrenzyManager {
         const checkX = Math.floor(unit.x + Math.cos(angle) * dist);
         const checkY = Math.floor(unit.y + Math.sin(angle) * dist);
 
+        // Bounds check before ref
+        if (!this.game.isValidCoord(checkX, checkY)) continue;
         const tile = this.game.ref(checkX, checkY);
         if (tile && this.game.isWater(tile)) {
           return { x: checkX + 0.5, y: checkY + 0.5 };
@@ -1496,7 +1550,17 @@ export class FrenzyManager {
       const isDefensePostT2 =
         unit.unitType === FrenzyUnitType.DefensePost && unit.tier >= 2;
       const isArtillery = unit.unitType === FrenzyUnitType.Artillery;
-      const combatRange = isDefensePostT2 ? 37.5 : unitConfig.range; // Tier 2: 1.5x soldier range
+      const isWarshipT2 =
+        unit.unitType === FrenzyUnitType.Warship && unit.tier >= 2;
+      
+      // Get combat range based on unit type and tier
+      let combatRange = unitConfig.range;
+      if (isDefensePostT2) {
+        combatRange = 37.5; // Tier 2: 1.5x soldier range
+      } else if (isWarshipT2) {
+        combatRange = this.config.units.eliteWarship.range; // Tier 2: long range missiles
+      }
+      
       const effectiveFireInterval = isDefensePostT2 ? 4.0 : unit.fireInterval; // Tier 2: slow but powerful
 
       // Update fire interval for tier 2 defense posts
@@ -1532,6 +1596,10 @@ export class FrenzyManager {
             unit.weaponCooldown = unit.fireInterval;
           }
         }
+        // Tier 2 warships fire missile barrages (2x5 missiles, then reload)
+        else if (unit.unitType === FrenzyUnitType.Warship && unit.tier >= 2) {
+          this.handleTier2WarshipAttack(unit, nearest, deltaTime);
+        }
         // Defense posts deal burst damage on shot, regular units deal DPS
         else if (unitConfig.projectileDamage !== undefined) {
           // Burst damage on shot (defense posts, warships)
@@ -1565,8 +1633,13 @@ export class FrenzyManager {
           }
         }
       } else {
-        // No Frenzy enemy units nearby - check for enemy City/Factory structures
-        this.attackNearbyStructures(unit, deltaTime, unitConfig, combatRange);
+        // No Frenzy enemy units nearby - check for enemy structures
+        // Tier 2 warships use missile barrages on structures too
+        if (unit.unitType === FrenzyUnitType.Warship && unit.tier >= 2) {
+          this.attackNearbyStructuresWithMissiles(unit, deltaTime, combatRange);
+        } else {
+          this.attackNearbyStructures(unit, deltaTime, unitConfig, combatRange);
+        }
       }
     }
   }
@@ -1651,6 +1724,199 @@ export class FrenzyManager {
   }
 
   /**
+   * Handle tier 2 warship missile barrage attack.
+   * Fires 2 volleys of 5 missiles in quick succession, then reloads.
+   * Missiles are non-guided with small AOE and massive range (25% of map width).
+   */
+  private handleTier2WarshipAttack(
+    unit: FrenzyUnit,
+    target: FrenzyUnit,
+    deltaTime: number,
+  ) {
+    // Initialize barrage state if not set
+    if (unit.barrageCount === undefined) {
+      unit.barrageCount = 0;
+      unit.barragePhase = 0;
+      unit.barrageCooldown = 0;
+    }
+
+    // Decrement cooldowns
+    unit.weaponCooldown = Math.max(0, unit.weaponCooldown - deltaTime);
+    unit.barrageCooldown = Math.max(0, (unit.barrageCooldown ?? 0) - deltaTime);
+
+    // If in reload phase (after 2 volleys of 5), wait for main cooldown
+    if ((unit.barragePhase ?? 0) >= 2) {
+      if (unit.weaponCooldown <= 0) {
+        // Reset for next barrage cycle
+        unit.barrageCount = 0;
+        unit.barragePhase = 0;
+        unit.barrageCooldown = 0;
+      }
+      return;
+    }
+
+    // Fire missiles in quick succession (short barrage cooldown)
+    if ((unit.barrageCooldown ?? 0) <= 0 && (unit.barrageCount ?? 0) < 5) {
+      // Fire a missile with some spread
+      const spreadAngle = (this.random.next() - 0.5) * 0.1; // ~6 degree spread (reduced from 0.3)
+      this.spawnWarshipMissile(unit, target.x, target.y, spreadAngle);
+      unit.barrageCount = (unit.barrageCount ?? 0) + 1;
+      unit.barrageCooldown = 0.15; // 150ms between missiles in a volley
+    }
+
+    // Check if volley is complete
+    if ((unit.barrageCount ?? 0) >= 5) {
+      unit.barrageCount = 0;
+      unit.barragePhase = (unit.barragePhase ?? 0) + 1;
+      
+      if ((unit.barragePhase ?? 0) >= 2) {
+        // Both volleys complete, start reload
+        unit.weaponCooldown = 8.0; // Long reload after 2 volleys of 5
+      } else {
+        // Short pause between volleys
+        unit.barrageCooldown = 0.5;
+      }
+    }
+  }
+
+  /**
+   * Spawn a warship missile (non-guided, small AOE, massive range).
+   * Range is 25% of map width.
+   */
+  private spawnWarshipMissile(
+    attacker: FrenzyUnit,
+    targetX: number,
+    targetY: number,
+    spreadAngle: number = 0,
+  ) {
+    const dx = targetX - attacker.x;
+    const dy = targetY - attacker.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    
+    // Apply spread to direction
+    const baseAngle = Math.atan2(dy, dx);
+    const finalAngle = baseAngle + spreadAngle;
+    
+    // Missile range is 25% of map width
+    const mapWidth = this.game.width();
+    const missileRange = mapWidth * 0.25;
+    
+    // Clamp target distance to range
+    const effectiveDistance = Math.min(dist, missileRange);
+    
+    // Slower missile speed for tier 2 warships (half normal)
+    const speed = this.config.projectileSpeed * 1.25;
+    const vx = Math.cos(finalAngle) * speed;
+    const vy = Math.sin(finalAngle) * speed;
+    const travelTime = effectiveDistance / speed;
+
+    // Calculate actual target position based on angle and distance
+    const actualTargetX = attacker.x + Math.cos(finalAngle) * effectiveDistance;
+    const actualTargetY = attacker.y + Math.sin(finalAngle) * effectiveDistance;
+
+    this.projectiles.push({
+      id: this.nextProjectileId++,
+      playerId: attacker.playerId,
+      x: attacker.x,
+      y: attacker.y,
+      vx,
+      vy,
+      age: 0,
+      life: travelTime,
+      isMissile: true,
+      areaRadius: 8, // Small AOE
+      damage: 25, // Moderate damage per missile (10 missiles = 250 total potential)
+      targetX: actualTargetX,
+      targetY: actualTargetY,
+      startX: attacker.x,
+      startY: attacker.y,
+    });
+  }
+
+  /**
+   * Tier 2 warship attacks structures with missile barrages
+   */
+  private attackNearbyStructuresWithMissiles(
+    unit: FrenzyUnit,
+    deltaTime: number,
+    combatRange: number,
+  ) {
+    // Find nearest enemy Frenzy structure
+    const nearestStructure = this.findNearestEnemyFrenzyStructure(
+      unit,
+      combatRange,
+    );
+
+    if (nearestStructure) {
+      // Create a pseudo-target for the missile barrage
+      this.handleTier2WarshipStructureAttack(
+        unit,
+        nearestStructure,
+        deltaTime,
+      );
+      return;
+    }
+
+    // No Frenzy structures - fall back to regular structure attack
+    const unitConfig = getUnitConfig(this.config, unit.unitType);
+    this.attackNearbyStructures(unit, deltaTime, unitConfig, combatRange);
+  }
+
+  /**
+   * Handle tier 2 warship missile barrage attack on a structure.
+   */
+  private handleTier2WarshipStructureAttack(
+    unit: FrenzyUnit,
+    target: FrenzyStructure,
+    deltaTime: number,
+  ) {
+    // Initialize barrage state if not set
+    if (unit.barrageCount === undefined) {
+      unit.barrageCount = 0;
+      unit.barragePhase = 0;
+      unit.barrageCooldown = 0;
+    }
+
+    // Decrement cooldowns
+    unit.weaponCooldown = Math.max(0, unit.weaponCooldown - deltaTime);
+    unit.barrageCooldown = Math.max(0, (unit.barrageCooldown ?? 0) - deltaTime);
+
+    // If in reload phase (after 2 volleys of 5), wait for main cooldown
+    if ((unit.barragePhase ?? 0) >= 2) {
+      if (unit.weaponCooldown <= 0) {
+        // Reset for next barrage cycle
+        unit.barrageCount = 0;
+        unit.barragePhase = 0;
+        unit.barrageCooldown = 0;
+      }
+      return;
+    }
+
+    // Fire missiles in quick succession (short barrage cooldown)
+    if ((unit.barrageCooldown ?? 0) <= 0 && (unit.barrageCount ?? 0) < 5) {
+      // Fire a missile with some spread
+      const spreadAngle = (this.random.next() - 0.5) * 0.1; // ~6 degree spread
+      this.spawnWarshipMissile(unit, target.x, target.y, spreadAngle);
+      unit.barrageCount = (unit.barrageCount ?? 0) + 1;
+      unit.barrageCooldown = 0.15; // 150ms between missiles in a volley
+    }
+
+    // Check if volley is complete
+    if ((unit.barrageCount ?? 0) >= 5) {
+      unit.barrageCount = 0;
+      unit.barragePhase = (unit.barragePhase ?? 0) + 1;
+
+      if ((unit.barragePhase ?? 0) >= 2) {
+        // Both volleys complete, start reload
+        unit.weaponCooldown = 8.0; // Long reload after 2 volleys of 5
+      } else {
+        // Short pause between volleys
+        unit.barrageCooldown = 0.5;
+      }
+    }
+  }
+
+  /**
    * Check if a unit is protected by a friendly shield generator
    * Returns the shield generator if protected, null otherwise
    */
@@ -1704,6 +1970,22 @@ export class FrenzyManager {
     const tileY = Math.floor(unit.y);
     const tile = this.game.ref(tileX, tileY);
     if (!this.game.isValidRef(tile)) return;
+
+    // First check for enemy Frenzy structures (mines, factories, ports)
+    const nearestFrenzyStructure = this.findNearestEnemyFrenzyStructure(
+      unit,
+      combatRange,
+    );
+
+    if (nearestFrenzyStructure) {
+      this.attackFrenzyStructure(
+        unit,
+        nearestFrenzyStructure,
+        deltaTime,
+        unitConfig,
+      );
+      return;
+    }
 
     // Find nearby City/Factory structures
     const nearbyStructures = this.game.nearbyUnits(
@@ -1818,6 +2100,172 @@ export class FrenzyManager {
   }
 
   /**
+   * Find nearest enemy Frenzy structure (mine, factory, port) within range
+   */
+  private findNearestEnemyFrenzyStructure(
+    unit: FrenzyUnit,
+    combatRange: number,
+  ): FrenzyStructure | null {
+    const unitPlayer = this.game.player(unit.playerId);
+    let nearestStructure: FrenzyStructure | null = null;
+    let nearestDistSquared = combatRange * combatRange;
+
+    // Check mines
+    for (const mine of this.mines.values()) {
+      if (mine.playerId === unit.playerId) continue;
+      const minePlayer = this.game.player(mine.playerId);
+      if (unitPlayer.isAlliedWith(minePlayer)) continue;
+
+      const dx = mine.x - unit.x;
+      const dy = mine.y - unit.y;
+      const distSquared = dx * dx + dy * dy;
+
+      if (distSquared <= nearestDistSquared) {
+        nearestStructure = mine;
+        nearestDistSquared = distSquared;
+      }
+    }
+
+    // Check factories
+    for (const factory of this.factories.values()) {
+      if (factory.playerId === unit.playerId) continue;
+      const factoryPlayer = this.game.player(factory.playerId);
+      if (unitPlayer.isAlliedWith(factoryPlayer)) continue;
+
+      const dx = factory.x - unit.x;
+      const dy = factory.y - unit.y;
+      const distSquared = dx * dx + dy * dy;
+
+      if (distSquared <= nearestDistSquared) {
+        nearestStructure = factory;
+        nearestDistSquared = distSquared;
+      }
+    }
+
+    // Check ports
+    for (const port of this.ports.values()) {
+      if (port.playerId === unit.playerId) continue;
+      const portPlayer = this.game.player(port.playerId);
+      if (unitPlayer.isAlliedWith(portPlayer)) continue;
+
+      const dx = port.x - unit.x;
+      const dy = port.y - unit.y;
+      const distSquared = dx * dx + dy * dy;
+
+      if (distSquared <= nearestDistSquared) {
+        nearestStructure = port;
+        nearestDistSquared = distSquared;
+      }
+    }
+
+    return nearestStructure;
+  }
+
+  /**
+   * Attack a Frenzy structure (mine, factory, port)
+   */
+  private attackFrenzyStructure(
+    unit: FrenzyUnit,
+    structure: FrenzyStructure,
+    deltaTime: number,
+    unitConfig: UnitTypeConfig,
+  ) {
+    const unitPlayer = this.game.player(unit.playerId);
+
+    // Calculate damage based on unit type
+    if (unitConfig.projectileDamage !== undefined) {
+      // Burst damage (defense posts)
+      if (unit.weaponCooldown <= 0) {
+        structure.health -= unitConfig.projectileDamage;
+        this.spawnBeamProjectileToFrenzyStructure(unit, structure);
+        unit.weaponCooldown = unit.fireInterval;
+      }
+    } else {
+      // Regular unit DPS
+      structure.health -= unitConfig.dps * deltaTime;
+
+      if (unit.weaponCooldown <= 0) {
+        this.spawnProjectileToFrenzyStructure(unit, structure);
+        unit.weaponCooldown = unit.fireInterval;
+      }
+    }
+
+    // Check if structure is destroyed
+    if (structure.health <= 0) {
+      this.removeFrenzyStructure(structure);
+    }
+  }
+
+  /**
+   * Remove a destroyed Frenzy structure
+   */
+  private removeFrenzyStructure(structure: FrenzyStructure) {
+    switch (structure.type) {
+      case FrenzyStructureType.Mine:
+        this.mines.delete(structure.tile);
+        break;
+      case FrenzyStructureType.Factory:
+        this.factories.delete(structure.tile);
+        break;
+      case FrenzyStructureType.Port:
+        this.ports.delete(structure.tile);
+        break;
+    }
+  }
+
+  /**
+   * Spawn projectile toward a Frenzy structure
+   */
+  private spawnProjectileToFrenzyStructure(
+    attacker: FrenzyUnit,
+    target: FrenzyStructure,
+  ) {
+    const dx = target.x - attacker.x;
+    const dy = target.y - attacker.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const speed = this.config.projectileSpeed;
+    const vx = (dx / dist) * speed;
+    const vy = (dy / dist) * speed;
+    const travelTime = Math.max(dist / speed, 0.15);
+
+    this.projectiles.push({
+      id: this.nextProjectileId++,
+      playerId: attacker.playerId,
+      x: attacker.x,
+      y: attacker.y,
+      vx,
+      vy,
+      age: 0,
+      life: travelTime,
+      isElite: attacker.unitType === FrenzyUnitType.EliteSoldier,
+    });
+  }
+
+  /**
+   * Spawn beam projectile toward a Frenzy structure
+   */
+  private spawnBeamProjectileToFrenzyStructure(
+    attacker: FrenzyUnit,
+    target: FrenzyStructure,
+  ) {
+    const beamLife = 0.3;
+
+    this.projectiles.push({
+      id: this.nextProjectileId++,
+      playerId: attacker.playerId,
+      x: target.x,
+      y: target.y,
+      vx: 0,
+      vy: 0,
+      age: 0,
+      life: beamLife,
+      isBeam: true,
+      startX: attacker.x,
+      startY: attacker.y,
+    });
+  }
+
+  /**
    * Spawn projectile toward an enemy HQ
    */
   private spawnProjectileToHQ(attacker: FrenzyUnit, target: CoreBuilding) {
@@ -1929,6 +2377,12 @@ export class FrenzyManager {
         // Apply area damage at impact location
         this.applyArtilleryImpact(projectile);
       }
+      
+      // Check if missile has reached target (tier 2 warship)
+      if (projectile.isMissile && projectile.age >= projectile.life) {
+        // Apply small area damage at impact location
+        this.applyMissileImpact(projectile);
+      }
 
       if (projectile.age < projectile.life) {
         active.push(projectile);
@@ -1963,6 +2417,106 @@ export class FrenzyManager {
         // Damage falls off with distance (100% at center, 50% at edge)
         const falloff = 1 - (dist / radius) * 0.5;
         this.applyDamage(unit, damage * falloff);
+      }
+    }
+  }
+
+  /**
+   * Apply small area damage when tier 2 warship missile lands
+   */
+  private applyMissileImpact(projectile: FrenzyProjectile) {
+    const impactX = projectile.targetX ?? projectile.x;
+    const impactY = projectile.targetY ?? projectile.y;
+    const radius = projectile.areaRadius ?? 8;
+    const damage = projectile.damage ?? 25;
+    const projectilePlayer = this.game.player(projectile.playerId);
+
+    // Find all enemy units in the blast radius
+    const unitsInRadius = this.spatialGrid.getNearby(impactX, impactY, radius);
+
+    for (const unit of unitsInRadius) {
+      // Don't damage friendly units
+      if (unit.playerId === projectile.playerId) continue;
+
+      // Check if allied
+      const unitPlayer = this.game.player(unit.playerId);
+      if (projectilePlayer.isAlliedWith(unitPlayer)) continue;
+
+      const dist = Math.hypot(unit.x - impactX, unit.y - impactY);
+      if (dist <= radius) {
+        // Damage falls off with distance (100% at center, 25% at edge)
+        const falloff = 1 - (dist / radius) * 0.75;
+        this.applyDamage(unit, damage * falloff);
+      }
+    }
+
+    // Also damage enemy Frenzy structures (mines, factories, ports) in blast radius
+    this.damageStructuresInRadius(
+      impactX,
+      impactY,
+      radius,
+      damage,
+      projectile.playerId,
+    );
+  }
+
+  /**
+   * Damage enemy Frenzy structures (mines, factories, ports) within a radius
+   */
+  private damageStructuresInRadius(
+    x: number,
+    y: number,
+    radius: number,
+    damage: number,
+    attackerPlayerId: PlayerID,
+  ) {
+    const attackerPlayer = this.game.player(attackerPlayerId);
+
+    // Check mines
+    for (const [tile, mine] of this.mines) {
+      if (mine.playerId === attackerPlayerId) continue;
+      const minePlayer = this.game.player(mine.playerId);
+      if (attackerPlayer.isAlliedWith(minePlayer)) continue;
+
+      const dist = Math.hypot(mine.x - x, mine.y - y);
+      if (dist <= radius) {
+        const falloff = 1 - (dist / radius) * 0.75;
+        mine.health -= damage * falloff;
+        if (mine.health <= 0) {
+          this.mines.delete(tile);
+        }
+      }
+    }
+
+    // Check factories
+    for (const [tile, factory] of this.factories) {
+      if (factory.playerId === attackerPlayerId) continue;
+      const factoryPlayer = this.game.player(factory.playerId);
+      if (attackerPlayer.isAlliedWith(factoryPlayer)) continue;
+
+      const dist = Math.hypot(factory.x - x, factory.y - y);
+      if (dist <= radius) {
+        const falloff = 1 - (dist / radius) * 0.75;
+        factory.health -= damage * falloff;
+        if (factory.health <= 0) {
+          this.factories.delete(tile);
+        }
+      }
+    }
+
+    // Check ports
+    for (const [tile, port] of this.ports) {
+      if (port.playerId === attackerPlayerId) continue;
+      const portPlayer = this.game.player(port.playerId);
+      if (attackerPlayer.isAlliedWith(portPlayer)) continue;
+
+      const dist = Math.hypot(port.x - x, port.y - y);
+      if (dist <= radius) {
+        const falloff = 1 - (dist / radius) * 0.75;
+        port.health -= damage * falloff;
+        if (port.health <= 0) {
+          this.ports.delete(tile);
+        }
       }
     }
   }
@@ -2537,8 +3091,8 @@ export class FrenzyManager {
       x,
       y,
       tile,
-      spawnTimer: this.config.spawnInterval * 3, // Warships spawn slower (double normal)
-      spawnInterval: this.config.spawnInterval * 3,
+      spawnTimer: this.config.spawnInterval * 6, // Warships spawn slower (6x normal)
+      spawnInterval: this.config.spawnInterval * 6,
       health: this.config.mineHealth,
       maxHealth: this.config.mineHealth,
       tier: 1,
@@ -2560,6 +3114,8 @@ export class FrenzyManager {
           if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; // Only check perimeter
           const x = Math.floor(portX) + dx;
           const y = Math.floor(portY) + dy;
+          // Check bounds before creating ref
+          if (!this.game.isValidCoord(x, y)) continue;
           const tile = this.game.ref(x, y);
           if (tile && this.game.isWater(tile)) {
             return { x: x + 0.5, y: y + 0.5 }; // Center of tile
@@ -2662,6 +3218,56 @@ export class FrenzyManager {
   getFactoryTier(tile: TileRef): number {
     const factory = this.factories.get(tile);
     return factory?.tier ?? 1;
+  }
+
+  /**
+   * Get count of structures of a specific type for a player.
+   * Used by AI to track how many of each structure they own.
+   * Maps game UnitTypes to Frenzy structure types.
+   */
+  getStructureCountForPlayer(playerId: PlayerID, unitType: UnitType): number {
+    switch (unitType) {
+      case UnitType.City: // City = Mine in Frenzy
+        return Array.from(this.mines.values()).filter(
+          (m) => m.playerId === playerId,
+        ).length;
+      case UnitType.Factory:
+        return Array.from(this.factories.values()).filter(
+          (f) => f.playerId === playerId,
+        ).length;
+      case UnitType.Port:
+        return Array.from(this.ports.values()).filter(
+          (p) => p.playerId === playerId,
+        ).length;
+      case UnitType.DefensePost:
+        return this.units.filter(
+          (u) =>
+            u.playerId === playerId && u.unitType === FrenzyUnitType.DefensePost,
+        ).length;
+      case UnitType.SAMLauncher:
+        return this.units.filter(
+          (u) =>
+            u.playerId === playerId && u.unitType === FrenzyUnitType.SAMLauncher,
+        ).length;
+      case UnitType.MissileSilo:
+        return this.units.filter(
+          (u) =>
+            u.playerId === playerId && u.unitType === FrenzyUnitType.MissileSilo,
+        ).length;
+      case UnitType.ShieldGenerator:
+        return this.units.filter(
+          (u) =>
+            u.playerId === playerId &&
+            u.unitType === FrenzyUnitType.ShieldGenerator,
+        ).length;
+      case UnitType.Artillery:
+        return this.units.filter(
+          (u) =>
+            u.playerId === playerId && u.unitType === FrenzyUnitType.Artillery,
+        ).length;
+      default:
+        return 0;
+    }
   }
 
   /**
@@ -2920,13 +3526,13 @@ export class FrenzyManager {
     // Check HQ tier requirement
     if (!this.meetsHQTierRequirement(playerId, "port")) return false;
 
-    const ports = player.units(UnitType.Port);
-    const port = ports.find((p) => p.tile() === tile);
-    if (!port) return false;
+    // Find the port at this tile in Frenzy ports map
+    const port = this.ports.get(tile);
+    if (!port || port.playerId !== playerId) return false;
 
     // Check if already at max tier
     const upgradeInfo = STRUCTURE_UPGRADES["port"];
-    if (port.level() >= upgradeInfo.maxTier) return false;
+    if (port.tier >= upgradeInfo.maxTier) return false;
 
     // Check if player has enough gold
     const upgradeCost = BigInt(upgradeInfo.upgradeCost);
@@ -2940,20 +3546,25 @@ export class FrenzyManager {
     const player = this.game.player(playerId);
     if (!player) return false;
 
-    const ports = player.units(UnitType.Port);
-    const port = ports.find((p) => p.tile() === tile);
-    if (!port) return false;
+    // Check HQ tier requirement
+    if (!this.meetsHQTierRequirement(playerId, "port")) return false;
 
-    if (port.level() >= 2) return false;
+    // Find the port at this tile in Frenzy ports map
+    const port = this.ports.get(tile);
+    if (!port || port.playerId !== playerId) return false;
+
+    // Check if already tier 2+
+    if (port.tier >= 2) return false;
 
     const upgradeCost = BigInt(this.config.factoryUpgradeCost);
     if (player.gold() < upgradeCost) return false;
 
+    // Deduct gold and upgrade tier
     player.removeGold(upgradeCost);
-    port.increaseLevel();
+    port.tier = 2;
 
     console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded port to tier ${port.level()}`,
+      `[FrenzyManager] Player ${player.name()} upgraded port to tier ${port.tier}`,
     );
     return true;
   }

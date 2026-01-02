@@ -51,6 +51,11 @@ export class WarshipExecution implements Execution {
   }
 
   tick(ticks: number): void {
+    // Guard against warship not being initialized (spawn failed)
+    if (!this.warship) {
+      return;
+    }
+
     if (this.warship.health() <= 0) {
       this.warship.delete();
       return;
@@ -232,7 +237,7 @@ export class WarshipExecution implements Execution {
   }
 
   isActive(): boolean {
-    return this.warship?.isActive();
+    return this.warship?.isActive() ?? false;
   }
 
   activeDuringSpawnPhase(): boolean {

@@ -76,6 +76,10 @@ export interface FrenzyUnit {
   attackOrderX?: number; // Attack order target X
   attackOrderY?: number; // Attack order target Y
   hasAttackOrder?: boolean; // Whether unit has an active attack order
+  // Tier 2 warship missile barrage state
+  barrageCount?: number; // Current number of missiles fired in this barrage (0-5)
+  barrageCooldown?: number; // Cooldown between barrage volleys (short, for rapid fire)
+  barragePhase?: number; // 0 = first volley of 5, 1 = second volley of 5, then reload
 }
 
 export interface FrenzyProjectile {
@@ -90,12 +94,13 @@ export interface FrenzyProjectile {
   isBeam?: boolean; // True for defense post red beam
   isElite?: boolean; // True for elite soldier projectiles
   isArtillery?: boolean; // True for artillery shells (area damage)
+  isMissile?: boolean; // True for tier 2 warship missiles (non-guided, small AOE)
   areaRadius?: number; // Splash damage radius
   damage?: number; // Damage to deal on impact
   startX?: number; // Beam origin X
   startY?: number; // Beam origin Y
-  targetX?: number; // Target position X (for artillery)
-  targetY?: number; // Target position Y (for artillery)
+  targetX?: number; // Target position X (for artillery/missiles)
+  targetY?: number; // Target position Y (for artillery/missiles)
 }
 
 /**
@@ -171,8 +176,10 @@ export interface FrenzyConfig {
     soldier: UnitTypeConfig;
     eliteSoldier: UnitTypeConfig;
     warship: UnitTypeConfig;
+    eliteWarship: UnitTypeConfig;
     // Towers
     defensePost: UnitTypeConfig;
+    eliteDefensePost: UnitTypeConfig;
     samLauncher: UnitTypeConfig;
     missileSilo: UnitTypeConfig;
     shieldGenerator: UnitTypeConfig;
@@ -270,6 +277,15 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       fireInterval: 1.5, // Moderate fire rate
       projectileDamage: 50, // Good projectile damage
     },
+    eliteWarship: {
+      health: 375, // 1.5x warship health (250 * 1.5)
+      speed: 2.0, // Same speed as tier 1
+      dps: 30, // 1.5x warship dps
+      range: 90, // 2x warship range (45 * 2) - long range missiles
+      fireInterval: 8.0, // Slow reload (fires barrages)
+      projectileDamage: 30, // Per-missile damage (fires 2x5 = 10 missiles)
+      areaRadius: 10, // Small AOE per missile
+    },
     // Towers
     defensePost: {
       health: 200, // 2x soldier health
@@ -278,6 +294,14 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       range: 25, // Same as soldier (tier 2: 37.5)
       fireInterval: 0.5, // Double soldier fire rate (tier 2: 4.0)
       projectileDamage: 15, // Same as soldier damage (tier 2: 100, one-shots units)
+    },
+    eliteDefensePost: {
+      health: 300, // 1.5x defense post health
+      speed: 0, // Stationary
+      dps: 0, // Uses projectileDamage instead
+      range: 37.5, // 1.5x defense post range
+      fireInterval: 4.0, // Slower but one-shots
+      projectileDamage: 100, // One-shots most units
     },
     samLauncher: {
       health: 150, // Moderate HP

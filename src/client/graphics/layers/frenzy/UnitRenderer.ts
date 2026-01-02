@@ -61,7 +61,7 @@ export class UnitRenderer {
     } else if (isEliteSoldier) {
       this.renderEliteSoldier(ctx.context, x, y, player);
     } else if (isWarship) {
-      this.renderWarship(ctx.context, x, y, player);
+      this.renderWarship(ctx.context, x, y, player, tier);
     } else {
       this.renderSoldier(ctx.context, x, y, player);
     }
@@ -313,45 +313,37 @@ export class UnitRenderer {
     x: number,
     y: number,
     player: PlayerView,
+    tier: number = 1,
   ) {
-    const size = 10;
+    // Lower half of an elongated horizontal ellipse
+    const radiusX = 7; // Horizontal radius (wider)
+    const radiusY = 4; // Vertical radius (shorter)
 
-    // Ship hull
+    // Determine stroke color: golden for tier 2, black for tier 1
+    const strokeColor = tier >= 2 ? "#FFD700" : "#000";
+
+    // Draw the bottom half of the ellipse (hull)
     context.fillStyle = player.territoryColor().toRgbString();
     context.beginPath();
-    context.moveTo(x, y - size / 2);
-    context.lineTo(x + size / 3, y - size / 6);
-    context.lineTo(x + size / 3, y + size / 3);
-    context.lineTo(x - size / 3, y + size / 3);
-    context.lineTo(x - size / 3, y - size / 6);
+    // Draw arc from left to right (bottom half = PI to 2*PI)
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI, false);
     context.closePath();
     context.fill();
 
-    // Deck line
-    context.fillStyle = "#fff";
-    context.fillRect(x - size / 4, y - size / 10, size / 2, size / 6);
-
-    // Cannon turret
+    // Border - golden for tier 2, black for tier 1
+    context.strokeStyle = strokeColor;
+    context.lineWidth = tier >= 2 ? 1.5 : 1;
     context.beginPath();
-    context.arc(x, y + size / 8, size / 6, 0, Math.PI * 2);
-    context.fillStyle = "#444";
-    context.fill();
-
-    // Border
-    context.strokeStyle = "#1a3a6e";
-    context.lineWidth = 1.5;
-    context.beginPath();
-    context.moveTo(x, y - size / 2);
-    context.lineTo(x + size / 3, y - size / 6);
-    context.lineTo(x + size / 3, y + size / 3);
-    context.lineTo(x - size / 3, y + size / 3);
-    context.lineTo(x - size / 3, y - size / 6);
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI, false);
     context.closePath();
     context.stroke();
 
-    context.strokeStyle = "#000";
-    context.lineWidth = 0.5;
-    context.stroke();
+    // Superstructure (cabin) - rectangle on top, 3px wide, 2px high
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.fillRect(x - 1.5, y - 2, 3, 2);
+    context.strokeStyle = strokeColor;
+    context.lineWidth = tier >= 2 ? 1 : 0.5;
+    context.strokeRect(x - 1.5, y - 2, 3, 2);
   }
 
   private renderSoldier(

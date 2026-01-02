@@ -118,6 +118,9 @@ export class BotExecution implements Execution {
   /**
    * Handle structure building in Frenzy mode for bots.
    * Uses defensive stance to determine priority.
+   * 
+   * Multiplier formula: Higher multiplier = higher perceived cost = builds fewer of that type
+   * We use (num + X) where X controls how many are built before cost becomes prohibitive
    */
   private handleFrenzyUnits(): boolean {
     if (!this.mg.frenzyManager()) return false;
@@ -128,27 +131,28 @@ export class BotExecution implements Execution {
     
     if (stance < 0.5) {
       // Defensive: Prioritize defense, then economy
+      // Lower base multiplier = will build more before moving to next type
       return (
-        this.maybeSpawnStructure(UnitType.DefensePost, (num) => Math.max(1, num)) ||
-        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Artillery, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.City, (num) => Math.max(1, num)) || // Mine
-        this.maybeSpawnStructure(UnitType.Factory, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Port, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => (num + 1) ** 2)
+        this.maybeSpawnStructure(UnitType.DefensePost, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Artillery, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.City, (num) => num + 1) || // Mine
+        this.maybeSpawnStructure(UnitType.Factory, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Port, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num + 3)
       );
     } else {
       // Offensive: Prioritize economy/offense, then defense
       return (
-        this.maybeSpawnStructure(UnitType.City, (num) => Math.max(1, num)) || // Mine
-        this.maybeSpawnStructure(UnitType.Factory, (num) => Math.max(1, num)) ||
-        this.maybeSpawnStructure(UnitType.Port, (num) => Math.max(1, num)) ||
-        this.maybeSpawnStructure(UnitType.DefensePost, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => (num + 1) ** 2) ||
-        this.maybeSpawnStructure(UnitType.Artillery, (num) => (num + 2) ** 2) ||
-        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => (num + 1) ** 2)
+        this.maybeSpawnStructure(UnitType.City, (num) => num + 1) || // Mine
+        this.maybeSpawnStructure(UnitType.Factory, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.Port, (num) => num + 1) ||
+        this.maybeSpawnStructure(UnitType.DefensePost, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.ShieldGenerator, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.SAMLauncher, (num) => num + 2) ||
+        this.maybeSpawnStructure(UnitType.Artillery, (num) => num + 3) ||
+        this.maybeSpawnStructure(UnitType.MissileSilo, (num) => num + 2)
       );
     }
   }
@@ -157,7 +161,12 @@ export class BotExecution implements Execution {
     type: UnitType,
     multiplier: (num: number) => number,
   ): boolean {
-    const owned = this.bot.unitsOwned(type);
+    // In Frenzy mode, use FrenzyManager's structure count instead of game units
+    const frenzyManager = this.mg.frenzyManager();
+    const owned = frenzyManager
+      ? frenzyManager.getStructureCountForPlayer(this.bot.id(), type)
+      : this.bot.unitsOwned(type);
+      
     const perceivedCostMultiplier = multiplier(owned + 1);
     const realCost = this.mg.unitInfo(type).cost(this.bot);
     const perceivedCost = realCost * BigInt(perceivedCostMultiplier);

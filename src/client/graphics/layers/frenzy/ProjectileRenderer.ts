@@ -11,6 +11,7 @@ export interface FrenzyProjectileData {
   isBeam?: boolean;
   isElite?: boolean;
   isArtillery?: boolean;
+  isMissile?: boolean;
   areaRadius?: number;
   startX?: number;
   startY?: number;
@@ -25,6 +26,7 @@ export interface FrenzyProjectileData {
  * - Elite projectiles (golden glow)
  * - Artillery shells (ballistic arc)
  * - Defense post beams (red laser)
+ * - Missiles (tier 2 warship, fast straight trajectory)
  */
 export class ProjectileRenderer {
   /**
@@ -51,6 +53,12 @@ export class ProjectileRenderer {
     // Artillery shell
     if (projectile.isArtillery) {
       this.renderArtilleryProjectile(ctx, projectile);
+      return;
+    }
+
+    // Missile (tier 2 warship)
+    if (projectile.isMissile) {
+      this.renderMissile(ctx, projectile);
       return;
     }
 
@@ -196,5 +204,68 @@ export class ProjectileRenderer {
     context.beginPath();
     context.arc(endX, endY, 4, 0, Math.PI * 2);
     context.fill();
+  }
+
+  /**
+   * Render a missile (tier 2 warship projectile)
+   * Fast, straight trajectory with smoke trail effect
+   */
+  private renderMissile(ctx: FrenzyRenderContext, projectile: FrenzyProjectileData) {
+    const context = ctx.context;
+    const x = projectile.x - ctx.halfWidth;
+    const y = projectile.y - ctx.halfHeight;
+    const startX = (projectile.startX ?? projectile.x) - ctx.halfWidth;
+    const startY = (projectile.startY ?? projectile.y) - ctx.halfHeight;
+
+    // Calculate direction for missile shape
+    const dx = x - startX;
+    const dy = y - startY;
+    const dist = Math.hypot(dx, dy);
+    const dirX = dist > 0 ? dx / dist : 1;
+    const dirY = dist > 0 ? dy / dist : 0;
+
+    // Smoke trail (faint gray line behind missile)
+    const trailLength = Math.min(15, dist * 0.3);
+    const trailStartX = x - dirX * trailLength;
+    const trailStartY = y - dirY * trailLength;
+    
+    const trailGradient = context.createLinearGradient(trailStartX, trailStartY, x, y);
+    trailGradient.addColorStop(0, "rgba(100, 100, 100, 0)");
+    trailGradient.addColorStop(1, "rgba(150, 150, 150, 0.4)");
+    
+    context.strokeStyle = trailGradient;
+    context.lineWidth = 2;
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(trailStartX, trailStartY);
+    context.lineTo(x, y);
+    context.stroke();
+
+    // Missile body (small elongated shape)
+    const missileLength = 4;
+    const missileWidth = 1.5;
+    
+    context.save();
+    context.translate(x, y);
+    context.rotate(Math.atan2(dirY, dirX));
+    
+    // Body
+    context.fillStyle = "#ffffff";
+    context.beginPath();
+    context.ellipse(0, 0, missileLength, missileWidth, 0, 0, Math.PI * 2);
+    context.fill();
+    
+    // Engine glow at back
+    const glowGradient = context.createRadialGradient(-missileLength, 0, 0, -missileLength, 0, 4);
+    glowGradient.addColorStop(0, "rgba(255, 200, 100, 0.8)");
+    glowGradient.addColorStop(0.5, "rgba(255, 100, 50, 0.4)");
+    glowGradient.addColorStop(1, "rgba(255, 50, 0, 0)");
+    
+    context.fillStyle = glowGradient;
+    context.beginPath();
+    context.arc(-missileLength, 0, 4, 0, Math.PI * 2);
+    context.fill();
+    
+    context.restore();
   }
 }
