@@ -492,6 +492,8 @@ export class GameView implements GameMap {
       y: number;
       tier?: number;
       maxUnits?: number;
+      warshipCount?: number;
+      maxWarships?: number;
       health?: number;
       maxHealth?: number;
     }>;
@@ -521,6 +523,7 @@ export class GameView implements GameMap {
     }>;
     projectileSize: number;
     maxUnitsPerPlayer: number;
+    maxWarshipsPerPlayer?: number;
     crystals: Array<{
       id: number;
       x: number;
@@ -674,6 +677,7 @@ export class GameView implements GameMap {
         projectiles: frenzyData.projectiles,
         projectileSize: frenzyData.projectileSize,
         maxUnitsPerPlayer: frenzyData.maxUnitsPerPlayer,
+        maxWarshipsPerPlayer: frenzyData.maxWarshipsPerPlayer ?? 20,
         crystals: frenzyData.crystals ?? [],
         pendingGoldPayouts: frenzyData.pendingGoldPayouts ?? [],
         // Helper method to get HQ tier

@@ -32,12 +32,20 @@ export class ProjectileRenderer {
   /**
    * Render a projectile
    */
-  render(ctx: FrenzyRenderContext, projectile: FrenzyProjectileData, diameter: number) {
+  render(
+    ctx: FrenzyRenderContext,
+    projectile: FrenzyProjectileData,
+    diameter: number,
+  ) {
     const x = projectile.x - ctx.halfWidth;
     const y = projectile.y - ctx.halfHeight;
 
     // Beam rendering
-    if (projectile.isBeam && projectile.startX !== undefined && projectile.startY !== undefined) {
+    if (
+      projectile.isBeam &&
+      projectile.startX !== undefined &&
+      projectile.startY !== undefined
+    ) {
       this.renderBeam(ctx, projectile);
       return;
     }
@@ -100,7 +108,14 @@ export class ProjectileRenderer {
     const eliteRadius = radius * 1.5;
 
     // Golden glow
-    const gradient = context.createRadialGradient(x, y, 0, x, y, eliteRadius * 2.5);
+    const gradient = context.createRadialGradient(
+      x,
+      y,
+      0,
+      x,
+      y,
+      eliteRadius * 2.5,
+    );
     gradient.addColorStop(0, "rgba(255, 255, 150, 0.95)");
     gradient.addColorStop(0.3, "rgba(255, 220, 100, 0.8)");
     gradient.addColorStop(0.6, "rgba(255, 180, 50, 0.5)");
@@ -118,10 +133,13 @@ export class ProjectileRenderer {
     context.fill();
   }
 
-  private renderArtilleryProjectile(ctx: FrenzyRenderContext, projectile: FrenzyProjectileData) {
+  private renderArtilleryProjectile(
+    ctx: FrenzyRenderContext,
+    projectile: FrenzyProjectileData,
+  ) {
     const context = ctx.context;
     const spotSize = 3;
-    const progress = projectile.progress || 0;
+    const progress = projectile.progress ?? 0;
 
     const startX = (projectile.startX ?? projectile.x) - ctx.halfWidth;
     const startY = (projectile.startY ?? projectile.y) - ctx.halfHeight;
@@ -141,7 +159,14 @@ export class ProjectileRenderer {
 
     // Outer glow
     const glowRadius = spotSize * 4;
-    const glowGradient = context.createRadialGradient(x, y, 0, x, y, glowRadius);
+    const glowGradient = context.createRadialGradient(
+      x,
+      y,
+      0,
+      x,
+      y,
+      glowRadius,
+    );
     glowGradient.addColorStop(0, "rgba(255, 150, 50, 0.6)");
     glowGradient.addColorStop(0.4, "rgba(255, 80, 0, 0.3)");
     glowGradient.addColorStop(1, "rgba(255, 0, 0, 0)");
@@ -162,7 +187,10 @@ export class ProjectileRenderer {
     context.fill();
   }
 
-  private renderBeam(ctx: FrenzyRenderContext, projectile: FrenzyProjectileData) {
+  private renderBeam(
+    ctx: FrenzyRenderContext,
+    projectile: FrenzyProjectileData,
+  ) {
     const context = ctx.context;
     const startX = projectile.startX! - ctx.halfWidth;
     const startY = projectile.startY! - ctx.halfHeight;
@@ -208,64 +236,124 @@ export class ProjectileRenderer {
 
   /**
    * Render a missile (tier 2 warship projectile)
-   * Fast, straight trajectory with smoke trail effect
+   * Arcing trajectory with proper missile shape including fins
    */
-  private renderMissile(ctx: FrenzyRenderContext, projectile: FrenzyProjectileData) {
+  private renderMissile(
+    ctx: FrenzyRenderContext,
+    projectile: FrenzyProjectileData,
+  ) {
     const context = ctx.context;
-    const x = projectile.x - ctx.halfWidth;
-    const y = projectile.y - ctx.halfHeight;
+    const progress = projectile.progress ?? 0;
+
     const startX = (projectile.startX ?? projectile.x) - ctx.halfWidth;
     const startY = (projectile.startY ?? projectile.y) - ctx.halfHeight;
+    const targetX = (projectile.targetX ?? projectile.x) - ctx.halfWidth;
+    const targetY = (projectile.targetY ?? projectile.y) - ctx.halfHeight;
 
-    // Calculate direction for missile shape
-    const dx = x - startX;
-    const dy = y - startY;
+    const dx = targetX - startX;
+    const dy = targetY - startY;
     const dist = Math.hypot(dx, dy);
-    const dirX = dist > 0 ? dx / dist : 1;
-    const dirY = dist > 0 ? dy / dist : 0;
 
-    // Smoke trail (faint gray line behind missile)
-    const trailLength = Math.min(15, dist * 0.3);
-    const trailStartX = x - dirX * trailLength;
-    const trailStartY = y - dirY * trailLength;
-    
-    const trailGradient = context.createLinearGradient(trailStartX, trailStartY, x, y);
-    trailGradient.addColorStop(0, "rgba(100, 100, 100, 0)");
-    trailGradient.addColorStop(1, "rgba(150, 150, 150, 0.4)");
-    
+    // Ballistic arc - smaller arc than artillery
+    const arcHeight = Math.min(dist * 0.25, 40);
+    const arcOffset = -4 * arcHeight * progress * (1 - progress);
+
+    // Current position on arc
+    const x = startX + dx * progress;
+    const y = startY + dy * progress + arcOffset;
+
+    // Calculate tangent direction (derivative of position with respect to progress)
+    // dx/dt = dx (constant velocity in x)
+    // dy/dt = dy + d(arcOffset)/dt = dy + (-4 * arcHeight * (1 - 2*progress))
+    const velocityX = dx;
+    const velocityY = dy + -4 * arcHeight * (1 - 2 * progress);
+    const angle = Math.atan2(velocityY, velocityX);
+
+    // Trail position (slightly behind on the arc)
+    const trailProgress = Math.max(0, progress - 0.08);
+    const trailArcOffset = -4 * arcHeight * trailProgress * (1 - trailProgress);
+    const trailX = startX + dx * trailProgress;
+    const trailY = startY + dy * trailProgress + trailArcOffset;
+
+    // Smoke trail
+    const trailGradient = context.createLinearGradient(trailX, trailY, x, y);
+    trailGradient.addColorStop(0, "rgba(80, 80, 80, 0)");
+    trailGradient.addColorStop(0.5, "rgba(120, 120, 120, 0.3)");
+    trailGradient.addColorStop(1, "rgba(180, 180, 180, 0.5)");
+
     context.strokeStyle = trailGradient;
-    context.lineWidth = 2;
+    context.lineWidth = 0.6;
     context.lineCap = "round";
     context.beginPath();
-    context.moveTo(trailStartX, trailStartY);
+    context.moveTo(trailX, trailY);
     context.lineTo(x, y);
     context.stroke();
 
-    // Missile body (small elongated shape)
-    const missileLength = 4;
-    const missileWidth = 1.5;
-    
+    // Draw missile
     context.save();
     context.translate(x, y);
-    context.rotate(Math.atan2(dirY, dirX));
-    
-    // Body
-    context.fillStyle = "#ffffff";
+    context.rotate(angle);
+
+    // Missile body (elongated white shape)
+    const missileLength = 1.0;
+    const missileWidth = 0.4;
+
+    context.fillStyle = "#f0f0f0";
     context.beginPath();
     context.ellipse(0, 0, missileLength, missileWidth, 0, 0, Math.PI * 2);
     context.fill();
-    
+
+    // Nose cone (darker tip)
+    context.fillStyle = "#d0d0d0";
+    context.beginPath();
+    context.ellipse(
+      missileLength * 0.7,
+      0,
+      missileLength * 0.4,
+      missileWidth * 0.8,
+      0,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+
+    // Tail fins (small triangles at back)
+    context.fillStyle = "#c0c0c0";
+    context.beginPath();
+    // Top fin
+    context.moveTo(-missileLength * 0.6, -missileWidth * 0.5);
+    context.lineTo(-missileLength * 1.1, -missileWidth * 1.5);
+    context.lineTo(-missileLength * 0.9, -missileWidth * 0.3);
+    context.closePath();
+    context.fill();
+
+    context.beginPath();
+    // Bottom fin
+    context.moveTo(-missileLength * 0.6, missileWidth * 0.5);
+    context.lineTo(-missileLength * 1.1, missileWidth * 1.5);
+    context.lineTo(-missileLength * 0.9, missileWidth * 0.3);
+    context.closePath();
+    context.fill();
+
     // Engine glow at back
-    const glowGradient = context.createRadialGradient(-missileLength, 0, 0, -missileLength, 0, 4);
-    glowGradient.addColorStop(0, "rgba(255, 200, 100, 0.8)");
-    glowGradient.addColorStop(0.5, "rgba(255, 100, 50, 0.4)");
+    const glowGradient = context.createRadialGradient(
+      -missileLength,
+      0,
+      0,
+      -missileLength,
+      0,
+      1.0,
+    );
+    glowGradient.addColorStop(0, "rgba(255, 220, 120, 0.9)");
+    glowGradient.addColorStop(0.3, "rgba(255, 150, 50, 0.6)");
+    glowGradient.addColorStop(0.6, "rgba(255, 80, 20, 0.3)");
     glowGradient.addColorStop(1, "rgba(255, 50, 0, 0)");
-    
+
     context.fillStyle = glowGradient;
     context.beginPath();
-    context.arc(-missileLength, 0, 4, 0, Math.PI * 2);
+    context.arc(-missileLength, 0, 1.0, 0, Math.PI * 2);
     context.fill();
-    
+
     context.restore();
   }
 }

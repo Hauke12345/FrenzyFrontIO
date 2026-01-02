@@ -298,6 +298,8 @@ export interface FrenzyUpdate {
     unitCount?: number;
     tier?: number;
     maxUnits?: number;
+    warshipCount?: number;
+    maxWarships?: number;
     health?: number;
     maxHealth?: number;
   }>;
@@ -334,6 +336,7 @@ export interface FrenzyUpdate {
   }>;
   projectileSize: number;
   maxUnitsPerPlayer: number;
+  maxWarshipsPerPlayer?: number;
   crystals: Array<{
     id: number;
     x: number;

@@ -186,6 +186,34 @@ export class FrenzyManager {
   }
 
   /**
+   * Get the max warship cap for a player.
+   * Bots get half the cap.
+   */
+  getMaxWarshipsForPlayer(playerId: PlayerID): number {
+    const player = this.game.player(playerId);
+    if (player && player.type() === PlayerType.Bot) {
+      return Math.floor(this.config.maxWarshipsPerPlayer / 2);
+    }
+    return this.config.maxWarshipsPerPlayer;
+  }
+
+  /**
+   * Count the number of warships owned by a player.
+   */
+  getWarshipCount(playerId: PlayerID): number {
+    let count = 0;
+    for (const unit of this.units) {
+      if (
+        unit.playerId === playerId &&
+        unit.unitType === FrenzyUnitType.Warship
+      ) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Get the defensive stance for a player.
    * For bots/FakeHumans, returns a random value if not explicitly set.
    * Bots: 10% under medium (0-0.5), 90% between medium and aggressive (0.5-1.0)
@@ -439,16 +467,20 @@ export class FrenzyManager {
 
       port.spawnTimer -= deltaTime;
 
-      if (
-        port.spawnTimer <= 0 &&
-        building.unitCount < this.getMaxUnitsForPlayer(port.playerId)
-      ) {
+      // Check both total unit cap AND warship-specific cap
+      const underUnitCap =
+        building.unitCount < this.getMaxUnitsForPlayer(port.playerId);
+      const underWarshipCap =
+        this.getWarshipCount(port.playerId) <
+        this.getMaxWarshipsForPlayer(port.playerId);
+
+      if (port.spawnTimer <= 0 && underUnitCap && underWarshipCap) {
         // Find a water tile near the port to spawn the warship
         const waterSpawn = this.findWaterSpawnNearPort(port.x, port.y);
         if (waterSpawn) {
           // Use port tier from FrenzyManager's port object (set by upgradePort)
           const portTier = port.tier ?? 1;
-          
+
           this.spawnUnit(
             port.playerId,
             waterSpawn.x,
@@ -733,7 +765,7 @@ export class FrenzyManager {
     const unitConfig = getUnitConfig(this.config, unitType);
     let health = unitConfig.health;
     const fireInterval = unitConfig.fireInterval;
-    
+
     // Tier 2 warships get 50% more health
     if (unitType === FrenzyUnitType.Warship && tier >= 2) {
       health = Math.floor(health * 1.5);
@@ -802,13 +834,17 @@ export class FrenzyManager {
       const territory = territories.get(unit.playerId);
 
       // Check if unit has a per-unit attack order
-      if (unit.hasAttackOrder && unit.attackOrderX !== undefined && unit.attackOrderY !== undefined) {
+      if (
+        unit.hasAttackOrder &&
+        unit.attackOrderX !== undefined &&
+        unit.attackOrderY !== undefined
+      ) {
         // Check if unit has arrived at attack order destination
         const distToAttackTarget = Math.hypot(
           unit.attackOrderX - unit.x,
           unit.attackOrderY - unit.y,
         );
-        
+
         if (distToAttackTarget < ATTACK_ORDER_ARRIVAL_DISTANCE) {
           // Clear attack order - unit has arrived
           unit.hasAttackOrder = false;
@@ -1124,11 +1160,15 @@ export class FrenzyManager {
     let destY: number = unit.targetY;
 
     // Check if warship has a per-unit attack order
-    if (unit.hasAttackOrder && unit.attackOrderX !== undefined && unit.attackOrderY !== undefined) {
+    if (
+      unit.hasAttackOrder &&
+      unit.attackOrderX !== undefined &&
+      unit.attackOrderY !== undefined
+    ) {
       destX = unit.attackOrderX;
       destY = unit.attackOrderY;
       const distToTarget = Math.hypot(destX - unit.x, destY - unit.y);
-      
+
       if (distToTarget < ATTACK_ORDER_ARRIVAL_DISTANCE) {
         // Clear attack order - unit has arrived
         unit.hasAttackOrder = false;
@@ -1141,7 +1181,7 @@ export class FrenzyManager {
     } else {
       // Use patrol target
       const distToTarget = Math.hypot(destX - unit.x, destY - unit.y);
-      
+
       // Check if needs new patrol target
       if (distToTarget < 2 || (unit.targetX === 0 && unit.targetY === 0)) {
         const newTarget = this.findWarshipTarget(unit);
@@ -1155,13 +1195,13 @@ export class FrenzyManager {
     // Convert positions to polar coordinates relative to map center
     const unitR = Math.hypot(unit.x - centerX, unit.y - centerY);
     const unitTheta = Math.atan2(unit.y - centerY, unit.x - centerX);
-    
+
     const destR = Math.hypot(destX - centerX, destY - centerY);
     const destTheta = Math.atan2(destY - centerY, destX - centerX);
 
     // Calculate deltas in polar space
     const deltaR = destR - unitR;
-    
+
     // Calculate shortest angular distance (handle wrap-around)
     let deltaTheta = destTheta - unitTheta;
     while (deltaTheta > Math.PI) deltaTheta -= 2 * Math.PI;
@@ -1176,7 +1216,7 @@ export class FrenzyManager {
     const angularSpeed = deltaTheta > 0 ? speed : -speed;
     const tangentX = -Math.sin(unitTheta); // Perpendicular to radius
     const tangentY = Math.cos(unitTheta);
-    
+
     // Radial velocity component (toward/away from center)
     const radialSpeed = deltaR > 0 ? speed : -speed;
     const radialX = Math.cos(unitTheta);
@@ -1189,15 +1229,19 @@ export class FrenzyManager {
 
     let vx = 0;
     let vy = 0;
-    
+
     if (totalDelta > 0.5) {
       // Weight the movement by which direction needs more travel
       const radialWeight = absR / totalDelta;
       const angularWeight = absTheta / totalDelta;
-      
-      vx = radialX * radialSpeed * radialWeight + tangentX * angularSpeed * angularWeight;
-      vy = radialY * radialSpeed * radialWeight + tangentY * angularSpeed * angularWeight;
-      
+
+      vx =
+        radialX * radialSpeed * radialWeight +
+        tangentX * angularSpeed * angularWeight;
+      vy =
+        radialY * radialSpeed * radialWeight +
+        tangentY * angularSpeed * angularWeight;
+
       // Normalize to unit speed
       const vmag = Math.hypot(vx, vy);
       if (vmag > 0) {
@@ -1209,7 +1253,7 @@ export class FrenzyManager {
     // Apply movement
     const nextX = unit.x + vx * deltaTime;
     const nextY = unit.y + vy * deltaTime;
-    
+
     // Check if next position is water (with bounds checking)
     const floorNextX = Math.floor(nextX);
     const floorNextY = Math.floor(nextY);
@@ -1223,13 +1267,13 @@ export class FrenzyManager {
         return;
       }
     }
-    
+
     // Can't move in ideal direction - try just angular movement
     const altX = unit.x + tangentX * angularSpeed * deltaTime;
     const altY = unit.y + tangentY * angularSpeed * deltaTime;
     const floorAltX = Math.floor(altX);
     const floorAltY = Math.floor(altY);
-    
+
     if (this.game.isValidCoord(floorAltX, floorAltY)) {
       const altTile = this.game.ref(floorAltX, floorAltY);
       if (altTile && this.game.isWater(altTile)) {
@@ -1240,13 +1284,13 @@ export class FrenzyManager {
         return;
       }
     }
-    
+
     // Try opposite angular direction
     const alt2X = unit.x - tangentX * angularSpeed * deltaTime;
     const alt2Y = unit.y - tangentY * angularSpeed * deltaTime;
     const floorAlt2X = Math.floor(alt2X);
     const floorAlt2Y = Math.floor(alt2Y);
-    
+
     if (this.game.isValidCoord(floorAlt2X, floorAlt2Y)) {
       const alt2Tile = this.game.ref(floorAlt2X, floorAlt2Y);
       if (alt2Tile && this.game.isWater(alt2Tile)) {
@@ -1257,7 +1301,7 @@ export class FrenzyManager {
         return;
       }
     }
-    
+
     // Can't move at all
     unit.vx = 0;
     unit.vy = 0;
@@ -1379,7 +1423,10 @@ export class FrenzyManager {
     }
 
     // Calculate how many units to assign
-    const numToAssign = Math.max(1, Math.floor(mobileUnits.length * clampedRatio));
+    const numToAssign = Math.max(
+      1,
+      Math.floor(mobileUnits.length * clampedRatio),
+    );
 
     // Sort all units by distance to target
     const sortByDistance = (a: FrenzyUnit, b: FrenzyUnit) => {
@@ -1552,7 +1599,7 @@ export class FrenzyManager {
       const isArtillery = unit.unitType === FrenzyUnitType.Artillery;
       const isWarshipT2 =
         unit.unitType === FrenzyUnitType.Warship && unit.tier >= 2;
-      
+
       // Get combat range based on unit type and tier
       let combatRange = unitConfig.range;
       if (isDefensePostT2) {
@@ -1560,7 +1607,7 @@ export class FrenzyManager {
       } else if (isWarshipT2) {
         combatRange = this.config.units.eliteWarship.range; // Tier 2: long range missiles
       }
-      
+
       const effectiveFireInterval = isDefensePostT2 ? 4.0 : unit.fireInterval; // Tier 2: slow but powerful
 
       // Update fire interval for tier 2 defense posts
@@ -1768,13 +1815,13 @@ export class FrenzyManager {
     if ((unit.barrageCount ?? 0) >= 5) {
       unit.barrageCount = 0;
       unit.barragePhase = (unit.barragePhase ?? 0) + 1;
-      
+
       if ((unit.barragePhase ?? 0) >= 2) {
         // Both volleys complete, start reload
         unit.weaponCooldown = 8.0; // Long reload after 2 volleys of 5
       } else {
         // Short pause between volleys
-        unit.barrageCooldown = 0.5;
+        unit.barrageCooldown = 1.0;
       }
     }
   }
@@ -1792,18 +1839,18 @@ export class FrenzyManager {
     const dx = targetX - attacker.x;
     const dy = targetY - attacker.y;
     const dist = Math.hypot(dx, dy) || 1;
-    
+
     // Apply spread to direction
     const baseAngle = Math.atan2(dy, dx);
     const finalAngle = baseAngle + spreadAngle;
-    
+
     // Missile range is 25% of map width
     const mapWidth = this.game.width();
     const missileRange = mapWidth * 0.25;
-    
+
     // Clamp target distance to range
     const effectiveDistance = Math.min(dist, missileRange);
-    
+
     // Slower missile speed for tier 2 warships (half normal)
     const speed = this.config.projectileSpeed * 1.25;
     const vx = Math.cos(finalAngle) * speed;
@@ -1849,11 +1896,7 @@ export class FrenzyManager {
 
     if (nearestStructure) {
       // Create a pseudo-target for the missile barrage
-      this.handleTier2WarshipStructureAttack(
-        unit,
-        nearestStructure,
-        deltaTime,
-      );
+      this.handleTier2WarshipStructureAttack(unit, nearestStructure, deltaTime);
       return;
     }
 
@@ -1911,7 +1954,7 @@ export class FrenzyManager {
         unit.weaponCooldown = 8.0; // Long reload after 2 volleys of 5
       } else {
         // Short pause between volleys
-        unit.barrageCooldown = 0.5;
+        unit.barrageCooldown = 1.0;
       }
     }
   }
@@ -2170,8 +2213,6 @@ export class FrenzyManager {
     deltaTime: number,
     unitConfig: UnitTypeConfig,
   ) {
-    const unitPlayer = this.game.player(unit.playerId);
-
     // Calculate damage based on unit type
     if (unitConfig.projectileDamage !== undefined) {
       // Burst damage (defense posts)
@@ -2377,7 +2418,7 @@ export class FrenzyManager {
         // Apply area damage at impact location
         this.applyArtilleryImpact(projectile);
       }
-      
+
       // Check if missile has reached target (tier 2 warship)
       if (projectile.isMissile && projectile.age >= projectile.life) {
         // Apply small area damage at impact location
@@ -2630,7 +2671,7 @@ export class FrenzyManager {
         visited.add(current);
 
         const currentOwner = this.game.owner(current);
-        
+
         if (currentOwner.isPlayer()) {
           // This is owned territory - record the owner
           surroundingPlayers.add(currentOwner.id());
@@ -2662,9 +2703,16 @@ export class FrenzyManager {
       }
 
       // If region doesn't touch map edge and is surrounded by exactly one player, capture it
-      if (!touchesMapEdge && surroundingPlayers.size === 1 && region.length > 0) {
+      if (
+        !touchesMapEdge &&
+        surroundingPlayers.size === 1 &&
+        region.length > 0
+      ) {
         const playerId = Array.from(surroundingPlayers)[0];
-        if (!this.defeatedPlayers.has(playerId) && this.game.hasPlayer(playerId)) {
+        if (
+          !this.defeatedPlayers.has(playerId) &&
+          this.game.hasPlayer(playerId)
+        ) {
           const player = this.game.player(playerId);
           for (const wildTile of region) {
             player.conquer(wildTile);
@@ -3242,17 +3290,20 @@ export class FrenzyManager {
       case UnitType.DefensePost:
         return this.units.filter(
           (u) =>
-            u.playerId === playerId && u.unitType === FrenzyUnitType.DefensePost,
+            u.playerId === playerId &&
+            u.unitType === FrenzyUnitType.DefensePost,
         ).length;
       case UnitType.SAMLauncher:
         return this.units.filter(
           (u) =>
-            u.playerId === playerId && u.unitType === FrenzyUnitType.SAMLauncher,
+            u.playerId === playerId &&
+            u.unitType === FrenzyUnitType.SAMLauncher,
         ).length;
       case UnitType.MissileSilo:
         return this.units.filter(
           (u) =>
-            u.playerId === playerId && u.unitType === FrenzyUnitType.MissileSilo,
+            u.playerId === playerId &&
+            u.unitType === FrenzyUnitType.MissileSilo,
         ).length;
       case UnitType.ShieldGenerator:
         return this.units.filter(
@@ -4042,6 +4093,8 @@ export class FrenzyManager {
         unitCount: b.unitCount,
         tier: b.tier,
         maxUnits: this.getMaxUnitsForPlayer(b.playerId),
+        warshipCount: this.getWarshipCount(b.playerId),
+        maxWarships: this.getMaxWarshipsForPlayer(b.playerId),
         health: b.health,
         maxHealth: b.maxHealth,
       })),
@@ -4064,6 +4117,7 @@ export class FrenzyManager {
         startX: p.startX,
         startY: p.startY,
         isArtillery: p.isArtillery,
+        isMissile: p.isMissile,
         targetX: p.targetX,
         targetY: p.targetY,
         areaRadius: p.areaRadius,
@@ -4071,6 +4125,7 @@ export class FrenzyManager {
       })),
       projectileSize: this.config.projectileSize,
       maxUnitsPerPlayer: this.config.maxUnitsPerPlayer,
+      maxWarshipsPerPlayer: this.config.maxWarshipsPerPlayer,
       crystals: this.crystals.map((c) => ({
         id: c.id,
         x: c.x,
@@ -4087,4 +4142,3 @@ interface PlayerTerritorySnapshot {
   borderTiles: TileRef[];
   centroid: { x: number; y: number };
 }
-

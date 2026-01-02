@@ -43,6 +43,12 @@ export class ControlPanel extends LitElement implements Layer {
   private _unitCount: number = 0;
 
   @state()
+  private _warshipCount: number = 0;
+
+  @state()
+  private _maxWarships: number = 20;
+
+  @state()
   private _landSize: number = 0;
 
   @state()
@@ -63,7 +69,9 @@ export class ControlPanel extends LitElement implements Layer {
     );
     this.uiState.defensiveStance = this.defensiveStance;
     // Send initial stance to server
-    this.eventBus.emit(new SendDefensiveStanceIntentEvent(this.defensiveStance));
+    this.eventBus.emit(
+      new SendDefensiveStanceIntentEvent(this.defensiveStance),
+    );
 
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio =
@@ -119,12 +127,20 @@ export class ControlPanel extends LitElement implements Layer {
             (u) => u.playerId === myId && u.unitType !== "defensePost",
           ).length
         : 0;
+      // Count warships (both tier 1 and tier 2 use "warship" type)
+      this._warshipCount = frenzy
+        ? frenzy.units.filter(
+            (u) => u.playerId === myId && u.unitType === "warship",
+          ).length
+        : 0;
       this._landSize = player.numTilesOwned();
       this._gold = player.gold();
       this._troops = this._unitCount;
       // Get max units from the player's core building in frenzy state
       const myBuilding = frenzy?.coreBuildings.find((b) => b.playerId === myId);
       this._maxTroops = myBuilding?.maxUnits ?? frenzy?.maxUnitsPerPlayer ?? 60;
+      this._maxWarships =
+        myBuilding?.maxWarships ?? frenzy?.maxWarshipsPerPlayer ?? 20;
       this.troopRate = 0;
     } else {
       this._maxTroops = this.game.config().maxTroops(player);
@@ -234,13 +250,20 @@ export class ControlPanel extends LitElement implements Layer {
           : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="block bg-black/40 text-white mb-4 p-2 rounded border border-red-900/30">
+        <div
+          class="block bg-black/40 text-white mb-4 p-2 rounded border border-red-900/30"
+        >
           <div class="flex justify-between mb-1">
             <span class="font-bold"
-              >${translateText(this._isFrenzy ? "control_panel.units" : "control_panel.troops")}:</span
+              >${translateText(
+                this._isFrenzy ? "control_panel.units" : "control_panel.troops",
+              )}:</span
             >
             <span translate="no"
-              >${this._isFrenzy ? this._troops : renderTroops(this._troops)} / ${this._isFrenzy ? this._maxTroops : renderTroops(this._maxTroops)}
+              >${this._isFrenzy ? this._troops : renderTroops(this._troops)} /
+              ${this._isFrenzy
+                ? this._maxTroops
+                : renderTroops(this._maxTroops)}
               ${this._isFrenzy
                 ? ""
                 : html`<span
@@ -252,6 +275,16 @@ export class ControlPanel extends LitElement implements Layer {
                   >`}</span
             >
           </div>
+          ${this._isFrenzy
+            ? html`<div class="flex justify-between mb-1">
+                <span class="font-bold"
+                  >${translateText("control_panel.warships")}:</span
+                >
+                <span translate="no"
+                  >${this._warshipCount} / ${this._maxWarships}</span
+                >
+              </div>`
+            : ""}
           <div class="flex justify-between">
             <span class="font-bold"
               >${translateText("control_panel.gold")}:</span
@@ -264,9 +297,7 @@ export class ControlPanel extends LitElement implements Layer {
         <div class="relative mb-2 sm:mb-4">
           <label class="block text-white mb-1">
             ${translateText("control_panel.defensive_stance")}:
-            <span class="text-sm">
-              ${this.getDefensiveStanceLabel()}
-            </span>
+            <span class="text-sm"> ${this.getDefensiveStanceLabel()} </span>
           </label>
           <div class="relative h-8">
             <!-- Background track -->
@@ -274,7 +305,9 @@ export class ControlPanel extends LitElement implements Layer {
               class="absolute left-0 right-0 top-3 h-2 bg-white/20 rounded"
             ></div>
             <!-- Tick marks for fixed positions -->
-            <div class="absolute left-0 right-0 top-3 h-2 flex justify-between px-0">
+            <div
+              class="absolute left-0 right-0 top-3 h-2 flex justify-between px-0"
+            >
               <div class="w-0.5 h-2 bg-white/40"></div>
               <div class="w-0.5 h-2 bg-white/40"></div>
               <div class="w-0.5 h-2 bg-white/40"></div>

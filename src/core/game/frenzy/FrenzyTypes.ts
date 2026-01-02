@@ -189,6 +189,7 @@ export interface FrenzyConfig {
   // Spawning
   spawnInterval: number; // Seconds between spawns (default: 4.0)
   maxUnitsPerPlayer: number; // Hard cap (default: 60)
+  maxWarshipsPerPlayer: number; // Ship cap (default: 20)
   startingUnits: number; // Units at game start (default: 5)
 
   // Movement & Territory
@@ -281,10 +282,10 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       health: 375, // 1.5x warship health (250 * 1.5)
       speed: 2.0, // Same speed as tier 1
       dps: 30, // 1.5x warship dps
-      range: 90, // 2x warship range (45 * 2) - long range missiles
+      range: 300, // 2x warship range (45 * 2) - long range missiles
       fireInterval: 8.0, // Slow reload (fires barrages)
       projectileDamage: 30, // Per-missile damage (fires 2x5 = 10 missiles)
-      areaRadius: 10, // Small AOE per missile
+      areaRadius: 5, // Small AOE per missile
     },
     // Towers
     defensePost: {
@@ -341,6 +342,7 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   // Spawning
   spawnInterval: 4.0,
   maxUnitsPerPlayer: 100,
+  maxWarshipsPerPlayer: 20,
   startingUnits: 5,
 
   // Movement & Territory
