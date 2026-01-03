@@ -217,7 +217,7 @@ export class WinModal extends LitElement implements Layer {
           ${translateText("win_modal.ofm_winter_description")}
         </p>
         <a
-          href="https://discord.gg/wXXJshB8Jt"
+          href="https://discord.gg/agCuqQ5z24"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-block px-6 py-3 bg-green-600 text-white rounded font-semibold transition-all duration-200 hover:bg-green-700 hover:-translate-y-px no-underline"
