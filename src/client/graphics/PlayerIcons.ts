@@ -6,12 +6,10 @@ import crownIcon from "../../../resources/images/CrownIcon.svg";
 import disconnectedIcon from "../../../resources/images/DisconnectedIcon.svg";
 import embargoBlackIcon from "../../../resources/images/EmbargoBlackIcon.svg";
 import embargoWhiteIcon from "../../../resources/images/EmbargoWhiteIcon.svg";
-import nukeRedIcon from "../../../resources/images/NukeIconRed.svg";
-import nukeWhiteIcon from "../../../resources/images/NukeIconWhite.svg";
 import questionMarkIcon from "../../../resources/images/QuestionMarkIcon.svg";
 import targetIcon from "../../../resources/images/TargetIcon.svg";
 import traitorIcon from "../../../resources/images/TraitorIcon.svg";
-import { AllPlayers, nukeTypes } from "../../core/game/Game";
+import { AllPlayers } from "../../core/game/Game";
 import { GameView, PlayerView } from "../../core/game/GameView";
 
 export type PlayerIconId =
@@ -22,8 +20,7 @@ export type PlayerIconId =
   | "alliance-request"
   | "target"
   | "emoji"
-  | "embargo"
-  | "nuke";
+  | "embargo";
 
 export type PlayerIconKind = "image" | "emoji";
 
@@ -142,25 +139,6 @@ export function getPlayerIcons(
   if (myPlayer?.hasEmbargo(player)) {
     const embargoIcon = isDarkMode ? embargoWhiteIcon : embargoBlackIcon;
     icons.push({ id: "embargo", kind: "image", src: embargoIcon });
-  }
-
-  // Nuke icon (different color depending on whether the local player is the target)
-  const nukesSentByOtherPlayer = game.units(...nukeTypes).filter((unit) => {
-    const isSendingNuke = player.id() === unit.owner().id();
-    const notMyPlayer = !myPlayer || unit.owner().id() !== myPlayer.id();
-    return isSendingNuke && notMyPlayer && unit.isActive();
-  });
-
-  const isMyPlayerTarget = nukesSentByOtherPlayer.some((unit) => {
-    const detonationDst = unit.targetTile();
-    if (!detonationDst || !myPlayer) return false;
-    const targetId = game.owner(detonationDst).id();
-    return targetId === myPlayer.id();
-  });
-
-  if (nukesSentByOtherPlayer.length > 0) {
-    const icon = isMyPlayerTarget ? nukeRedIcon : nukeWhiteIcon;
-    icons.push({ id: "nuke", kind: "image", src: icon });
   }
 
   return icons;

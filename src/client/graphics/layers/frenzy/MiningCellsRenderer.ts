@@ -1,5 +1,8 @@
 import { GameView } from "../../../../core/game/GameView";
-import { shouldSkipExpensiveEffect } from "../../MobileOptimizations";
+import {
+  isMobileDevice,
+  shouldSkipExpensiveEffect,
+} from "../../MobileOptimizations";
 import { FrenzyRenderContext } from "./FrenzyRenderContext";
 
 /**
@@ -55,6 +58,10 @@ export class MiningCellsRenderer {
     mineHash: string;
     veins: VeinCache[];
   } = { canvas: null, context: null, mineHash: "", veins: [] };
+
+  // Throttle cache rebuild checks
+  private lastCacheCheck: number = 0;
+  private cacheCheckRate: number = 500; // ms
 
   constructor(private game: GameView) {}
 
@@ -144,16 +151,22 @@ export class MiningCellsRenderer {
     const halfWidth = ctx.halfWidth;
     const halfHeight = ctx.halfHeight;
 
-    // Create hash to detect changes
-    const mineHash =
-      allMines.map((m) => `${m.x},${m.y},${m.playerId}`).join("|") +
-      "|" +
-      allCrystals.map((c) => `${c.x},${c.y}`).join("|");
+    // Throttle cache rebuild checks (hash computation is expensive with many mines/crystals)
+    const now = Date.now();
+    if (now - this.lastCacheCheck > this.cacheCheckRate || !this.cache.canvas) {
+      this.lastCacheCheck = now;
 
-    // Rebuild cache if needed
-    if (this.cache.mineHash !== mineHash || !this.cache.canvas) {
-      this.rebuildCache(allMines, allCrystals, halfWidth, halfHeight);
-      this.cache.mineHash = mineHash;
+      // Create hash to detect changes
+      const mineHash =
+        allMines.map((m) => `${m.x},${m.y},${m.playerId}`).join("|") +
+        "|" +
+        allCrystals.map((c) => `${c.x},${c.y}`).join("|");
+
+      // Rebuild cache if needed
+      if (this.cache.mineHash !== mineHash || !this.cache.canvas) {
+        this.rebuildCache(allMines, allCrystals, halfWidth, halfHeight);
+        this.cache.mineHash = mineHash;
+      }
     }
 
     // Draw cached static elements
@@ -161,8 +174,10 @@ export class MiningCellsRenderer {
       ctx.context.drawImage(this.cache.canvas, -halfWidth, -halfHeight);
     }
 
-    // Draw animated pulses
-    this.drawAnimatedPulses(ctx.context, ctx.time);
+    // Draw animated pulses (skip on mobile for performance)
+    if (!isMobileDevice()) {
+      this.drawAnimatedPulses(ctx.context, ctx.time);
+    }
   }
 
   /**
@@ -521,33 +536,35 @@ export class MiningCellsRenderer {
     context.rotate(rotation);
     context.translate(-x, -bottomY);
 
-    // Outer glow
-    const glowIntensity = 0.4 + Math.sin(time * 2.5) * 0.2;
-    const radiationPulse = 1 + Math.sin(time * 3) * 0.15;
-    const glowGradient = context.createRadialGradient(
-      x,
-      y - height * 0.2,
-      0,
-      x,
-      y - height * 0.2,
-      size * 1.5 * radiationPulse,
-    );
-    glowGradient.addColorStop(0, `rgba(120, 200, 255, ${glowIntensity})`);
-    glowGradient.addColorStop(
-      0.5,
-      `rgba(80, 160, 220, ${glowIntensity * 0.5})`,
-    );
-    glowGradient.addColorStop(1, "rgba(40, 120, 200, 0)");
-    context.fillStyle = glowGradient;
-    context.beginPath();
-    context.arc(
-      x,
-      y - height * 0.2,
-      size * 1.5 * radiationPulse,
-      0,
-      Math.PI * 2,
-    );
-    context.fill();
+    // Outer glow (skip on mobile for performance)
+    if (!isMobileDevice()) {
+      const glowIntensity = 0.4 + Math.sin(time * 2.5) * 0.2;
+      const radiationPulse = 1 + Math.sin(time * 3) * 0.15;
+      const glowGradient = context.createRadialGradient(
+        x,
+        y - height * 0.2,
+        0,
+        x,
+        y - height * 0.2,
+        size * 1.5 * radiationPulse,
+      );
+      glowGradient.addColorStop(0, `rgba(120, 200, 255, ${glowIntensity})`);
+      glowGradient.addColorStop(
+        0.5,
+        `rgba(80, 160, 220, ${glowIntensity * 0.5})`,
+      );
+      glowGradient.addColorStop(1, "rgba(40, 120, 200, 0)");
+      context.fillStyle = glowGradient;
+      context.beginPath();
+      context.arc(
+        x,
+        y - height * 0.2,
+        size * 1.5 * radiationPulse,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
 
     // Crystal body
     context.fillStyle = "rgba(60, 140, 200, 0.9)";

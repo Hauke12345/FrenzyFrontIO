@@ -264,24 +264,14 @@ export class NameLayer implements Layer {
       return;
     }
 
-    // Update location
+    // Calculate base size for visibility check
     const nameLoc = render.player.nameLocation();
-    const locationChanged =
-      !render.location ||
-      render.location.x !== nameLoc.x ||
-      render.location.y !== nameLoc.y;
-    render.location = new Cell(nameLoc.x, nameLoc.y);
-
-    // Calculate base size and scale
     const baseSize = Math.max(1, Math.floor(nameLoc.size));
     render.fontSize = Math.max(4, Math.floor(baseSize * 0.4));
     render.fontColor = this.theme.textColor(render.player);
 
-    // Update position if changed (do this before visibility check)
-    if (locationChanged) {
-      const scale = Math.min(baseSize * 0.25, 3);
-      render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
-    }
+    // Always update location for visibility check
+    render.location = new Cell(nameLoc.x, nameLoc.y);
 
     // Update element visibility (handles Ctrl key, size, and screen position)
     this.updateElementVisibility(render);
@@ -297,6 +287,10 @@ export class NameLayer implements Layer {
       return;
     }
     render.lastRenderCalc = now + this.rand.nextInt(0, 100);
+
+    // Update position transform (inside throttle)
+    const scale = Math.min(baseSize * 0.25, 3);
+    render.element.style.transform = `translate(${render.location.x}px, ${render.location.y}px) translate(-50%, -50%) scale(${scale})`;
 
     // Update text sizes using cached DOM references
     const nameDiv = render.nameDiv;

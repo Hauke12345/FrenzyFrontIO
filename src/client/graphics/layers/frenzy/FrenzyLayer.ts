@@ -26,6 +26,9 @@ import { UnitRenderer } from "./UnitRenderer";
  */
 export class FrenzyLayer implements Layer {
   private lastFrameTime: number = 0;
+  private lastCrystalAssignmentTime: number = 0;
+  private cachedMines: MineData[] = [];
+  private crystalAssignmentRate: number = 500; // ms
 
   // Sub-renderers
   private structureRenderer: StructureRenderer;
@@ -138,13 +141,26 @@ export class FrenzyLayer implements Layer {
       }),
     );
 
-    // Assign crystals to mines
+    // Assign crystals to mines (throttled to reduce ownership checks)
     const mineRadius = 40;
-    this.miningCellsRenderer.assignCrystalsToMines(
-      allMines,
-      crystals,
-      mineRadius,
-    );
+    const assignNow = Date.now();
+    if (
+      assignNow - this.lastCrystalAssignmentTime >
+      this.crystalAssignmentRate
+    ) {
+      this.lastCrystalAssignmentTime = assignNow;
+      this.miningCellsRenderer.assignCrystalsToMines(
+        allMines,
+        crystals,
+        mineRadius,
+      );
+      this.cachedMines = allMines;
+    } else {
+      // Use cached assignment by copying crystalsInCell from cache
+      for (let i = 0; i < allMines.length && i < this.cachedMines.length; i++) {
+        allMines[i].crystalsInCell = this.cachedMines[i].crystalsInCell;
+      }
+    }
     FrameProfiler.end("FrenzyLayer:crystalAssignment", mineStart);
 
     // Render mining cells effect
