@@ -153,6 +153,37 @@ export class HelpModal extends LitElement {
         <hr class="mt-6 mb-4" />
 
         <div class="text-2xl font-bold text-center mb-4">
+          ${translateText("help_modal.frenzy_title")}
+        </div>
+        <div class="flex flex-col gap-4">
+          <p>${translateText("help_modal.frenzy_intro")}</p>
+          <ul>
+            <li class="mb-4">
+              <strong>${translateText("help_modal.frenzy_hq_title")}</strong>
+              <p>${translateText("help_modal.frenzy_hq_desc")}</p>
+            </li>
+            <li class="mb-4">
+              <strong>${translateText("help_modal.frenzy_gold_title")}</strong>
+              <p>${translateText("help_modal.frenzy_gold_desc")}</p>
+            </li>
+            <li class="mb-4">
+              <strong
+                >${translateText("help_modal.frenzy_towers_title")}</strong
+              >
+              <p>${translateText("help_modal.frenzy_towers_desc")}</p>
+            </li>
+            <li class="mb-4">
+              <strong
+                >${translateText("help_modal.frenzy_upgrades_title")}</strong
+              >
+              <p>${translateText("help_modal.frenzy_upgrades_desc")}</p>
+            </li>
+          </ul>
+        </div>
+
+        <hr class="mt-6 mb-4" />
+
+        <div class="text-2xl font-bold text-center mb-4">
           ${translateText("help_modal.ui_section")}
         </div>
         <div class="flex flex-col md:flex-row gap-4">
@@ -264,28 +295,6 @@ export class HelpModal extends LitElement {
                 ${translateText("help_modal.option_settings")}
               </li>
             </ul>
-          </div>
-        </div>
-
-        <hr class="mt-6 mb-4" />
-
-        <div class="flex flex-col md:flex-row gap-4">
-          <div class="flex flex-col items-center">
-            <div class="text-gray-300 font-bold">
-              ${translateText("help_modal.ui_playeroverlay")}
-            </div>
-            <img
-              src="/images/helpModal/playerInfoOverlay.webp"
-              alt="Player info overlay"
-              title="Player info overlay"
-              class="default-image"
-              loading="lazy"
-            />
-          </div>
-          <div>
-            <p class="mb-4">
-              ${translateText("help_modal.ui_playeroverlay_desc")}
-            </p>
           </div>
         </div>
 
@@ -488,11 +497,6 @@ export class HelpModal extends LitElement {
                 <td>${translateText("help_modal.build_hydrogen")}</td>
                 <td><div class="icon hydrogen-bomb-icon"></div></td>
                 <td>${translateText("help_modal.build_hydrogen_desc")}</td>
-              </tr>
-              <tr>
-                <td>${translateText("help_modal.build_mirv")}</td>
-                <td><div class="icon mirv-icon"></div></td>
-                <td>${translateText("help_modal.build_mirv_desc")}</td>
               </tr>
             </tbody>
           </table>
