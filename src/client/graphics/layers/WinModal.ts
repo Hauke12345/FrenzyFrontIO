@@ -1,7 +1,7 @@
 import { LitElement, TemplateResult, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import ofmWintersLogo from "../../../../resources/images/OfmWintersLogo.png";
-import { isInIframe, translateText } from "../../../client/Utils";
+import { translateText } from "../../../client/Utils";
 import { ColorPalette, Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
@@ -101,19 +101,7 @@ export class WinModal extends LitElement implements Layer {
   }
 
   innerHtml() {
-    if (isInIframe()) {
-      return this.steamWishlist();
-    }
-
-    if (this.rand < 0.25) {
-      return this.steamWishlist();
-    } else if (this.rand < 0.5) {
-      return this.ofmDisplay();
-    } else if (this.rand < 0.75) {
-      return this.discordDisplay();
-    } else {
-      return this.renderPatternButton();
-    }
+    return this.discordDisplay();
   }
 
   renderPatternButton() {
@@ -238,7 +226,7 @@ export class WinModal extends LitElement implements Layer {
           ${translateText("win_modal.discord_description")}
         </p>
         <a
-          href="https://discord.com/invite/openfront"
+          href="https://discord.gg/agCuqQ5z24"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-block px-6 py-3 bg-indigo-600 text-white rounded font-semibold transition-all duration-200 hover:bg-indigo-700 hover:-translate-y-px no-underline"

@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../../client/Utils";
 import { EventBus, GameEvent } from "../../../core/EventBus";
+import { GameFork } from "../../../core/game/Game";
 import { GameView, PlayerView, UnitView } from "../../../core/game/GameView";
 import { renderNumber } from "../../Utils";
 import { Layer } from "./Layer";
@@ -100,13 +101,24 @@ export class Leaderboard extends LitElement implements Layer {
     const numTilesWithoutFallout =
       this.game.numLandTiles() - this.game.numTilesWithFallout();
 
+    const isFrenzy =
+      this.game.config().gameConfig().gameFork === GameFork.Frenzy;
+    const frenzy = isFrenzy ? this.game.frenzyManager() : null;
+
     const alivePlayers = sorted.filter((player) => player.isAlive());
     const playersToShow = this.showTopFive
       ? alivePlayers.slice(0, 5)
       : alivePlayers;
 
     this.players = playersToShow.map((player, index) => {
-      const troops = player.troops() / 10;
+      let unitCount: number;
+      if (isFrenzy && frenzy) {
+        unitCount = frenzy.units.filter(
+          (u) => u.playerId === player.id() && u.unitType !== "defensePost",
+        ).length;
+      } else {
+        unitCount = player.troops() / 10;
+      }
       return {
         name: player.displayName(),
         position: index + 1,
@@ -114,7 +126,7 @@ export class Leaderboard extends LitElement implements Layer {
           player.numTilesOwned() / numTilesWithoutFallout,
         ),
         gold: renderNumber(player.gold()),
-        troops: renderNumber(troops),
+        troops: renderNumber(unitCount),
         isMyPlayer: player === myPlayer,
         isOnSameTeam:
           myPlayer !== null &&
@@ -136,7 +148,14 @@ export class Leaderboard extends LitElement implements Layer {
       }
 
       if (myPlayer.isAlive()) {
-        const myPlayerTroops = myPlayer.troops() / 10;
+        let myUnitCount: number;
+        if (isFrenzy && frenzy) {
+          myUnitCount = frenzy.units.filter(
+            (u) => u.playerId === myPlayer.id() && u.unitType !== "defensePost",
+          ).length;
+        } else {
+          myUnitCount = myPlayer.troops() / 10;
+        }
         this.players.pop();
         this.players.push({
           name: myPlayer.displayName(),
@@ -145,7 +164,7 @@ export class Leaderboard extends LitElement implements Layer {
             myPlayer.numTilesOwned() / this.game.numLandTiles(),
           ),
           gold: renderNumber(myPlayer.gold()),
-          troops: renderNumber(myPlayerTroops),
+          troops: renderNumber(myUnitCount),
           isMyPlayer: true,
           isOnSameTeam: true,
           player: myPlayer,

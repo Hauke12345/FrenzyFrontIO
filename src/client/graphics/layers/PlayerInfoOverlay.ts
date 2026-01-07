@@ -12,6 +12,7 @@ import samLauncherIcon from "../../../../resources/images/SamLauncherIconWhite.s
 import { renderPlayerFlag } from "../../../core/CustomFlag";
 import { EventBus } from "../../../core/EventBus";
 import {
+  GameFork,
   PlayerProfile,
   PlayerType,
   Relation,
@@ -267,10 +268,23 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
     const isFriendly = myPlayer?.isFriendly(player);
     const isAllied = myPlayer?.isAlliedWith(player);
     let relationHtml: TemplateResult | null = null;
-    const attackingTroops = player
-      .outgoingAttacks()
-      .map((a) => a.troops)
-      .reduce((a, b) => a + b, 0);
+
+    // Calculate unit count for frenzy mode
+    const isFrenzy =
+      this.game.config().gameConfig().gameFork === GameFork.Frenzy;
+    const frenzy = isFrenzy ? this.game.frenzyManager() : null;
+    let unitCount: number;
+    let shipCount: number = 0;
+    if (isFrenzy && frenzy) {
+      unitCount = frenzy.units.filter(
+        (u) => u.playerId === player.id() && u.unitType !== "defensePost" && u.unitType !== "warship",
+      ).length;
+      shipCount = frenzy.units.filter(
+        (u) => u.playerId === player.id() && u.unitType === "warship",
+      ).length;
+    } else {
+      unitCount = player.troops();
+    }
 
     if (
       player.type() === PlayerType.FakeHuman &&
@@ -361,25 +375,25 @@ export class PlayerInfoOverlay extends LitElement implements Layer {
                   </div>`
                 : ""}
               <div class="flex text-sm">${playerType} ${relationHtml}</div>
-              ${player.troops() >= 1
+              ${unitCount >= 1
                 ? html`<div
                     class="flex gap-2 text-sm opacity-80"
                     translate="no"
                   >
                     ${translateText("player_info_overlay.troops")}
                     <span class="ml-auto mr-0 font-bold">
-                      ${renderTroops(player.troops())}
+                      ${isFrenzy ? unitCount : renderTroops(unitCount)}
                     </span>
                   </div>`
                 : ""}
-              ${attackingTroops >= 1
+              ${isFrenzy && shipCount >= 1
                 ? html`<div
                     class="flex gap-2 text-sm opacity-80"
                     translate="no"
                   >
-                    ${translateText("player_info_overlay.a_troops")}
-                    <span class="ml-auto mr-0 text-red-400 font-bold">
-                      ${renderTroops(attackingTroops)}
+                    ${translateText("player_info_overlay.ships")}
+                    <span class="ml-auto mr-0 font-bold">
+                      ${shipCount}
                     </span>
                   </div>`
                 : ""}

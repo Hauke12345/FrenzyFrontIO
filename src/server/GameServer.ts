@@ -24,6 +24,7 @@ import {
 import { createPartialGameRecord, getClanTag } from "../core/Util";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
+import { logGameStart, logGameEnd } from "./GameMetrics";
 export enum GamePhase {
   Lobby = "LOBBY",
   Active = "ACTIVE",
@@ -422,6 +423,15 @@ export class GameServer {
     }
     this.gameStartInfo = result.data satisfies GameStartInfo;
 
+    // Log game start metrics
+    logGameStart({
+      gameId: this.id,
+      map: this.gameConfig.gameMap,
+      playerCount: this.activeClients.length,
+      gameType: this.gameConfig.gameType,
+      gameFork: this.gameConfig.gameFork,
+    });
+
     this.endTurnIntervalID = setInterval(
       () => this.endTurn(),
       this.config.turnIntervalMs(),
@@ -494,6 +504,17 @@ export class GameServer {
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
+
+    // Log game end metrics
+    const durationMs = this._startTime ? Date.now() - this._startTime : 0;
+    logGameEnd({
+      gameId: this.id,
+      durationMs,
+      turns: this.turns.length,
+      winner: this.winner?.winner,
+      playerCount: this.allClients.size,
+    });
+
     try {
       if (this.allClients.size === 0) {
         this.log.info("no clients joined, not archiving game", {
