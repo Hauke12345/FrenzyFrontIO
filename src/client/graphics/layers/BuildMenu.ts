@@ -1,16 +1,17 @@
 import { LitElement, css, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import warshipIcon from "../../../../resources/images/BattleshipIconWhite.svg";
-import cityIcon from "../../../../resources/images/CityIconWhite.svg";
-import factoryIcon from "../../../../resources/images/FactoryIconWhite.svg";
 import goldCoinIcon from "../../../../resources/images/GoldCoinIcon.svg";
+import harborIcon from "../../../../resources/images/HarborIconWhite.svg";
+import mineIcon from "../../../../resources/images/MineIconWhite.svg";
 import mirvIcon from "../../../../resources/images/MIRVIcon.svg";
 import missileSiloIcon from "../../../../resources/images/MissileSiloIconWhite.svg";
 import hydrogenBombIcon from "../../../../resources/images/MushroomCloudIconWhite.svg";
 import atomBombIcon from "../../../../resources/images/NukeIconWhite.svg";
-import portIcon from "../../../../resources/images/PortIcon.svg";
 import samlauncherIcon from "../../../../resources/images/SamLauncherIconWhite.svg";
+import shieldGeneratorIcon from "../../../../resources/images/ShieldGeneratorIconWhite.svg";
 import shieldIcon from "../../../../resources/images/ShieldIconWhite.svg";
+import shipIcon from "../../../../resources/images/ShipIconWhite.svg";
+import unitFactoryIcon from "../../../../resources/images/UnitFactoryIconWhite.svg";
 import { translateText } from "../../../client/Utils";
 import { EventBus } from "../../../core/EventBus";
 import {
@@ -68,14 +69,14 @@ export const buildTable: BuildItemDisplay[][] = [
     },
     {
       unitType: UnitType.Warship,
-      icon: warshipIcon,
+      icon: shipIcon,
       description: "build_menu.desc.warship",
       key: "unit_type.warship",
       countable: true,
     },
     {
       unitType: UnitType.Port,
-      icon: portIcon,
+      icon: harborIcon,
       description: "build_menu.desc.port",
       key: "unit_type.port",
       countable: true,
@@ -104,7 +105,7 @@ export const buildTable: BuildItemDisplay[][] = [
     },
     {
       unitType: UnitType.ShieldGenerator,
-      icon: shieldIcon,
+      icon: shieldGeneratorIcon,
       description: "build_menu.desc.shield_generator",
       key: "unit_type.shield_generator",
       countable: true,
@@ -118,14 +119,14 @@ export const buildTable: BuildItemDisplay[][] = [
     },
     {
       unitType: UnitType.City,
-      icon: cityIcon,
+      icon: mineIcon,
       description: "build_menu.desc.city",
       key: "unit_type.city",
       countable: true,
     },
     {
       unitType: UnitType.Factory,
-      icon: factoryIcon,
+      icon: unitFactoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
       countable: true,

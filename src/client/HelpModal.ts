@@ -455,7 +455,7 @@ export class HelpModal extends LitElement {
             <tbody class="text-left">
               <tr>
                 <td>${translateText("help_modal.build_city")}</td>
-                <td><div class="icon city-icon"></div></td>
+                <td><div class="icon mine-icon"></div></td>
                 <td>${translateText("help_modal.build_city_desc")}</td>
               </tr>
               <tr>
@@ -470,7 +470,7 @@ export class HelpModal extends LitElement {
               </tr>
               <tr>
                 <td>${translateText("help_modal.build_factory")}</td>
-                <td><div class="icon factory-icon"></div></td>
+                <td><div class="icon unit-factory-icon"></div></td>
                 <td>${translateText("help_modal.build_factory_desc")}</td>
               </tr>
               <tr>

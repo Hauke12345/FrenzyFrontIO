@@ -1,4 +1,20 @@
-📦 **FrenzyFront Patch Notes - Latest Update**
+📦 **FrenzyFront Patch Notes - v0.02**
+
+🎨 **UI Improvements**
+
+- New icons for Mine, Unit Factory, Harbor, Ship, and Shield Generator
+  → Clearer visual distinction between structures in build menu and help modal
+- Updated terminology: "City" → "Mine", "Factory" → "Unit Factory"
+  → Better reflects their actual function in Frenzy mode
+
+🔧 **Bug Fixes**
+
+- Fixed structures spawning at wrong location after construction completes
+  → Harbor and Shield Generator now correctly spawn where they were built
+
+---
+
+📦 **FrenzyFront Patch Notes - v0.01**
 
 🚀 **Performance**
 

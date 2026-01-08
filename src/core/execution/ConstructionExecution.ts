@@ -89,6 +89,8 @@ export class ConstructionExecution implements Execution {
 
     if (this.ticksUntilComplete === 0) {
       this.player = this.construction.owner();
+      // Save the construction tile before deleting (this is the actual spawn location)
+      this.tile = this.construction.tile();
       this.construction.delete(false);
       // refund the cost so player has the gold to build the unit
       this.player.addGold(this.cost);

@@ -354,13 +354,13 @@ label.option-card:hover {
   height: 32px;
 }
 
-#helpModal .city-icon {
-  mask: url("../../resources/images/CityIconWhite.svg") no-repeat center / cover;
+#helpModal .mine-icon {
+  mask: url("../../resources/images/MineIconWhite.svg") no-repeat center / cover;
 }
 
-#helpModal .factory-icon {
-  mask: url("../../resources/images/FactoryIconWhite.svg") no-repeat center /
-    cover;
+#helpModal .unit-factory-icon {
+  mask: url("../../resources/images/UnitFactoryIconWhite.svg") no-repeat
+    center / cover;
 }
 
 #helpModal .defense-post-icon {
@@ -369,12 +369,12 @@ label.option-card:hover {
 }
 
 #helpModal .port-icon {
-  mask: url("../../resources/images/PortIcon.svg") no-repeat center / cover;
+  mask: url("../../resources/images/HarborIconWhite.svg") no-repeat center /
+    cover;
 }
 
 #helpModal .warship-icon {
-  mask: url("../../resources/images/BattleshipIconWhite.svg") no-repeat center /
-    cover;
+  mask: url("../../resources/images/ShipIconWhite.svg") no-repeat center / cover;
 }
 
 #helpModal .missile-silo-icon {
