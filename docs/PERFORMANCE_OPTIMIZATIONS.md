@@ -11,7 +11,24 @@ Comprehensive performance optimizations to the Frenzy mode tick execution, resul
 
 ## Results Overview
 
-### PC Performance
+### Comparison: Main Branch (Unoptimized) vs PixiJS Branch (Optimized)
+
+Tested with the same game state at the same point in time:
+
+| Platform            | Main (Unoptimized) | PixiJS (Optimized) | Improvement       |
+| ------------------- | ------------------ | ------------------ | ----------------- |
+| **PC Tick Avg**     | 15.36ms            | 10.42ms            | **32% faster**    |
+| **PC Tick Max**     | 22ms               | 19ms               | **14% faster**    |
+| **Mobile Tick Avg** | 54.38ms            | 49.13ms            | **10% faster**    |
+| **Mobile Tick Max** | 244ms              | 95ms               | **61% faster** ✅ |
+
+> Note: The max tick time improvement on mobile (244ms → 95ms) is significant for reducing stuttering.
+
+### Before/After on PixiJS Branch
+
+These measurements compare the PixiJS branch before and after applying optimizations:
+
+#### PC Performance
 
 | Metric       | Before  | After   | Improvement    |
 | ------------ | ------- | ------- | -------------- |
@@ -19,7 +36,7 @@ Comprehensive performance optimizations to the Frenzy mode tick execution, resul
 | **Tick Avg** | 29.84ms | 10.42ms | **65% faster** |
 | **Tick Max** | 104ms   | 19ms    | **82% faster** |
 
-### Mobile Performance
+#### Mobile Performance
 
 | Metric         | Before  | After   | Improvement    |
 | -------------- | ------- | ------- | -------------- |
