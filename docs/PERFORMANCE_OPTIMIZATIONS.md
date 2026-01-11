@@ -257,7 +257,7 @@ if (distSq > 0 && distSq < separationRadiusSq) {
 1. `src/core/game/frenzy/FrenzyManager.ts`
 
    - `checkPlayers`: Use `numTilesOwned()` instead of `tiles()`
-   - `captureTerritory`: Staggered processing, inline neighbor checks
+   - `captureTerritory`: Staggered processing (>100 units), inline neighbor checks, wrap-around fix
    - `updateCombat`: Remove `.filter()` + `.reduce()`, use squared distances
    - `updateUnits`: Use squared distances for comparisons
    - `applySeparation`: Use squared distances, cache variables
@@ -269,27 +269,95 @@ if (distSq > 0 && distSq < separationRadiusSq) {
 
 ---
 
-## Remaining Optimization Opportunities
+## Latest Results (After Staggering Fix)
 
-If further performance is needed:
+### Mobile Tick Breakdown - Progression
 
-1. **captureTerritory (still ~30% of tick time)**
+| Operation        | Original | After Opt | Latest  | Improvement |
+| ---------------- | -------- | --------- | ------- | ----------- |
+| checkPlayers     | 22.0ms   | 0ms       | 0ms     | **100%** ✅ |
+| updateUnits      | 18.2ms   | 13.2ms    | 9.5ms   | **48%** ✅  |
+| updateCombat     | 14.2ms   | 17.0ms    | 10.9ms  | **23%** ✅  |
+| captureTerritory | 24.5ms   | 13.2ms    | 4.1ms   | **83%** ✅  |
+| minePayouts      | 0ms      | 0ms       | 243ms\* | ⚠️ Spike    |
 
-   - Use a bitfield for border tile membership
-   - Only check tiles near active combat zones
-   - Reduce capture frequency to every 2nd tick
+> \*The `minePayouts: 243ms` spike is a separate bug - see "Next Optimization Targets" below.
 
-2. **updateCombat on mobile**
+### PC Tick Breakdown - Latest
 
-   - Consider staggering combat updates like captureTerritory
-   - Pool/reuse the nearby units array
+| Operation        | Value |
+| ---------------- | ----- |
+| checkPlayers     | 0ms   |
+| updateUnits      | 1.9ms |
+| updateCombat     | 2.9ms |
+| captureTerritory | 1.9ms |
+| **\_total**      | 6.8ms |
 
-3. **NameLayer rendering (3.6ms avg on mobile)**
-   - Reduce label update frequency
-   - Cull off-screen labels earlier
+---
+
+## Next Optimization Targets
+
+### Priority 1: `minePayouts` - CRITICAL
+
+**Current Complexity:** O(mines × crystals × mines) + O(mines × samplePoints × mines)
+
+The `updateMineGoldPayouts` function has severe O(n²) complexity:
+
+- For each mine, checks each crystal against ALL other mines (Voronoi)
+- For each mine, samples points in radius and checks against ALL other mines
+- With many mines, this explodes (e.g., 20 mines × 20 mines × 1000 sample points)
+
+**Fix Options:**
+
+1. Pre-compute Voronoi cells once when mines are placed/destroyed
+2. Use spatial hash grid for mine lookups instead of linear search
+3. Cache cell areas and only recalculate when mines change
+4. Reduce sample step from 4 to 8 (16x fewer samples)
+
+### Priority 2: Rendering - Focus Areas
+
+| Layer                   | Mobile Avg | Issue                               |
+| ----------------------- | ---------- | ----------------------------------- |
+| FrenzyLayer             | 20.2ms     | Total render time                   |
+| FrenzyLayer:miningCells | 8.3ms      | Voronoi cell rendering is expensive |
+| FrenzyLayer:structures  | 5.6ms      | Structure rendering                 |
+| NameLayer               | 2.6ms      | Player name labels                  |
+
+**Recommendations:**
+
+- **miningCells**: Cache Voronoi geometry, only recalculate when mines change
+- **structures**: Use sprite batching, reduce draw calls
+- **NameLayer**: Cull off-screen labels, reduce update frequency
+
+### Priority 3: Tick Execution (if needed)
+
+Current tick execution is good (6.8ms PC, ~25ms mobile without minePayouts spike), but if further optimization is needed:
+
+1. **Stagger combat updates** like captureTerritory
+2. **Pool nearby units array** in SpatialHashGrid to avoid allocations
+3. **Use TypedArrays** for unit positions (better cache locality)
+
+---
+
+## Focus: Tick vs Render?
+
+**Answer: Focus on TICK EXECUTION first.**
+
+| Bottleneck         | PC Impact | Mobile Impact | Why                                              |
+| ------------------ | --------- | ------------- | ------------------------------------------------ |
+| **Tick Execution** | 10ms      | 47ms          | Runs every 100ms, determines game responsiveness |
+| **Rendering**      | 3.5ms     | 20ms          | Runs every frame, but can drop frames gracefully |
+
+The `minePayouts` bug is causing 243ms spikes that freeze the game. This should be fixed first. After that, rendering optimizations will have the most visible impact on mobile FPS.
 
 ---
 
 ## Conclusion
 
 These optimizations reduced tick execution time by **65% on PC** and **37% on mobile**, bringing the game well within the 100ms tick interval target. The key insight was that many "innocent-looking" calls like `player.tiles()` and `game.neighbors()` were secretly creating temporary objects that caused excessive garbage collection pressure, especially on mobile devices.
+
+**Next steps:**
+
+1. Fix `minePayouts` O(n²) complexity (CRITICAL)
+2. Cache Voronoi geometry for rendering
+3. Consider sprite batching for structures
