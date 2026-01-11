@@ -484,7 +484,7 @@ export class StructureRenderer {
     player: PlayerView,
     tier: number,
   ) {
-    const size = 6.4;
+    const size = 8; // Increased from 6.4 to match larger defense post
     const halfSize = size / 2;
 
     // Outer glow
@@ -701,25 +701,38 @@ export class StructureRenderer {
     y: number,
     player: PlayerView,
   ) {
-    const size = 6;
+    const size = 7; // Same as UnitRenderer.renderArtillery
 
-    context.fillStyle = player.territoryColor().toRgbString();
-    context.beginPath();
-    context.ellipse(x, y + size * 0.3, size, size * 0.4, 0, 0, Math.PI * 2);
-    context.fill();
+    // Base platform
+    context.fillStyle = "#555";
+    context.fillRect(x - size / 2, y + size / 4, size, size / 3);
 
-    context.fillStyle = "#4a4a4a";
+    // Cannon barrel (angled)
     context.save();
     context.translate(x, y);
-    context.rotate(-Math.PI / 4);
-    context.fillRect(-size * 0.2, -size * 1.2, size * 0.4, size * 1.2);
+    context.rotate(-Math.PI / 6);
+
+    context.fillStyle = player.territoryColor().toRgbString();
+    context.fillRect(-size / 6, -size / 2, size / 3, size * 0.8);
+
+    context.fillStyle = "#333";
+    context.fillRect(-size / 6, -size / 2, size / 3, size / 5);
+
     context.restore();
 
+    // Wheels
+    context.fillStyle = "#444";
+    context.beginPath();
+    context.arc(x - size / 3, y + size / 3, size / 5, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.arc(x + size / 3, y + size / 3, size / 5, 0, Math.PI * 2);
+    context.fill();
+
+    // Border
     context.strokeStyle = "#000";
     context.lineWidth = 0.5;
-    context.beginPath();
-    context.ellipse(x, y + size * 0.3, size, size * 0.4, 0, 0, Math.PI * 2);
-    context.stroke();
+    context.strokeRect(x - size / 2, y + size / 4, size, size / 3);
   }
 
   private renderShieldGeneratorIcon(

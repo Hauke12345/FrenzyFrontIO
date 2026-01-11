@@ -121,9 +121,17 @@ export class FrenzyManager {
             ...DEFAULT_FRENZY_CONFIG.units.shieldGenerator,
             ...config.units.shieldGenerator,
           },
+          eliteShieldGenerator: {
+            ...DEFAULT_FRENZY_CONFIG.units.eliteShieldGenerator,
+            ...config.units.eliteShieldGenerator,
+          },
           artillery: {
             ...DEFAULT_FRENZY_CONFIG.units.artillery,
             ...config.units.artillery,
+          },
+          eliteArtillery: {
+            ...DEFAULT_FRENZY_CONFIG.units.eliteArtillery,
+            ...config.units.eliteArtillery,
           },
         },
       };
@@ -290,9 +298,17 @@ export class FrenzyManager {
             ...this.config.units.shieldGenerator,
             ...overrides.units.shieldGenerator,
           },
+          eliteShieldGenerator: {
+            ...this.config.units.eliteShieldGenerator,
+            ...overrides.units.eliteShieldGenerator,
+          },
           artillery: {
             ...this.config.units.artillery,
             ...overrides.units.artillery,
+          },
+          eliteArtillery: {
+            ...this.config.units.eliteArtillery,
+            ...overrides.units.eliteArtillery,
           },
         },
       };
@@ -2063,7 +2079,7 @@ export class FrenzyManager {
 
     // Calculate damage based on unit type
     if (unitConfig.projectileDamage !== undefined) {
-      // Burst damage (defense posts)
+      // Burst damage on shot (defense posts)
       if (unit.weaponCooldown <= 0) {
         targetStructure.modifyHealth(-unitConfig.projectileDamage, unitPlayer);
         this.spawnBeamProjectileToStructure(unit, targetStructure);
@@ -3264,6 +3280,181 @@ export class FrenzyManager {
   }
 
   /**
+   * Get all mines
+   */
+  getMines(): ReadonlyMap<TileRef, MineStructure> {
+    return this.mines;
+  }
+
+  /**
+   * Get all factories
+   */
+  getFactories(): ReadonlyMap<TileRef, FactorySpawner> {
+    return this.factories;
+  }
+
+  /**
+   * Get all ports
+   */
+  getPorts(): ReadonlyMap<TileRef, PortSpawner> {
+    return this.ports;
+  }
+
+  /**
+   * Check if a player meets the HQ tier requirement for a structure upgrade
+   */
+  meetsHQTierRequirement(playerId: PlayerID, structureType: string): boolean {
+    const upgradeInfo = STRUCTURE_UPGRADES[structureType];
+    if (!upgradeInfo) return false;
+
+    const hqTier = this.getHQTier(playerId);
+    return hqTier >= upgradeInfo.requiredHQTier;
+  }
+
+  /**
+   * Get the count of structures of a specific type for a player
+   * Accepts both FrenzyStructureType and UnitType for compatibility
+   */
+  getStructureCountForPlayer(
+    playerId: PlayerID,
+    structureType: FrenzyStructureType | UnitType,
+  ): number {
+    // Map UnitType to FrenzyStructureType if needed
+    let frenzyType: FrenzyStructureType | null = null;
+
+    if (
+      Object.values(FrenzyStructureType).includes(
+        structureType as FrenzyStructureType,
+      )
+    ) {
+      frenzyType = structureType as FrenzyStructureType;
+    } else {
+      // Map UnitType to FrenzyStructureType
+      switch (structureType) {
+        case UnitType.Port:
+          frenzyType = FrenzyStructureType.Port;
+          break;
+        case UnitType.Factory:
+          frenzyType = FrenzyStructureType.Factory;
+          break;
+        case UnitType.DefensePost:
+          return this.units.filter(
+            (u) =>
+              u.playerId === playerId &&
+              u.unitType === FrenzyUnitType.DefensePost,
+          ).length;
+        case UnitType.SAMLauncher:
+          return this.units.filter(
+            (u) =>
+              u.playerId === playerId &&
+              u.unitType === FrenzyUnitType.SAMLauncher,
+          ).length;
+        case UnitType.MissileSilo:
+          return this.units.filter(
+            (u) =>
+              u.playerId === playerId &&
+              u.unitType === FrenzyUnitType.MissileSilo,
+          ).length;
+        case UnitType.ShieldGenerator:
+          return this.units.filter(
+            (u) =>
+              u.playerId === playerId &&
+              u.unitType === FrenzyUnitType.ShieldGenerator,
+          ).length;
+        case UnitType.Artillery:
+          return this.units.filter(
+            (u) =>
+              u.playerId === playerId &&
+              u.unitType === FrenzyUnitType.Artillery,
+          ).length;
+        default:
+          return 0;
+      }
+    }
+
+    switch (frenzyType) {
+      case FrenzyStructureType.HQ:
+        return this.coreBuildings.has(playerId) ? 1 : 0;
+      case FrenzyStructureType.Mine:
+        return Array.from(this.mines.values()).filter(
+          (m) => m.playerId === playerId,
+        ).length;
+      case FrenzyStructureType.Factory:
+        return Array.from(this.factories.values()).filter(
+          (f) => f.playerId === playerId,
+        ).length;
+      case FrenzyStructureType.Port:
+        return Array.from(this.ports.values()).filter(
+          (p) => p.playerId === playerId,
+        ).length;
+      default:
+        return 0;
+    }
+  }
+
+  /**
+   * Get all tiles that contain structures of a specific type
+   */
+  getStructureTilesByType(structureType: FrenzyStructureType): TileRef[] {
+    switch (structureType) {
+      case FrenzyStructureType.HQ:
+        return Array.from(this.coreBuildings.values()).map((b) => b.tile);
+      case FrenzyStructureType.Mine:
+        return Array.from(this.mines.keys());
+      case FrenzyStructureType.Factory:
+        return Array.from(this.factories.keys());
+      case FrenzyStructureType.Port:
+        return Array.from(this.ports.keys());
+      default:
+        return [];
+    }
+  }
+
+  /**
+   * Get all structure tiles for all types
+   */
+  getAllStructureTiles(): TileRef[] {
+    const tiles: TileRef[] = [];
+    for (const b of this.coreBuildings.values()) {
+      tiles.push(b.tile);
+    }
+    for (const tile of this.mines.keys()) {
+      tiles.push(tile);
+    }
+    for (const tile of this.factories.keys()) {
+      tiles.push(tile);
+    }
+    for (const tile of this.ports.keys()) {
+      tiles.push(tile);
+    }
+    return tiles;
+  }
+
+  /**
+   * Get all tower tiles for a player (defense posts, artillery, SAM, silo, shield)
+   */
+  getTowerTilesForPlayer(playerId: PlayerID): TileRef[] {
+    const tiles: TileRef[] = [];
+    for (const unit of this.units) {
+      if (unit.playerId !== playerId) continue;
+      if (
+        unit.unitType === FrenzyUnitType.DefensePost ||
+        unit.unitType === FrenzyUnitType.Artillery ||
+        unit.unitType === FrenzyUnitType.SAMLauncher ||
+        unit.unitType === FrenzyUnitType.MissileSilo ||
+        unit.unitType === FrenzyUnitType.ShieldGenerator
+      ) {
+        const tileX = Math.floor(unit.x);
+        const tileY = Math.floor(unit.y);
+        if (this.game.isValidCoord(tileX, tileY)) {
+          tiles.push(this.game.ref(tileX, tileY));
+        }
+      }
+    }
+    return tiles;
+  }
+
+  /**
    * Get the HQ tier for a player
    */
   getHQTier(playerId: PlayerID): number {
@@ -3304,152 +3495,6 @@ export class FrenzyManager {
       `[FrenzyManager] Player ${player.name()} upgraded HQ to tier ${building.tier}`,
     );
     return true;
-  }
-
-  /**
-   * Get factory at a tile
-   */
-  getFactory(tile: TileRef): FactorySpawner | undefined {
-    return this.factories.get(tile);
-  }
-
-  /**
-   * Get port at a tile
-   */
-  getPort(tile: TileRef): PortSpawner | undefined {
-    return this.ports.get(tile);
-  }
-
-  /**
-   * Get factory tier at a tile
-   */
-  getFactoryTier(tile: TileRef): number {
-    const factory = this.factories.get(tile);
-    return factory?.tier ?? 1;
-  }
-
-  /**
-   * Get count of structures of a specific type for a player.
-   * Used by AI to track how many of each structure they own.
-   * Maps game UnitTypes to Frenzy structure types.
-   */
-  getStructureCountForPlayer(playerId: PlayerID, unitType: UnitType): number {
-    switch (unitType) {
-      case UnitType.City: // City = Mine in Frenzy
-        return Array.from(this.mines.values()).filter(
-          (m) => m.playerId === playerId,
-        ).length;
-      case UnitType.Factory:
-        return Array.from(this.factories.values()).filter(
-          (f) => f.playerId === playerId,
-        ).length;
-      case UnitType.Port:
-        return Array.from(this.ports.values()).filter(
-          (p) => p.playerId === playerId,
-        ).length;
-      case UnitType.DefensePost:
-        return this.units.filter(
-          (u) =>
-            u.playerId === playerId &&
-            u.unitType === FrenzyUnitType.DefensePost,
-        ).length;
-      case UnitType.SAMLauncher:
-        return this.units.filter(
-          (u) =>
-            u.playerId === playerId &&
-            u.unitType === FrenzyUnitType.SAMLauncher,
-        ).length;
-      case UnitType.MissileSilo:
-        return this.units.filter(
-          (u) =>
-            u.playerId === playerId &&
-            u.unitType === FrenzyUnitType.MissileSilo,
-        ).length;
-      case UnitType.ShieldGenerator:
-        return this.units.filter(
-          (u) =>
-            u.playerId === playerId &&
-            u.unitType === FrenzyUnitType.ShieldGenerator,
-        ).length;
-      case UnitType.Artillery:
-        return this.units.filter(
-          (u) =>
-            u.playerId === playerId && u.unitType === FrenzyUnitType.Artillery,
-        ).length;
-      default:
-        return 0;
-    }
-  }
-
-  /**
-   * Get all structure tiles (mines, factories, ports) for spacing calculations
-   * Used by FakeHuman to avoid clustering structures
-   */
-  getAllStructureTiles(): TileRef[] {
-    const tiles: TileRef[] = [];
-    for (const tile of this.mines.keys()) {
-      tiles.push(tile);
-    }
-    for (const tile of this.factories.keys()) {
-      tiles.push(tile);
-    }
-    for (const tile of this.ports.keys()) {
-      tiles.push(tile);
-    }
-    // Add HQ tiles
-    for (const [, building] of this.coreBuildings) {
-      tiles.push(building.tile);
-    }
-    return tiles;
-  }
-
-  /**
-   * Get structure tiles of a specific type for spacing calculations
-   */
-  getStructureTilesByType(type: FrenzyStructureType): TileRef[] {
-    switch (type) {
-      case FrenzyStructureType.Mine:
-        return Array.from(this.mines.keys());
-      case FrenzyStructureType.Factory:
-        return Array.from(this.factories.keys());
-      case FrenzyStructureType.Port:
-        return Array.from(this.ports.keys());
-      case FrenzyStructureType.HQ:
-        return Array.from(this.coreBuildings.values()).map((b) => b.tile);
-      default:
-        return [];
-    }
-  }
-
-  /**
-   * Get tower units (DefensePost, Artillery, etc.) for a player
-   * Used for spacing calculations
-   */
-  getTowerTilesForPlayer(playerId: PlayerID): TileRef[] {
-    const towerTypes = [
-      FrenzyUnitType.DefensePost,
-      FrenzyUnitType.SAMLauncher,
-      FrenzyUnitType.MissileSilo,
-      FrenzyUnitType.ShieldGenerator,
-      FrenzyUnitType.Artillery,
-    ];
-    return this.units
-      .filter((u) => u.playerId === playerId && towerTypes.includes(u.unitType))
-      .map((u) => this.game.ref(Math.floor(u.x), Math.floor(u.y)));
-  }
-
-  /**
-   * Check if player meets HQ tier requirement for a structure upgrade
-   */
-  private meetsHQTierRequirement(
-    playerId: PlayerID,
-    structureKey: string,
-  ): boolean {
-    const upgradeInfo = STRUCTURE_UPGRADES[structureKey];
-    if (!upgradeInfo) return false;
-
-    const hqTier = this.getHQTier(playerId);
-    return hqTier >= upgradeInfo.requiredHQTier;
   }
 
   /**
@@ -3501,6 +3546,60 @@ export class FrenzyManager {
 
     console.log(
       `[FrenzyManager] Player ${player.name()} upgraded factory to tier ${factory.tier}`,
+    );
+    return true;
+  }
+
+  /**
+   * Check if a port can be upgraded (HQ tier must be >= 2)
+   */
+  canUpgradePort(playerId: PlayerID): boolean {
+    return this.meetsHQTierRequirement(playerId, "port");
+  }
+
+  /**
+   * Upgrade a port to tier 2
+   * @returns true if upgrade was successful, false otherwise
+   */
+  upgradePort(playerId: PlayerID, tile: TileRef): boolean {
+    const port = this.ports.get(tile);
+    if (!port) {
+      return false;
+    }
+
+    // Check if port belongs to player
+    if (port.playerId !== playerId) {
+      return false;
+    }
+
+    // Check if already tier 2+
+    if (port.tier >= 2) {
+      return false;
+    }
+
+    // Check if HQ tier is >= 2 (required to upgrade ports)
+    const building = this.coreBuildings.get(playerId);
+    if (!building || building.tier < 2) {
+      return false;
+    }
+
+    const player = this.game.player(playerId);
+    if (!player) {
+      return false;
+    }
+
+    const upgradeInfo = STRUCTURE_UPGRADES["port"];
+    const upgradeCost = BigInt(upgradeInfo?.upgradeCost ?? 100000);
+    if (player.gold() < upgradeCost) {
+      return false;
+    }
+
+    // Deduct gold and upgrade tier
+    player.removeGold(upgradeCost);
+    port.tier = 2;
+
+    console.log(
+      `[FrenzyManager] Player ${player.name()} upgraded port to tier ${port.tier}`,
     );
     return true;
   }
@@ -3594,444 +3693,114 @@ export class FrenzyManager {
   }
 
   /**
-   * Upgrade a defense post to tier 2 (beam attack, longer range)
+   * Unified method to upgrade any Frenzy unit (tower)
    * @returns true if upgrade was successful, false otherwise
    */
-  upgradeDefensePost(playerId: PlayerID, unitId: number): boolean {
+  upgradeUnitUnified(playerId: PlayerID, unitId: number): boolean {
     const player = this.game.player(playerId);
     if (!player) return false;
 
-    // Find the defense post
-    const defensePost = this.units.find(
-      (u) =>
-        u.id === unitId &&
-        u.playerId === playerId &&
-        u.unitType === FrenzyUnitType.DefensePost,
+    const unit = this.units.find(
+      (u) => u.id === unitId && u.playerId === playerId,
     );
-    if (!defensePost) return false;
+    if (!unit) return false;
 
-    // Check if already tier 2+
-    if (defensePost.tier >= 2) return false;
+    // Get the structure type key for this unit
+    let structureKey: string;
+    switch (unit.unitType) {
+      case FrenzyUnitType.DefensePost:
+        structureKey = "defensePost";
+        break;
+      case FrenzyUnitType.SAMLauncher:
+        structureKey = "sam";
+        break;
+      case FrenzyUnitType.MissileSilo:
+        structureKey = "silo";
+        break;
+      case FrenzyUnitType.ShieldGenerator:
+        structureKey = "shield";
+        break;
+      case FrenzyUnitType.Artillery:
+        structureKey = "artillery";
+        break;
+      default:
+        return false; // Mobile units can't be upgraded this way
+    }
 
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
+    const upgradeInfo = STRUCTURE_UPGRADES[structureKey];
+    if (!upgradeInfo) return false;
+
+    const currentTier = unit.tier ?? 1;
+    if (currentTier >= upgradeInfo.maxTier) return false;
+
+    // Check HQ tier requirement
+    if (!this.meetsHQTierRequirement(playerId, structureKey)) return false;
+
+    // Check gold
+    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
     if (player.gold() < upgradeCost) return false;
 
-    // Deduct gold and upgrade tier
+    // Deduct gold and upgrade
     player.removeGold(upgradeCost);
-    defensePost.tier = 2;
-    // Fire interval will be updated in combat loop
+    unit.tier = currentTier + 1;
+
+    // Increase health on upgrade
+    const healthBonus = Math.floor(unit.maxHealth * 0.5); // 50% health bonus
+    unit.maxHealth += healthBonus;
+    unit.health = unit.maxHealth; // Heal to full on upgrade
 
     console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded defense post to tier 2`,
+      `[FrenzyManager] Player ${player.name()} upgraded ${unit.unitType} to tier ${unit.tier}`,
     );
     return true;
-  }
-
-  /**
-   * Check if a port can be upgraded
-   */
-  canUpgradePort(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "port")) return false;
-
-    // Find the port at this tile in Frenzy ports map
-    const port = this.ports.get(tile);
-    if (!port || port.playerId !== playerId) return false;
-
-    // Check if already at max tier
-    const upgradeInfo = STRUCTURE_UPGRADES["port"];
-    if (port.tier >= upgradeInfo.maxTier) return false;
-
-    // Check if player has enough gold
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-    return player.gold() >= upgradeCost;
-  }
-
-  /**
-   * Upgrade a port to tier 2 (spawns elite warships)
-   */
-  upgradePort(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "port")) return false;
-
-    // Find the port at this tile in Frenzy ports map
-    const port = this.ports.get(tile);
-    if (!port || port.playerId !== playerId) return false;
-
-    // Check if already tier 2+
-    if (port.tier >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    // Deduct gold and upgrade tier
-    player.removeGold(upgradeCost);
-    port.tier = 2;
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded port to tier ${port.tier}`,
-    );
-    return true;
-  }
-
-  /**
-   * Check if a SAM launcher can be upgraded
-   */
-  canUpgradeSAM(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "sam")) return false;
-
-    const sams = player.units(UnitType.SAMLauncher);
-    const sam = sams.find((s) => s.tile() === tile);
-    if (!sam) return false;
-
-    const upgradeInfo = STRUCTURE_UPGRADES["sam"];
-    if (sam.level() >= upgradeInfo.maxTier) return false;
-
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-    return player.gold() >= upgradeCost;
-  }
-
-  /**
-   * Upgrade a SAM launcher to tier 2 (can shoot hydrogen bombs)
-   */
-  upgradeSAM(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    const sams = player.units(UnitType.SAMLauncher);
-    const sam = sams.find((s) => s.tile() === tile);
-    if (!sam) return false;
-
-    if (sam.level() >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    sam.increaseLevel();
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded SAM launcher to tier ${sam.level()}`,
-    );
-    return true;
-  }
-
-  /**
-   * Check if a shield generator can be upgraded
-   */
-  canUpgradeShield(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "shield")) return false;
-
-    const shields = player.units(UnitType.ShieldGenerator);
-    const shield = shields.find((s) => s.tile() === tile);
-    if (!shield) return false;
-
-    const upgradeInfo = STRUCTURE_UPGRADES["shield"];
-    if (shield.level() >= upgradeInfo.maxTier) return false;
-
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-    return player.gold() >= upgradeCost;
-  }
-
-  /**
-   * Upgrade a shield generator to tier 2 (bigger radius)
-   */
-  upgradeShield(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    const shields = player.units(UnitType.ShieldGenerator);
-    const shield = shields.find((s) => s.tile() === tile);
-    if (!shield) return false;
-
-    if (shield.level() >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    shield.increaseLevel();
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded shield generator to tier ${shield.level()}`,
-    );
-    return true;
-  }
-
-  /**
-   * Check if artillery can be upgraded
-   */
-  canUpgradeArtillery(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "artillery")) return false;
-
-    const artilleries = player.units(UnitType.Artillery);
-    const artillery = artilleries.find((a) => a.tile() === tile);
-    if (!artillery) return false;
-
-    const upgradeInfo = STRUCTURE_UPGRADES["artillery"];
-    if (artillery.level() >= upgradeInfo.maxTier) return false;
-
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-    return player.gold() >= upgradeCost;
-  }
-
-  /**
-   * Upgrade artillery to tier 2 (more damage, bigger radius)
-   */
-  upgradeArtillery(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    const artilleries = player.units(UnitType.Artillery);
-    const artillery = artilleries.find((a) => a.tile() === tile);
-    if (!artillery) return false;
-
-    if (artillery.level() >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    artillery.increaseLevel();
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded artillery to tier ${artillery.level()}`,
-    );
-    return true;
-  }
-
-  /**
-   * Check if a missile silo can be upgraded
-   */
-  canUpgradeSilo(playerId: PlayerID, tile: TileRef): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "silo")) return false;
-
-    const silos = player.units(UnitType.MissileSilo);
-    const silo = silos.find((s) => s.tile() === tile);
-    if (!silo) return false;
-
-    const upgradeInfo = STRUCTURE_UPGRADES["silo"];
-    if (silo.level() >= upgradeInfo.maxTier) return false;
-
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-    return player.gold() >= upgradeCost;
-  }
-
-  /**
-   * Upgrade missile silo to tier 2 (can launch hydrogen bombs)
-   */
-  upgradeSilo(playerId: PlayerID, tile: TileRef): boolean {
-    // Use canUpgradeSilo for all checks
-    if (!this.canUpgradeSilo(playerId, tile)) return false;
-
-    const player = this.game.player(playerId)!;
-    const silos = player.units(UnitType.MissileSilo);
-    const silo = silos.find((s) => s.tile() === tile)!;
-
-    const upgradeInfo = STRUCTURE_UPGRADES["silo"];
-    const upgradeCost = BigInt(upgradeInfo.upgradeCost);
-
-    player.removeGold(upgradeCost);
-    silo.increaseLevel();
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded missile silo to tier ${silo.level()}`,
-    );
-    return true;
-  }
-
-  /**
-   * Get unit count for a player
-   */
-  getUnitCount(playerId: PlayerID): number {
-    return this.units.filter((u) => u.playerId === playerId).length;
   }
 
   /**
    * Generic method to upgrade a Frenzy unit based on its type
-   * Dispatches to the appropriate upgrade method
+   * Dispatches to the unified upgrade method
    */
   upgradeFrenzyUnit(
     playerId: PlayerID,
     unitId: number,
     unitType: string,
   ): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
+    return this.upgradeUnitUnified(playerId, unitId);
+  }
 
-    // Find the unit in our units list
-    const unit = this.units.find(
-      (u) => u.id === unitId && u.playerId === playerId,
-    );
-    if (!unit) return false;
-
-    switch (unitType) {
-      case FrenzyUnitType.DefensePost:
-        return this.upgradeDefensePost(playerId, unitId);
-      case FrenzyUnitType.Artillery:
-        return this.upgradeArtilleryById(playerId, unitId);
-      case FrenzyUnitType.ShieldGenerator:
-        return this.upgradeShieldGeneratorById(playerId, unitId);
-      case FrenzyUnitType.SAMLauncher:
-        return this.upgradeSAMById(playerId, unitId);
-      case FrenzyUnitType.MissileSilo:
-        return this.upgradeSiloById(playerId, unitId);
-      default:
-        console.warn(
-          `[FrenzyManager] Unknown unit type for upgrade: ${unitType}`,
-        );
-        return false;
-    }
+  /**
+   * Upgrade a defense post to tier 2 (beam attack, longer range)
+   * @returns true if upgrade was successful, false otherwise
+   */
+  upgradeDefensePost(playerId: PlayerID, unitId: number): boolean {
+    return this.upgradeUnitUnified(playerId, unitId);
   }
 
   /**
    * Upgrade Artillery by ID (for Frenzy units)
    */
   upgradeArtilleryById(playerId: PlayerID, unitId: number): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "artillery")) return false;
-
-    const artillery = this.units.find(
-      (u) =>
-        u.id === unitId &&
-        u.playerId === playerId &&
-        u.unitType === FrenzyUnitType.Artillery,
-    );
-    if (!artillery) return false;
-
-    if ((artillery.tier ?? 1) >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    artillery.tier = 2;
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded artillery to tier 2`,
-    );
-    return true;
+    return this.upgradeUnitUnified(playerId, unitId);
   }
 
   /**
    * Upgrade Shield Generator by ID (for Frenzy units)
    */
   upgradeShieldGeneratorById(playerId: PlayerID, unitId: number): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "shield")) return false;
-
-    const shield = this.units.find(
-      (u) =>
-        u.id === unitId &&
-        u.playerId === playerId &&
-        u.unitType === FrenzyUnitType.ShieldGenerator,
-    );
-    if (!shield) return false;
-
-    if ((shield.tier ?? 1) >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    shield.tier = 2;
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded shield generator to tier 2`,
-    );
-    return true;
+    return this.upgradeUnitUnified(playerId, unitId);
   }
 
   /**
    * Upgrade SAM launcher by ID
    */
   upgradeSAMById(playerId: PlayerID, unitId: number): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "sam")) return false;
-
-    const sam = this.units.find(
-      (u) =>
-        u.id === unitId &&
-        u.playerId === playerId &&
-        u.unitType === FrenzyUnitType.SAMLauncher,
-    );
-    if (!sam) return false;
-
-    if ((sam.tier ?? 1) >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    sam.tier = 2;
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded SAM launcher to tier 2`,
-    );
-    return true;
+    return this.upgradeUnitUnified(playerId, unitId);
   }
 
   /**
    * Upgrade Missile Silo by ID
    */
   upgradeSiloById(playerId: PlayerID, unitId: number): boolean {
-    const player = this.game.player(playerId);
-    if (!player) return false;
-
-    // Check HQ tier requirement
-    if (!this.meetsHQTierRequirement(playerId, "silo")) return false;
-
-    const silo = this.units.find(
-      (u) =>
-        u.id === unitId &&
-        u.playerId === playerId &&
-        u.unitType === FrenzyUnitType.MissileSilo,
-    );
-    if (!silo) return false;
-
-    if ((silo.tier ?? 1) >= 2) return false;
-
-    const upgradeCost = BigInt(this.config.factoryUpgradeCost);
-    if (player.gold() < upgradeCost) return false;
-
-    player.removeGold(upgradeCost);
-    silo.tier = 2;
-
-    console.log(
-      `[FrenzyManager] Player ${player.name()} upgraded missile silo to tier 2`,
-    );
-    return true;
+    return this.upgradeUnitUnified(playerId, unitId);
   }
 
   /**

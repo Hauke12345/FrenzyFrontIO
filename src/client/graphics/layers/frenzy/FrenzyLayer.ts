@@ -156,9 +156,20 @@ export class FrenzyLayer implements Layer {
       );
       this.cachedMines = allMines;
     } else {
-      // Use cached assignment by copying crystalsInCell from cache
-      for (let i = 0; i < allMines.length && i < this.cachedMines.length; i++) {
-        allMines[i].crystalsInCell = this.cachedMines[i].crystalsInCell;
+      // Use cached assignment by matching mines by position (not array index)
+      // Create a map of cached mines by position key for fast lookup
+      const cachedMineMap = new Map<string, MineData>();
+      for (const cachedMine of this.cachedMines) {
+        const key = `${cachedMine.x},${cachedMine.y}`;
+        cachedMineMap.set(key, cachedMine);
+      }
+
+      for (const mine of allMines) {
+        const key = `${mine.x},${mine.y}`;
+        const cachedMine = cachedMineMap.get(key);
+        if (cachedMine) {
+          mine.crystalsInCell = cachedMine.crystalsInCell;
+        }
       }
     }
     FrameProfiler.end("FrenzyLayer:crystalAssignment", mineStart);

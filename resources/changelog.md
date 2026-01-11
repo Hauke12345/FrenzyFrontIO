@@ -1,3 +1,29 @@
+📦 **FrenzyFront Patch Notes - v0.03**
+
+⚖️ **Balance Changes**
+
+- Artillery and Defense Post icons now larger and more visible
+- Shield Generator health increased (900 → shield HP)
+- Artillery damage increased (60 → 100)
+- Elite Artillery and Elite Shield Generator added as tier 2 upgrades
+  → Elite Artillery: 1.5x range, 1.5x damage, larger splash radius
+  → Elite Shield Generator: 1.5x shield radius, 2x shield HP
+
+🔧 **Bug Fixes**
+
+- Fixed crystal assignment flickering when mines are destroyed
+  → Crystals now properly match mines by position instead of array index
+- Fixed port upgrade not working from radial menu
+- Unified all tower upgrade logic for consistency
+
+🏗️ **Code Improvements**
+
+- New centralized structure configuration system (STRUCTURE_CONFIGS)
+  → All build costs, health, upgrade costs in one place for easier balancing
+- Added itch.io landing page for game distribution
+
+---
+
 📦 **FrenzyFront Patch Notes - v0.02**
 
 🎨 **UI Improvements**

@@ -764,7 +764,11 @@ function sanitizeConfig(partial: Partial<FrenzyConfig>): FrenzyConfig {
       samLauncher: { ...DEFAULT_FRENZY_CONFIG.units.samLauncher },
       missileSilo: { ...DEFAULT_FRENZY_CONFIG.units.missileSilo },
       shieldGenerator: { ...DEFAULT_FRENZY_CONFIG.units.shieldGenerator },
+      eliteShieldGenerator: {
+        ...DEFAULT_FRENZY_CONFIG.units.eliteShieldGenerator,
+      },
       artillery: { ...DEFAULT_FRENZY_CONFIG.units.artillery },
+      eliteArtillery: { ...DEFAULT_FRENZY_CONFIG.units.eliteArtillery },
     },
   };
 
@@ -790,7 +794,9 @@ function sanitizeConfig(partial: Partial<FrenzyConfig>): FrenzyConfig {
         "samLauncher",
         "missileSilo",
         "shieldGenerator",
+        "eliteShieldGenerator",
         "artillery",
+        "eliteArtillery",
       ] as const
     ).forEach((unitType) => {
       const unitConfig = partial.units?.[unitType];

@@ -41,6 +41,238 @@ export enum FrenzyUnitType {
   Artillery = "artillery",
 }
 
+/**
+ * Unified structure configuration for all buildable structures
+ * Centralizes all structure parameters: costs, health, construction, upgrades, selling
+ */
+export interface StructureConfig {
+  // Building
+  buildCost: number; // Gold cost to build
+  constructionTime: number; // Ticks to construct (10 ticks = 1 second)
+  health: number; // Base HP at tier 1
+
+  // Upgrades
+  maxTier: number; // Maximum tier (1 = not upgradable)
+  upgradeCost: number; // Gold cost to upgrade to next tier
+  upgradeHealthBonus: number; // Additional HP per tier upgrade
+  requiredHQTier: number; // Minimum HQ tier required to upgrade
+
+  // Selling
+  sellRefundPercent: number; // Percentage of build cost refunded when selling (0-100)
+
+  // Special properties (optional)
+  spawnInterval?: number; // For spawners (Factory, Port): seconds between spawns
+  goldPerMinute?: number; // For Mine: gold generation per minute
+  tier2GoldMultiplier?: number; // For Mine: multiplier for tier 2 gold generation
+}
+
+/**
+ * Structure type keys for configuration lookup
+ */
+export type StructureTypeKey =
+  | "hq"
+  | "mine"
+  | "factory"
+  | "port"
+  | "defensePost"
+  | "samLauncher"
+  | "missileSilo"
+  | "shieldGenerator"
+  | "artillery";
+
+/**
+ * Default structure configurations
+ * All structures in one place for easy balancing
+ */
+export const STRUCTURE_CONFIGS: Record<StructureTypeKey, StructureConfig> = {
+  // === Buildings (economic/production) ===
+  hq: {
+    buildCost: 0, // Not buildable
+    constructionTime: 0,
+    health: 1000,
+    maxTier: 2,
+    upgradeCost: 500000,
+    upgradeHealthBonus: 500,
+    requiredHQTier: 1,
+    sellRefundPercent: 0, // Cannot sell HQ
+    spawnInterval: 4.0,
+  },
+  mine: {
+    buildCost: 50000,
+    constructionTime: 20, // 2 seconds
+    health: 400,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 200,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+    goldPerMinute: 10000,
+    tier2GoldMultiplier: 2,
+  },
+  factory: {
+    buildCost: 100000,
+    constructionTime: 20, // 2 seconds
+    health: 400,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 200,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+    spawnInterval: 4.0,
+  },
+  port: {
+    buildCost: 100000,
+    constructionTime: 20, // 2 seconds
+    health: 400,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 200,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+    spawnInterval: 4.0,
+  },
+
+  // === Towers (military/defensive) ===
+  defensePost: {
+    buildCost: 25000,
+    constructionTime: 50, // 5 seconds
+    health: 200,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 100,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+  },
+  samLauncher: {
+    buildCost: 1500000,
+    constructionTime: 300, // 30 seconds
+    health: 150,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 75,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+  },
+  missileSilo: {
+    buildCost: 1000000,
+    constructionTime: 100, // 10 seconds
+    health: 300,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 150,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+  },
+  shieldGenerator: {
+    buildCost: 150000,
+    constructionTime: 150, // 15 seconds
+    health: 100,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 50,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+  },
+  artillery: {
+    buildCost: 200000,
+    constructionTime: 200, // 20 seconds
+    health: 150,
+    maxTier: 2,
+    upgradeCost: 100000,
+    upgradeHealthBonus: 75,
+    requiredHQTier: 2,
+    sellRefundPercent: 50,
+  },
+};
+
+/**
+ * Get structure config by type key
+ */
+export function getStructureConfig(type: StructureTypeKey): StructureConfig {
+  return STRUCTURE_CONFIGS[type];
+}
+
+/**
+ * Get structure type key from FrenzyStructureType
+ */
+export function structureTypeToKey(
+  type: FrenzyStructureType,
+): StructureTypeKey {
+  switch (type) {
+    case FrenzyStructureType.HQ:
+      return "hq";
+    case FrenzyStructureType.Mine:
+      return "mine";
+    case FrenzyStructureType.Factory:
+      return "factory";
+    case FrenzyStructureType.Port:
+      return "port";
+  }
+}
+
+/**
+ * Get structure type key from FrenzyUnitType (for towers)
+ */
+export function unitTypeToStructureKey(
+  type: FrenzyUnitType,
+): StructureTypeKey | null {
+  switch (type) {
+    case FrenzyUnitType.DefensePost:
+      return "defensePost";
+    case FrenzyUnitType.SAMLauncher:
+      return "samLauncher";
+    case FrenzyUnitType.MissileSilo:
+      return "missileSilo";
+    case FrenzyUnitType.ShieldGenerator:
+      return "shieldGenerator";
+    case FrenzyUnitType.Artillery:
+      return "artillery";
+    default:
+      return null; // Mobile units don't have structure configs
+  }
+}
+
+/**
+ * Calculate sell value for a structure
+ */
+export function getStructureSellValue(
+  type: StructureTypeKey,
+  tier: number = 1,
+): number {
+  const config = STRUCTURE_CONFIGS[type];
+  const baseCost = config.buildCost;
+  const upgradeCost = (tier - 1) * config.upgradeCost;
+  const totalInvested = baseCost + upgradeCost;
+  return Math.floor(totalInvested * (config.sellRefundPercent / 100));
+}
+
+/**
+ * Check if a structure can be upgraded
+ */
+export function canUpgradeStructureConfig(
+  type: StructureTypeKey,
+  currentTier: number,
+  hqTier: number,
+  playerGold: bigint,
+): boolean {
+  const config = STRUCTURE_CONFIGS[type];
+  if (currentTier >= config.maxTier) return false;
+  if (hqTier < config.requiredHQTier) return false;
+  if (playerGold < BigInt(config.upgradeCost)) return false;
+  return true;
+}
+
+/**
+ * Get health for a structure at a specific tier
+ */
+export function getStructureHealthForTier(
+  type: StructureTypeKey,
+  tier: number = 1,
+): number {
+  const config = STRUCTURE_CONFIGS[type];
+  return config.health + (tier - 1) * config.upgradeHealthBonus;
+}
+
 // Per-unit-type configuration
 export interface UnitTypeConfig {
   health: number; // HP for this unit type
@@ -52,6 +284,7 @@ export interface UnitTypeConfig {
   areaRadius?: number; // Area of effect radius for splash damage
   shieldRadius?: number; // Shield protection radius
   shieldHealth?: number; // Shield HP (regenerates when not taking damage)
+  shieldRegenTime?: number; // Seconds to fully regenerate shield from 0 to max
 }
 
 export interface FrenzyUnit {
@@ -183,7 +416,9 @@ export interface FrenzyConfig {
     samLauncher: UnitTypeConfig;
     missileSilo: UnitTypeConfig;
     shieldGenerator: UnitTypeConfig;
+    eliteShieldGenerator: UnitTypeConfig;
     artillery: UnitTypeConfig;
+    eliteArtillery: UnitTypeConfig;
   };
 
   // Spawning
@@ -204,12 +439,14 @@ export interface FrenzyConfig {
   projectileSpeed: number; // Speed of visual shells (default: 140px/s)
   projectileSize: number; // Diameter of visual shells in pixels (default: 4px)
 
-  // Buildings
+  // Buildings - DEPRECATED: Use STRUCTURE_CONFIGS instead
+  // Kept for backward compatibility
   hqCaptureRadius: number; // Tiles around HQ that must fall before defeat (default: 2 tiles)
   mineHealth: number; // HP for mines/factories (default: 400)
   hqHealth: number; // HP for HQ (default: 1000)
 
-  // Economy
+  // Economy - DEPRECATED: Use STRUCTURE_CONFIGS instead for costs
+  // Kept for backward compatibility
   startingGold: number; // Gold at spawn (default: 150000)
   baseGoldPerMinute: number; // Base gold income per minute (default: 20000)
   mineGoldPerMinute: number; // Gold per mine per minute (default: 10000 for tier 1)
@@ -326,7 +563,18 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       range: 0, // No attack range
       fireInterval: 0, // No firing
       shieldRadius: 30, // Protection radius
-      shieldHealth: 500, // Shield absorbs 500 damage before breaking
+      shieldHealth: 900, // Shield absorbs 500 damage before breaking
+      shieldRegenTime: 10, // 10 seconds to fully regenerate
+    },
+    eliteShieldGenerator: {
+      health: 150, // 1.5x shield generator health
+      speed: 0, // Stationary
+      dps: 0, // No attack
+      range: 0, // No attack range
+      fireInterval: 0, // No firing
+      shieldRadius: 45, // 1.5x protection radius
+      shieldHealth: 2000, // 2x shield HP
+      shieldRegenTime: 12, // Faster regen (12 seconds)
     },
     artillery: {
       health: 150, // Fragile
@@ -334,8 +582,17 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
       dps: 0, // Uses projectileDamage instead
       range: 80, // Very long range
       fireInterval: 8.0, // Very slow firing, long cooldown
-      projectileDamage: 60, // High damage
+      projectileDamage: 100, // High damage
       areaRadius: 15, // Splash damage radius
+    },
+    eliteArtillery: {
+      health: 225, // 1.5x artillery health
+      speed: 0, // Stationary
+      dps: 0, // Uses projectileDamage instead
+      range: 120, // 1.5x range
+      fireInterval: 8.0, // Faster firing
+      projectileDamage: 150, // 1.5x damage
+      areaRadius: 30, // Larger splash radius (~1.5x)
     },
   },
 
@@ -357,19 +614,19 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
   projectileSpeed: 10,
   projectileSize: 1,
 
-  // Buildings
+  // Buildings - values now come from STRUCTURE_CONFIGS
   hqCaptureRadius: 2,
-  mineHealth: 400,
-  hqHealth: 1000,
+  mineHealth: STRUCTURE_CONFIGS.mine.health,
+  hqHealth: STRUCTURE_CONFIGS.hq.health,
 
-  // Economy
+  // Economy - values now come from STRUCTURE_CONFIGS
   startingGold: 150000,
   baseGoldPerMinute: 20000,
-  mineGoldPerMinute: 10000, // Tier 1 mine gold (tier 2 doubles this)
-  mineCost: 50000,
-  mineUpgradeCost: 100000, // Upgrade to tier 2 doubles gold generation
-  factoryCost: 100000,
-  factoryUpgradeCost: 100000,
+  mineGoldPerMinute: STRUCTURE_CONFIGS.mine.goldPerMinute!,
+  mineCost: STRUCTURE_CONFIGS.mine.buildCost,
+  mineUpgradeCost: STRUCTURE_CONFIGS.mine.upgradeCost,
+  factoryCost: STRUCTURE_CONFIGS.factory.buildCost,
+  factoryUpgradeCost: STRUCTURE_CONFIGS.factory.upgradeCost,
 
   // Crystals (resources)
   crystalClusterCount: 50,
@@ -379,8 +636,9 @@ export const DEFAULT_FRENZY_CONFIG: FrenzyConfig = {
 };
 
 /**
- * Structure upgrade configuration
- * Defines HQ tier requirements and upgrade costs for each structure type
+ * Structure upgrade configuration - DEPRECATED
+ * Use STRUCTURE_CONFIGS instead
+ * Kept for backward compatibility
  */
 export interface StructureUpgradeInfo {
   requiredHQTier: number; // Minimum HQ tier required to upgrade this structure
@@ -389,26 +647,52 @@ export interface StructureUpgradeInfo {
 }
 
 /**
+ * DEPRECATED: Use STRUCTURE_CONFIGS instead
  * Structure upgrade configurations for all upgradable structures
- * All structures require HQ tier 2 to upgrade (same as factory)
- *
- * Buildings (right menu - economic/production):
- *   - mine, factory, port
- *
- * Towers (left menu - military/defensive):
- *   - defensePost, sam, shield, artillery, silo
  */
 export const STRUCTURE_UPGRADES: Record<string, StructureUpgradeInfo> = {
   // Buildings
-  mine: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  factory: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  port: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  mine: {
+    requiredHQTier: STRUCTURE_CONFIGS.mine.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.mine.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.mine.maxTier,
+  },
+  factory: {
+    requiredHQTier: STRUCTURE_CONFIGS.factory.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.factory.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.factory.maxTier,
+  },
+  port: {
+    requiredHQTier: STRUCTURE_CONFIGS.port.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.port.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.port.maxTier,
+  },
   // Towers
-  defensePost: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  sam: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  shield: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  artillery: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
-  silo: { requiredHQTier: 2, upgradeCost: 100000, maxTier: 2 },
+  defensePost: {
+    requiredHQTier: STRUCTURE_CONFIGS.defensePost.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.defensePost.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.defensePost.maxTier,
+  },
+  sam: {
+    requiredHQTier: STRUCTURE_CONFIGS.samLauncher.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.samLauncher.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.samLauncher.maxTier,
+  },
+  shield: {
+    requiredHQTier: STRUCTURE_CONFIGS.shieldGenerator.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.shieldGenerator.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.shieldGenerator.maxTier,
+  },
+  artillery: {
+    requiredHQTier: STRUCTURE_CONFIGS.artillery.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.artillery.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.artillery.maxTier,
+  },
+  silo: {
+    requiredHQTier: STRUCTURE_CONFIGS.missileSilo.requiredHQTier,
+    upgradeCost: STRUCTURE_CONFIGS.missileSilo.upgradeCost,
+    maxTier: STRUCTURE_CONFIGS.missileSilo.maxTier,
+  },
 };
 
 export enum Stance {

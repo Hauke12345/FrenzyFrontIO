@@ -198,7 +198,7 @@ export class UnitRenderer {
     player: PlayerView,
     tier: number = 1,
   ) {
-    const size = 4;
+    const size = 7;
 
     // Golden ring for tier 2 towers
     if (tier >= 2) {
@@ -248,7 +248,7 @@ export class UnitRenderer {
     player: PlayerView,
     tier: number = 1,
   ) {
-    const size = 4;
+    const size = 6;
 
     // Golden ring for tier 2 towers
     if (tier >= 2) {

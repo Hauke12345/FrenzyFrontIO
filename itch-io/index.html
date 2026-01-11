@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FrenzyFront - Battle Royale Strategy Game</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: linear-gradient(
+          135deg,
+          #1a1a2e 0%,
+          #16213e 50%,
+          #0f3460 100%
+        );
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          sans-serif;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .logo {
+        font-size: 3.5em;
+        font-weight: 900;
+        color: #fff;
+        text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        margin-bottom: 10px;
+        letter-spacing: -2px;
+      }
+
+      .logo span {
+        color: #ff6b6b;
+      }
+
+      .tagline {
+        font-size: 1.3em;
+        color: #a0a0a0;
+        margin-bottom: 40px;
+        max-width: 600px;
+        line-height: 1.5;
+      }
+
+      .play-button {
+        display: inline-block;
+        padding: 20px 60px;
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #fff;
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+        border: none;
+        border-radius: 50px;
+        text-decoration: none;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        box-shadow: 0 8px 30px rgba(255, 107, 107, 0.4);
+        animation: pulse 2s infinite;
+      }
+
+      .play-button:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 12px 40px rgba(255, 107, 107, 0.6);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 8px 30px rgba(255, 107, 107, 0.4);
+        }
+        50% {
+          box-shadow: 0 8px 50px rgba(255, 107, 107, 0.6);
+        }
+      }
+
+      .features {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 30px;
+        margin-top: 50px;
+        max-width: 800px;
+      }
+
+      .feature {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #ccc;
+        font-size: 1em;
+      }
+
+      .feature-icon {
+        font-size: 1.5em;
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 20px;
+        color: #666;
+        font-size: 0.9em;
+      }
+
+      .footer a {
+        color: #ff6b6b;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="logo">Frenzy<span>Front</span>.io</div>
+      <p class="tagline">
+        Conquer the world in this fast-paced multiplayer RTS battle royale!
+        Build your army, form alliances, launch nukes, and dominate the map.
+      </p>
+
+      <a href="https://frenzyfront.io/" target="_blank" class="play-button">
+        ▶ PLAY NOW - FREE
+      </a>
+
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">🌍</span>
+          <span>Real-time Multiplayer</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">⚔️</span>
+          <span>Build & Conquer</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🤝</span>
+          <span>Form Alliances</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">💣</span>
+          <span>Nuclear Warfare</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🗺️</span>
+          <span>Multiple Maps</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🎮</span>
+          <span>Free to Play</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Play at
+      <a href="https://frenzyfront.io/" target="_blank">frenzyfront.io</a>
+    </div>
+  </body>
+</html>
