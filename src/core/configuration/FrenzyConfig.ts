@@ -43,6 +43,11 @@ export class FrenzyServerConfig extends DefaultServerConfig {
   subdomain(): string {
     return process.env.SUBDOMAIN ?? "";
   }
+
+  // Disable trains entirely - they don't have a purpose in Frenzy mode
+  trainSpawnRate(_numPlayerFactories: number): number {
+    return Infinity;
+  }
 }
 
 export const frenzyConfig = new FrenzyServerConfig();

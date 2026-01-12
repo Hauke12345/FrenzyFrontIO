@@ -1,5 +1,6 @@
 import { colord } from "colord";
 import { Theme } from "../../../core/configuration/Config";
+import { GameFork } from "../../../core/configuration/GameForkConfig";
 import { PlayerID } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import {
@@ -27,12 +28,14 @@ export class RailroadLayer implements Layer {
   private existingRailroads = new Map<TileRef, RailRef>();
   private nextRailIndexToCheck = 0;
   private railTileList: TileRef[] = [];
+  private isFrenzyMode: boolean;
 
   constructor(
     private game: GameView,
     private transformHandler: TransformHandler,
   ) {
     this.theme = game.config().theme();
+    this.isFrenzyMode = game.config().gameConfig().gameFork === GameFork.Frenzy;
   }
 
   shouldTransform(): boolean {
@@ -40,6 +43,9 @@ export class RailroadLayer implements Layer {
   }
 
   tick() {
+    // Skip railroad processing entirely in Frenzy mode - trains are disabled
+    if (this.isFrenzyMode) return;
+
     const updates = this.game.updatesSinceLastTick();
     const railUpdates =
       updates !== null ? updates[GameUpdateType.RailroadEvent] : [];
@@ -95,6 +101,9 @@ export class RailroadLayer implements Layer {
   }
 
   renderLayer(context: CanvasRenderingContext2D) {
+    // Skip rendering entirely in Frenzy mode - trains are disabled
+    if (this.isFrenzyMode) return;
+
     this.updateRailColors();
     const scale = this.transformHandler.scale;
     if (scale <= 1) {
