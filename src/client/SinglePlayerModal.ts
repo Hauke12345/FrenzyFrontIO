@@ -28,43 +28,9 @@ import { JoinLobbyEvent } from "./types/JoinLobbyEvent";
 import { UsernameInput } from "./UsernameInput";
 import { renderUnitTypeOptions } from "./utilities/RenderUnitTypeOptions";
 
-// Singleplayer-specific map categories: Frenzy maps at top, experimental maps below
+// Singleplayer-specific map categories: Only Frenzy maps for now
 const singlePlayerMapCategories: Record<string, GameMapType[]> = {
   frenzy: [GameMapType.CircleMap],
-  experimental: [
-    GameMapType.World,
-    GameMapType.GiantWorldMap,
-    GameMapType.NorthAmerica,
-    GameMapType.SouthAmerica,
-    GameMapType.Europe,
-    GameMapType.EuropeClassic,
-    GameMapType.Asia,
-    GameMapType.Africa,
-    GameMapType.Oceania,
-    GameMapType.BlackSea,
-    GameMapType.Britannia,
-    GameMapType.GatewayToTheAtlantic,
-    GameMapType.BetweenTwoSeas,
-    GameMapType.Iceland,
-    GameMapType.EastAsia,
-    GameMapType.Mena,
-    GameMapType.Australia,
-    GameMapType.FaroeIslands,
-    GameMapType.FalklandIslands,
-    GameMapType.Baikal,
-    GameMapType.Halkidiki,
-    GameMapType.StraitOfGibraltar,
-    GameMapType.Italia,
-    GameMapType.Japan,
-    GameMapType.Montreal,
-    GameMapType.Pangaea,
-    GameMapType.Pluto,
-    GameMapType.Mars,
-    GameMapType.DeglaciatedAntarctica,
-    GameMapType.Achiran,
-    GameMapType.BaikalNukeWars,
-    GameMapType.FourIslands,
-  ],
 };
 
 @customElement("single-player-modal")
