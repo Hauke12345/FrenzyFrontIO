@@ -38,7 +38,7 @@ export class SinglePlayerModal extends LitElement {
   @state() private selectedMap: GameMapType = GameMapType.World;
   @state() private selectedDifficulty: Difficulty = Difficulty.Medium;
   @state() private disableNPCs: boolean = false;
-  @state() private bots: number = 80;
+  @state() private bots: number = 20;
   @state() private infiniteGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private compactMap: boolean = false;
@@ -243,7 +243,7 @@ export class SinglePlayerModal extends LitElement {
                   type="range"
                   id="bots-count"
                   min="0"
-                  max="80"
+                  max="20"
                   step="1"
                   @input=${this.handleBotsChange}
                   @change=${this.handleBotsChange}
@@ -412,11 +412,19 @@ export class SinglePlayerModal extends LitElement {
           </div>
         </div>
 
-        <o-button
-          title=${translateText("single_modal.start")}
-          @click=${this.startGame}
-          blockDesktop
-        ></o-button>
+        <div
+          style="display:flex;gap:8px;align-items:center;justify-content:center;"
+        >
+          <o-button
+            title=${translateText("single_modal.start")}
+            @click=${this.startGame}
+            blockDesktop
+          ></o-button>
+          <span
+            style="font-size:12px;padding:6px 8px;border-radius:6px;background:#ffcc00;color:#111;font-weight:600;"
+            >experimental</span
+          >
+        </div>
       </o-modal>
     `;
   }
@@ -449,7 +457,7 @@ export class SinglePlayerModal extends LitElement {
 
   private handleBotsChange(e: Event) {
     const value = parseInt((e.target as HTMLInputElement).value);
-    if (isNaN(value) || value < 0 || value > 400) {
+    if (isNaN(value) || value < 0 || value > 20) {
       return;
     }
     this.bots = value;
