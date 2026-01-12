@@ -81,6 +81,7 @@ export class MiningCellsRenderer {
   /**
    * Assign crystals to their nearest mine's Voronoi cell
    * Only assigns crystals that are on land owned by the mine's owner
+   * OPTIMIZED: Uses squared distances instead of Math.hypot()
    */
   assignCrystalsToMines(
     allMines: MineData[],
@@ -92,9 +93,11 @@ export class MiningCellsRenderer {
       mine.crystalsInCell = [];
     }
 
+    const mineRadiusSq = mineRadius * mineRadius;
+
     for (const crystal of crystals) {
       let closestMine: MineData | null = null;
-      let closestDist = Infinity;
+      let closestDistSq = Infinity;
 
       for (const mine of allMines) {
         // Only consider crystals on land owned by the mine's owner
@@ -102,25 +105,26 @@ export class MiningCellsRenderer {
           continue;
         }
 
-        const dist = Math.hypot(crystal.x - mine.x, crystal.y - mine.y);
-        if (dist <= mineRadius && dist < closestDist) {
+        const dx = crystal.x - mine.x;
+        const dy = crystal.y - mine.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq <= mineRadiusSq && distSq < closestDistSq) {
           // Check if closer to this mine than any other owned by same player
           let isClosest = true;
           for (const other of allMines) {
             if (other === mine) continue;
             if (other.playerId !== mine.playerId) continue; // Only compare same owner
-            const otherDist = Math.hypot(
-              crystal.x - other.x,
-              crystal.y - other.y,
-            );
-            if (otherDist < dist) {
+            const odx = crystal.x - other.x;
+            const ody = crystal.y - other.y;
+            const otherDistSq = odx * odx + ody * ody;
+            if (otherDistSq < distSq) {
               isClosest = false;
               break;
             }
           }
           if (isClosest) {
             closestMine = mine;
-            closestDist = dist;
+            closestDistSq = distSq;
           }
         }
       }
@@ -156,11 +160,13 @@ export class MiningCellsRenderer {
     if (now - this.lastCacheCheck > this.cacheCheckRate || !this.cache.canvas) {
       this.lastCacheCheck = now;
 
-      // Create hash to detect changes
-      const mineHash =
-        allMines.map((m) => `${m.x},${m.y},${m.playerId}`).join("|") +
-        "|" +
-        allCrystals.map((c) => `${c.x},${c.y}`).join("|");
+      // Create a simple hash using counts and sample positions (faster than full string concat)
+      // Only rebuild when mines change position/count - crystals don't affect static cache
+      let mineHash = `${allMines.length}`;
+      for (let i = 0; i < allMines.length; i++) {
+        const m = allMines[i];
+        mineHash += `,${m.x | 0},${m.y | 0}`;
+      }
 
       // Rebuild cache if needed
       if (this.cache.mineHash !== mineHash || !this.cache.canvas) {
@@ -208,6 +214,8 @@ export class MiningCellsRenderer {
     halfHeight: number,
   ) {
     const mineRadius = 40;
+    const mineRadius2 = mineRadius * 2;
+    const mineRadius2Sq = mineRadius2 * mineRadius2;
 
     // Create or resize canvas
     if (!this.cache.canvas) {
@@ -242,9 +250,11 @@ export class MiningCellsRenderer {
         // Only draw bisection between mines owned by same player
         if (mine.playerId !== other.playerId) continue;
 
-        const dist = Math.hypot(other.x - mine.x, other.y - mine.y);
+        const dx = other.x - mine.x;
+        const dy = other.y - mine.y;
+        const distSq = dx * dx + dy * dy;
 
-        if (dist < mineRadius * 2) {
+        if (distSq < mineRadius2Sq) {
           const pairKey = `${i}_${j}`;
           if (!drawnBisections.has(pairKey)) {
             drawnBisections.add(pairKey);
@@ -269,9 +279,8 @@ export class MiningCellsRenderer {
 
             const midX = worldMidX - halfWidth;
             const midY = worldMidY - halfHeight;
-            const dx = other.x - mine.x;
-            const dy = other.y - mine.y;
-            const perpLen = Math.hypot(-dy, dx);
+            const dist = Math.sqrt(distSq);
+            const perpLen = dist; // perpLen of (-dy, dx) equals sqrt(dx*dx + dy*dy) = dist
             if (perpLen === 0) continue;
 
             const normPerpX = -dy / perpLen;
@@ -317,16 +326,18 @@ export class MiningCellsRenderer {
           continue;
         }
 
-        // Simple Voronoi check
+        // Simple Voronoi check using squared distances
         let inCell = true;
+        const dxToThis = vx - mx;
+        const dyToThis = vy - my;
+        const distSqToThis = dxToThis * dxToThis + dyToThis * dyToThis;
+
         for (const other of allMines) {
           if (other === mine) continue;
-          const distToOther = Math.hypot(
-            vx + halfWidth - other.x,
-            vy + halfHeight - other.y,
-          );
-          const distToThis = Math.hypot(vx - mx, vy - my);
-          if (distToOther < distToThis) {
+          const dxToOther = worldVx - other.x;
+          const dyToOther = worldVy - other.y;
+          const distSqToOther = dxToOther * dxToOther + dyToOther * dyToOther;
+          if (distSqToOther < distSqToThis) {
             inCell = false;
             break;
           }
@@ -356,13 +367,15 @@ export class MiningCellsRenderer {
   ) {
     const dx = x2 - x1;
     const dy = y2 - y1;
-    const length = Math.hypot(dx, dy);
-    if (length < 2) return;
+    const lengthSq = dx * dx + dy * dy;
+    if (lengthSq < 4) return; // 2^2 = 4
 
+    const length = Math.sqrt(lengthSq);
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
-    const perpX = -dy / length;
-    const perpY = dx / length;
+    const invLength = 1 / length;
+    const perpX = -dy * invLength;
+    const perpY = dx * invLength;
     const waveAmp = length * 0.03 * Math.sin(x1 * 0.1 + y1 * 0.1);
     const ctrlX = midX + perpX * waveAmp;
     const ctrlY = midY + perpY * waveAmp;
@@ -395,7 +408,6 @@ export class MiningCellsRenderer {
     halfHeight: number,
   ) {
     const mineRadius = 40;
-    const sampleCount = 24;
 
     // Use player's territory color if available, otherwise default blue
     if (mine.territoryColor) {
@@ -413,26 +425,49 @@ export class MiningCellsRenderer {
     }
     ctx.lineWidth = 1.2;
 
+    // Pre-compute nearby mine data (squared distances, angles) once
+    const mineRadius2 = mineRadius * 2;
+    const mineRadius2Sq = mineRadius2 * mineRadius2;
+    const nearbyMines: Array<{
+      distSq: number;
+      dist: number;
+      midDist: number;
+      angleToMid: number;
+    }> = [];
+
+    for (const other of allMines) {
+      if (other === mine) continue;
+      const dx = other.x - mine.x;
+      const dy = other.y - mine.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < mineRadius2Sq) {
+        const dist = Math.sqrt(distSq);
+        nearbyMines.push({
+          distSq,
+          dist,
+          midDist: dist / 2,
+          angleToMid: Math.atan2(dy, dx),
+        });
+      }
+    }
+
+    // Sample points around cell boundary
+    const sampleCount = 24;
     let lastPoint: { x: number; y: number; owned: boolean } | null = null;
 
     for (let i = 0; i <= sampleCount; i++) {
       const angle = (i / sampleCount) * Math.PI * 2;
       let radius = mineRadius;
 
-      for (const other of allMines) {
-        if (other === mine) continue;
-        const dist = Math.hypot(other.x - mine.x, other.y - mine.y);
-        if (dist < mineRadius * 2) {
-          const midDist = dist / 2;
-          const angleToMid = Math.atan2(other.y - mine.y, other.x - mine.x);
-          const angleDiff = Math.abs(
-            ((angle - angleToMid + Math.PI * 3) % (Math.PI * 2)) - Math.PI,
-          );
-          if (angleDiff < Math.PI / 2) {
-            const clipDist = midDist / Math.cos(angleDiff);
-            if (clipDist > 0 && clipDist < radius) {
-              radius = clipDist;
-            }
+      // Use pre-computed nearby mine data
+      for (const nearby of nearbyMines) {
+        const angleDiff = Math.abs(
+          ((angle - nearby.angleToMid + Math.PI * 3) % (Math.PI * 2)) - Math.PI,
+        );
+        if (angleDiff < Math.PI / 2) {
+          const clipDist = nearby.midDist / Math.cos(angleDiff);
+          if (clipDist > 0 && clipDist < radius) {
+            radius = clipDist;
           }
         }
       }
