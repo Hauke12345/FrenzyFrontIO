@@ -19,6 +19,12 @@ export class BotExecution implements Execution {
   private reserveRatio: number;
   private expandRatio: number;
 
+  // Frenzy mode: cached mine limit based on territory size
+  private static readonly TILES_PER_MINE = 2500;
+  private static readonly MINE_LIMIT_UPDATE_INTERVAL = 100;
+  private cachedMaxMines = 0;
+  private lastMineLimitUpdateTick = -1000; // Force update on first check
+
   constructor(private bot: Player) {
     this.random = new PseudoRandom(simpleHash(bot.id()));
     this.attackRate = this.random.nextInt(40, 80);
@@ -169,9 +175,22 @@ export class BotExecution implements Execution {
       ? frenzyManager.getStructureCountForPlayer(this.bot.id(), type)
       : this.bot.unitsOwned(type);
 
-    // Limit mines for bots to 10 in Frenzy mode (City = Mine)
-    if (frenzyManager && type === UnitType.City && owned >= 10) {
-      return false;
+    // Limit mines for bots based on territory size (City = Mine in Frenzy)
+    if (frenzyManager && type === UnitType.City) {
+      const currentTick = this.mg.ticks();
+      if (
+        currentTick - this.lastMineLimitUpdateTick >=
+        BotExecution.MINE_LIMIT_UPDATE_INTERVAL
+      ) {
+        this.cachedMaxMines = Math.max(
+          1,
+          Math.floor(this.bot.numTilesOwned() / BotExecution.TILES_PER_MINE),
+        );
+        this.lastMineLimitUpdateTick = currentTick;
+      }
+      if (owned >= this.cachedMaxMines) {
+        return false;
+      }
     }
 
     const perceivedCostMultiplier = multiplier(owned + 1);

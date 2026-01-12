@@ -73,6 +73,14 @@ export class FakeHumanExecution implements Execution {
   /** Minimum city count for leader to trigger steam roll detection */
   private static readonly STEAMROLL_MIN_LEADER_CITIES = 10;
 
+  // Frenzy mode: cached mine limit based on territory size
+  // FakeHumans get 1.5x the base limit (territory / TILES_PER_MINE)
+  private static readonly TILES_PER_MINE = 2500;
+  private static readonly MINE_LIMIT_MULTIPLIER = 1.5;
+  private static readonly MINE_LIMIT_UPDATE_INTERVAL = 100;
+  private cachedMaxMines = 0;
+  private lastMineLimitUpdateTick = -1000; // Force update on first check
+
   constructor(
     gameID: GameID,
     private nation: Nation, // Nation contains PlayerInfo with PlayerType.FakeHuman
@@ -521,9 +529,25 @@ export class FakeHumanExecution implements Execution {
       ? frenzyManager.getStructureCountForPlayer(this.player.id(), type)
       : this.player.unitsOwned(type);
 
-    // Limit mines for FakeHumans to 20 in Frenzy mode (City = Mine)
-    if (frenzyManager && type === UnitType.City && owned >= 20) {
-      return false;
+    // Limit mines for FakeHumans based on territory size (City = Mine in Frenzy)
+    // FakeHumans get 1.5x the base limit
+    if (frenzyManager && type === UnitType.City) {
+      const currentTick = this.mg.ticks();
+      if (
+        currentTick - this.lastMineLimitUpdateTick >=
+        FakeHumanExecution.MINE_LIMIT_UPDATE_INTERVAL
+      ) {
+        const baseLimit =
+          this.player.numTilesOwned() / FakeHumanExecution.TILES_PER_MINE;
+        this.cachedMaxMines = Math.max(
+          1,
+          Math.floor(baseLimit * FakeHumanExecution.MINE_LIMIT_MULTIPLIER),
+        );
+        this.lastMineLimitUpdateTick = currentTick;
+      }
+      if (owned >= this.cachedMaxMines) {
+        return false;
+      }
     }
 
     const perceivedCostMultiplier = multiplier(owned + 1);
