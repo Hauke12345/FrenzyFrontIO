@@ -459,12 +459,33 @@
           ></o-button> -->
         </div>
 
-        <o-button
-          id="single-player"
-          title="Single Player"
-          translationKey="main.single_player"
-          block
-        ></o-button>
+        <div style="position: relative; display: inline-block; width: 100%">
+          <o-button
+            id="single-player"
+            title="Single Player"
+            translationKey="main.single_player"
+            block
+          ></o-button>
+          <span
+            style="
+              position: absolute;
+              top: -10px;
+              right: 10px;
+              font-size: 11px;
+              padding: 4px 10px;
+              border-radius: 4px;
+              background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+              color: #fff;
+              font-weight: 700;
+              box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+              transform: rotate(3deg);
+              pointer-events: none;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            "
+            >experimental</span
+          >
+        </div>
 
         <o-button
           id="help-button"
